@@ -1,0 +1,12 @@
+{
+  "name": "myhero-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "My HERO ship gates and background harness",
+  "dependencies": {
+    "acorn": "^8.11.0"
+  },
+  "optionalDependencies": {
+    "canvas": "^2.11.2"
+  }
+}

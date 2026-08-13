@@ -7,6 +7,32 @@
 
 ---
 
+## 2026-08-13
+
+### Claude Code 開発体制へ移行（リポジトリ再構成）＋ ゲームを v236 に更新
+
+- **何を**:
+  - Claude チャット時代の成果物一式（zip）をリポジトリに導入
+    - `CLAUDE.md`（開発ルールブック・唯一の正本）
+    - `docs/SPEC.md`（仕様・現状・地雷・未検証・ロードマップの正本。旧SPECを差し替え）
+    - `docs/LEGACY_hikitsugi_v234c.md`（旧引継書アーカイブ・読み取り専用）
+    - `game/my_hero.html`（**v236**・開発本体。8,125行 / 1,049,835B）
+    - `tools/check.js` / `tools/render_bg.js`（出荷前ゲート・背景計測）
+  - ルート `index.html` を v236 に更新（公開用コピー。`game/` と同一内容）
+  - ルート `README.md` を開発リポジトリ用に刷新
+  - `CLAUDE.md` にユーザー協働ルール（12ルールの要点）を §9 として統合
+- **削除（承認済み）**:
+  - `my_hero_confirm_modal_fixed.html`（v236に修正内容が含まれ役目終了。Git履歴に残存）
+  - `docs/RULES.md`（CLAUDE.md §9 に統合）
+  - `docs/README.md`（ルート README.md に統合）
+- **なぜ**: 開発を Claude Code に一本化するにあたり、ルール・仕様・ツールの正本を
+  リポジトリ内に置き、二重管理をなくすため（CLAUDE.md §0-5）
+- **検証**: `tools/check.js` 全ゲート合格（構文 / __dbg 0件 / 禁止API 0件）を
+  `game/my_hero.html`・`index.html` の両方で確認
+- **未検証**: v236 の実機確認は未了（`docs/SPEC.md` §6 のチェックリスト参照）
+
+---
+
 ## 2026-08-07
 
 ### docs/ フォルダを新設
