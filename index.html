@@ -7701,6 +7701,26 @@ function showStageClear(star, scoreRate){
       +'<span style="color:#fff;font-size:12px;font-weight:bold;width:38px;text-align:right">'+val+'%</span>'
     +'</div>';
   }
+  // ★v237 案A: 星の条件を可視化（判定式は一切変更しない・表示のみ）。SPEC §9-5
+  //   合算スコアが画面に出ておらず「敵を全滅させたのに★2」の理由が見えなかったため。
+  var _tgtStar=(star<2)?2:3;
+  var _starHint='<div style="width:220px;margin:2px auto 0;padding:6px 10px;box-sizing:border-box;'
+    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:9px">'
+    +'<div style="color:#9fe4ff;font-size:11px;font-weight:bold">ひょうか '+Math.round((scoreRate||0)*100)+'%'
+    +'<span style="color:#7fb4c8;font-weight:normal;font-size:10px">　★'+_tgtStar+'は '+((_tgtStar===2)?'60':'85')+'%から</span></div>';
+  if(star<3){
+    var _gap=Math.max(0,((_tgtStar===2)?0.60:0.85)-(scoreRate||0));
+    var _restE=Math.max(0,stageEnemyTotal-stageEnemyKilled);
+    var _restC=Math.max(0,stageCoinTotal-stageCoinGot);
+    var _needE=Math.ceil(_gap*stageEnemyTotal/0.5);
+    var _needC=Math.ceil(_gap*stageCoinTotal/0.25);
+    var _tip;
+    if(stageEnemyTotal>0 && _needE>0 && _needE<=_restE) _tip='てきを あと '+_needE+' たおすと ★'+_tgtStar+'！';
+    else if(stageCoinTotal>0 && _needC>0 && _needC<=_restC) _tip='コインを あと '+_needC+' まい とると ★'+_tgtStar+'！';
+    else _tip='ダメージを うけずに クリアすると ★'+_tgtStar+'！';
+    _starHint+='<div style="color:#cfe9f5;font-size:10px;line-height:1.45;margin-top:3px">'+_tip+'</div>';
+  }
+  _starHint+='</div>';
   var nextStage=level+1;
   var hasNext=(nextStage<=MAX_STAGE);
   var h='<div style="font-size:30px;margin-bottom:2px">🎉</div>'
@@ -7710,6 +7730,7 @@ function showStageClear(star, scoreRate){
     +statRow('⚔️','たおした',killRate,'#ff8866')
     +statRow('🪙','コイン',coinRate,'#ffd24a')
     +statRow('❤️','たいりょく',hpRate,'#66dd88')
+    +_starHint
     +'<div style="color:#ffe44d;font-size:14px;margin:12px 0 4px">スコア <b style="font-size:22px">'+Math.floor(score)+'</b></div>'
     +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,210,74,0.16);border:1.5px solid rgba(255,210,74,0.5);border-radius:10px;padding:6px 14px;margin:2px 0 4px"><span style="font-size:18px">💰</span><span style="color:#ffd24a;font-size:17px;font-weight:bold">+'+lastEarnedGold+'G</span><span style="color:#cda84a;font-size:11px">ゲット！</span></div>'
     +'<div style="color:#bda86a;font-size:11px;margin-bottom:2px">しょじ '+totalGold+'G（ショップでつかえる）</div>';
