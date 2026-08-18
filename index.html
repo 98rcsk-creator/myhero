@@ -3789,6 +3789,23 @@ function nextLevel(){
     showStageClear(earnedStar, stageScore);
     return;
   }
+  // ★v239: 連続プレイ（ホームの「タップしてスタート」）でもステージごとにクリア画面を出す。SPEC §9-6 案A
+  //   ラン単位の仕様は維持する：score はリセットしない／addRanking はラン終了時のみ。
+  //   コインはこの時点で貯金する（死亡時も貯金されるため合計額は変わらない）。
+  //   最終ステージは従来どおり ALL CLEAR 画面を優先するので、ここでは出さない。
+  if(level<MAX_STAGE){
+    lastEarnedGold=statGet('runGold'); totalGold+=lastEarnedGold; store.set('yk_gold',''+totalGold);
+    statSet('runGold',0);
+    checkAchievements();
+    saveData();
+    _contAdvancePending=true;   // クリア画面の「つぎへ すすむ」で advanceStage() に戻る合図
+    showStageClear(earnedStar, stageScore);
+    return;
+  }
+  advanceStage();
+}
+// ★v239: 次ステージへ進む処理（従来 nextLevel の後半をそのまま関数化。中身は未変更）
+function advanceStage(){
   level++;
   if(level>MAX_STAGE){
     level=MAX_STAGE; // クランプ
@@ -7548,6 +7565,7 @@ function showAchievements(){
 // ===== ステージ選択マップ（縦長スクロール）=====
 var selectedStage=1;
 var fromStageMap=false; // マップから来たか（クリア後の戻り先を分岐）
+var _contAdvancePending=false; // ★v239 連続プレイのクリア画面から次ステージへ戻る待ち状態
 // 星評価用：ステージ内の統計
 var stageCoinTotal=0, stageCoinGot=0, stageEnemyTotal=0, stageEnemyKilled=0;
 var lastClearStar=0, lastClearScore=0; // 直近クリアの星・スコア
@@ -7750,14 +7768,16 @@ function showStageClear(star, scoreRate){
     function tapEv(el,fn){ if(!el)return; el.addEventListener('touchstart',function(e){e.stopPropagation();if(e.cancelable)e.preventDefault();fn();},{passive:false}); el.addEventListener('click',function(e){e.stopPropagation();fn();}); }
     if(hasNext){
       tapEv(document.getElementById('scNext'),function(){
+        // ★v239 連続プレイ：score とランを維持したまま次ステージへ（doStart は score=0 にするため通さない）
+        if(_contAdvancePending){ _contAdvancePending=false; advanceStage(); return; }
         // selectedStageは既にnextLevel()で次ステージに設定されている
         fromStageMap=true;
         // 同じキャラ・スキル引き継ぎで次ステージへ（ワールド最初なら自動リセット）
         doStart(true);
       });
     }
-    tapEv(document.getElementById('scMap'),function(){ showStageMap(); });
-    tapEv(document.getElementById('scHome'),function(){ gs='title'; showTitleScreen(); });
+    tapEv(document.getElementById('scMap'),function(){ _contAdvancePending=false; showStageMap(); });
+    tapEv(document.getElementById('scHome'),function(){ _contAdvancePending=false; gs='title'; showTitleScreen(); });
   },30);
 }
 
