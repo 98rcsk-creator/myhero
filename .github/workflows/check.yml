@@ -1,0 +1,42 @@
+# My HERO 出荷前ゲート（CLAUDE.md §3）を GitHub 上で自動実行する。
+# PR を出すたび／main に入るたびに走り、落ちれば PR に赤い ✗ が出る。
+# 手元での `node tools/check.js` と同じ内容を、パソコン無しで回すのが目的。
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Node をセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 検査ツールの依存をインストール（acorn）
+        working-directory: tools
+        # canvas はビルドが環境依存で失敗しうるが check.js には不要なので入れない
+        run: npm install --no-audit --no-fund --omit=optional
+
+      - name: 出荷前ゲート（開発本体 game/my_hero.html）
+        run: node tools/check.js game/my_hero.html
+
+      - name: 出荷前ゲート（公開用 index.html）
+        run: node tools/check.js index.html
+
+      - name: game と index が同一か照合
+        # 公開フロー（CLAUDE.md §8-5）では index.html は game/my_hero.html のコピー。
+        # 片方だけ更新して乖離させる事故をここで止める。
+        run: |
+          if ! cmp -s game/my_hero.html index.html; then
+            echo "::error::game/my_hero.html と index.html が一致しません。リリース時は cp game/my_hero.html index.html を実行してください。"
+            exit 1
+          fi
+          echo "✅ game/my_hero.html と index.html は同一です"
