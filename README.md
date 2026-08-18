@@ -39,6 +39,17 @@ cd tools && npm install && cd ..
 
 - Node 18+ 推奨。`canvas` のビルドが環境依存で失敗しても、`check.js` と `render_bg.js` の計測・NaN検出は動く（PNG描き出しだけスキップされる）。
 
+## 自動チェック（GitHub Actions）
+
+PR を出すたび／main に入るたびに `.github/workflows/check.yml` が走り、
+GitHub のクラウド上で出荷前ゲートを自動実行する（パソコン不要）。
+
+- `node tools/check.js game/my_hero.html`（構文・禁止API・`__dbg`）
+- `node tools/check.js index.html`
+- `game/my_hero.html` と `index.html` が同一かの照合（§8-5 の公開フローの取りこぼし防止）
+
+落ちると PR に赤い ✗ が出るので、**マージ前に気づける**。公開リポジトリなので実行は無料。
+
 ## 日々のワークフロー
 
 1. `docs/SPEC.md` の §未検証 と §ロードマップ を見てテーマを1つ選ぶ（**1コミット＝1テーマ**）
