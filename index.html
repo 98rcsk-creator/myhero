@@ -1954,8 +1954,12 @@ function buildWorld(lv){
       var isShooter=(gtype==='shooter');
       var isFire=(gtype==='fire');
       var isGhost=(gtype==='ghost');
-      var gw=baseW*(isGiant?1.4:1);  // ★v247 1.7→1.4（踏める高さに収める）
-      var gh=baseH*(isGiant?1.4:1);
+      // ★v248 敵の巨体化を廃止（1.7→1.4→1.0）。giantタイプ自体は残す。
+      //   giantの正体は「緑のミニドラゴ＝HP2・のっそり遅い・ハートを落とす」まもので、
+      //   デカさは後付けの倍率でしかない。倍率だけ外せば回復の付け替えは要らない。
+      //   残る差分: hp=2 / 速度0.45倍 / maybeDrop のハート / ワールド別の専用スプライト。
+      var gw=baseW;
+      var gh=baseH;
       var gspd=spd*(isGiant?0.45:isShooter?0.3:isFire?0.4:1);
       var ghp=isGiant?2:isGhost?999:cfg.enemyHp;
       var gyPos=getGroundY(ex);
