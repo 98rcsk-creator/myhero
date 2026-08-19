@@ -903,6 +903,24 @@ ctx.setTransform(CV_K,0,0,CV_K,0,0);
 var ov=document.getElementById('overlay');
 var GRAV=0.52, GROUND=H-55, GOAL_X=4200, BW=13, BH=34;
 
+// ★v247 弾の属性。ワールドの世界観に合わせて火の玉の見た目を変える
+//   （雪山のまものがオレンジの火を吐いていたため）。
+//   描画は色の差し替えだけで図形は同じ＝描画コールは増えない。
+//   o=外側 / g=グロー / c=中心core。fire は従来と一字も変えていない。
+var BELEM={
+  fire :{o:'#ff6600', g:'#ff4400', c:'#ffcc00'},  // 火（既定）
+  ice  :{o:'#7fdcff', g:'#37b6ff', c:'#ffffff'},  // 氷・雪
+  rock :{o:'#a98159', g:'#6d4f31', c:'#e0c49a'},  // 岩・土
+  water:{o:'#3fb9d8', g:'#1d7fa8', c:'#c8f4ff'},  // 海底
+  dark :{o:'#a05cd6', g:'#6a2fa0', c:'#f0c8ff'},  // 魔界・夜
+  wind :{o:'#9fe8c8', g:'#4fbf95', c:'#ffffff'},  // 空中
+  holy :{o:'#ffd873', g:'#e0a52a', c:'#fffbe6'}   // 天空神殿
+};
+function elemOf(w){
+  return w===3?'rock':w===4?'ice':w===6?'dark':w===7?'wind':
+         w===8?'water':w===9?'dark':w===10?'holy':'fire';
+}
+
 // ===== 仮想ボタン =====
 var VK={L:false,R:false,J:false,A:false,G:false,LAS:false,UP:false,DOWN:false};
 function mkBtn(id,key){
@@ -1900,7 +1918,12 @@ function buildWorld(lv){
     placed++;
 
     var spd=cfg.enemySpd;
-    var baseW=16+sEff*2, baseH=20+sEff*2;  // ★v231 sEff（敵サイズの旧スケール維持）
+    // ★v247 敵サイズだけ W5相当(sEff=23)で頭打ち。数・HP・ボスHPの sEff はそのまま。
+    //   旧: W10で giant=190x197（画面幅390の49%）、ボス=381x394 で画面より大きかった。
+    //   単発ジャンプの到達高は110.9px（p.vy=-11 / GRAV=0.52）なので、
+    //   giant倍率1.4と併せて全ワールドで踏める（上限時 giant=87x92）。
+    var sSz=Math.min(sEff,23);
+    var baseW=16+sSz*2, baseH=20+sSz*2;
 
     if(isFlying){
       var ftype=flyTypes[(fPtr++)%flyTypes.length];
@@ -1931,8 +1954,8 @@ function buildWorld(lv){
       var isShooter=(gtype==='shooter');
       var isFire=(gtype==='fire');
       var isGhost=(gtype==='ghost');
-      var gw=baseW*(isGiant?1.7:1);
-      var gh=baseH*(isGiant?1.7:1);
+      var gw=baseW*(isGiant?1.4:1);  // ★v247 1.7→1.4（踏める高さに収める）
+      var gh=baseH*(isGiant?1.4:1);
       var gspd=spd*(isGiant?0.45:isShooter?0.3:isFire?0.4:1);
       var ghp=isGiant?2:isGhost?999:cfg.enemyHp;
       var gyPos=getGroundY(ex);
@@ -1945,6 +1968,7 @@ function buildWorld(lv){
         hp:ghp, maxHp:ghp,
         dead:false, dy:0,
         type:gtype,
+        elem:elemOf(lvW),                   // ★v247 吐く弾の属性（ワールド固定）
         sprS:Math.floor(Math.random()*997), // ★v240 ワールド別スプライトの選択用（生成時に固定）
         // shooterはレーザー、fireは火の玉、それ以外は射撃なし
         shootInterval:isShooter?110:isFire?80:0,
@@ -1969,6 +1993,7 @@ function buildWorld(lv){
       hp:bossHpVal, maxHp:bossHpVal,
       dead:false, dy:0,
       type:'boss',
+      elem:elemOf(lvW),                     // ★v247 ボスの火球も属性に合わせる
       shootInterval:100, shootTimer:30,
       shootBurst:3, shootBurstTimer:0,
       isBoss:true,
@@ -4474,7 +4499,7 @@ function update(){
                 x:e.x+(dirB>0?e.w:0), y:e.y+e.h*0.42,
                 vx:dirB*bSpdB*Math.cos(spread[bk]),
                 vy:bSpdB*Math.sin(spread[bk])-0.6,
-                type:'fire', life:150, r:6,
+                type:'fire', elem:e.elem||'fire', life:150, r:6,
               });
             }
             SFX.hit();
@@ -4491,6 +4516,7 @@ function update(){
             y:e.y+e.h*0.4,
             vx:bVx, vy:bVy,
             type:bType,
+            elem:e.elem||'fire',            // ★v247
             life:120, r:bType==='laser'?3:6,
           });
         }
@@ -4816,7 +4842,7 @@ function update(){
         var _hsCounter=!!eqShield().counter;
         if(p.cbCounter>0 || _hsCounter){
           if(p.cbCounter>0) p.cbCounter=0;  // 特典分のみ消費(装備の常時分は減らない)
-          bullets.push({x:b.x, y:b.y, vx:-(b.vx)*1.5, vy:-1.2, r:b.r+1, life:100, type:b.type, ref:true});
+          bullets.push({x:b.x, y:b.y, vx:-(b.vx)*1.5, vy:-1.2, r:b.r+1, life:100, type:b.type, elem:b.elem, ref:true});
           pops.push({x:p.x+pw()/2,y:p.y-12,txt:'🛡️カウンター!',life:46,ml:46,col:'#ff9df5',sz:13,glow:true});
           burst(p.x+pw()/2,p.y+ph()*0.3,'#ffd966',8);
         }
@@ -6673,12 +6699,13 @@ function draw(){
     var bx=b.x-cam;
     ctx.save();
     if(b.type==='fire'){
-      // 火の玉：オレンジ＋グロー
+      // ★v247 属性つきの玉＋グロー（図形は従来と同一・色だけ差し替え＝描画コール増減なし）
+      var EL=BELEM[b.elem]||BELEM.fire;
       ctx.globalAlpha=0.9;
-      ctx.fillStyle='#ff6600';
-      ctx.shadowColor='#ff4400';ctx.shadowBlur=10;
+      ctx.fillStyle=EL.o;
+      ctx.shadowColor=EL.g;ctx.shadowBlur=10;
       ctx.beginPath();ctx.arc(bx,b.y,b.r,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#ffcc00';
+      ctx.fillStyle=EL.c;
       ctx.beginPath();ctx.arc(bx,b.y,b.r*0.5,0,Math.PI*2);ctx.fill();
     } else {
       // レーザー：青白い線
