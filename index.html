@@ -7604,18 +7604,19 @@ function showStageMap(){
   ov.classList.remove('home');
   var h='<div style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;padding-bottom:20px">'
     +'<div class="title-logo" style="font-size:22px;margin-bottom:4px">🗺️ ステージ選択</div>'
-    +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:16px">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'</div>';
+    +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:16px">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
+    // ★v243 ワールドを 2列に。1ワールド=1ステージなので縦1列だと全長1711px（2.5画面分）あった。
+    +'<div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">';
   // 上のワールドから下に向かって表示（W10→W1）だと登る感じだが、分かりやすさ優先でW1→W10
   for(var w=1;w<=NUM_WORLDS;w++){
     var wColors=['#7ec850','#e0883c','#9a7adc','#7ec0ee','#ff6644','#a060d0','#88c0ff','#40c0b0','#c04080','#ffcc44'];
-    h+='<div style="width:100%;margin-bottom:14px">'
-      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:4px 8px;background:linear-gradient(90deg,'+wColors[w-1]+'33,transparent);border-left:3px solid '+wColors[w-1]+';border-radius:4px">'
-        +'<span style="font-size:18px">'+WORLD_ICONS[w-1]+'</span>'
-        +'<span style="color:#fff;font-size:13px;font-weight:bold">ワールド'+w+'：'+WORLD_NAMES[w-1]+'</span>'
+    h+='<div style="width:100%">'
+      +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;padding:3px 5px;background:linear-gradient(90deg,'+wColors[w-1]+'33,transparent);border-left:3px solid '+wColors[w-1]+';border-radius:4px">'
+        +'<span style="font-size:14px">'+WORLD_ICONS[w-1]+'</span>'
+        +'<span style="color:#fff;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ワールド'+w+'：'+WORLD_NAMES[w-1]+'</span>'
       +'</div>'
-      // ★v242 STAGES_PER_WORLD=1 だと 1fr が幅いっぱい(340px)になり aspect-ratio:1 で巨大な正方形になっていた。
-      //   上限84pxを付けて中央寄せ。minmax(0,84px) なので将来ステージ数が増えても収まる。
-      +'<div style="display:grid;grid-template-columns:repeat('+STAGES_PER_WORLD+',minmax(0,84px));gap:6px;justify-content:center">';
+      // ★v243 カードは列幅いっぱいの横長。aspect-ratio:1 だと v242 以前のように幅に引きずられて巨大化するので height 固定。
+      +'<div style="display:grid;grid-template-columns:repeat('+STAGES_PER_WORLD+',minmax(0,1fr));gap:6px">';
     for(var i=0;i<STAGES_PER_WORLD;i++){
       var s=(w-1)*STAGES_PER_WORLD+i+1;
       var unlocked=(s<=unlockedStage);
@@ -7634,12 +7635,13 @@ function showStageMap(){
           +'<div style="line-height:1;margin-top:4px;letter-spacing:1px">'+starStr+'</div>';
       }
       h+='<div class="stageCell" data-stage="'+s+'" data-unlocked="'+(unlocked?1:0)+'" '
-        +'style="aspect-ratio:1;background:'+bg+';border:'+border+';border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:'+(unlocked?'pointer':'default')+'">'
+        +'style="height:72px;background:'+bg+';border:'+border+';border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:'+(unlocked?'pointer':'default')+'">'
         +content+'</div>';
     }
     h+='</div></div>';
   }
-  h+='<div style="position:sticky;bottom:0;width:100%;padding:12px 0 6px;background:linear-gradient(180deg,rgba(11,26,36,0) 0%,rgba(11,26,36,0.94) 34%);display:flex;flex-direction:column;align-items:center;gap:9px;z-index:5">'
+  h+='</div>'   // ★v243 2列グリッドを閉じる
+    +'<div style="position:sticky;bottom:0;width:100%;padding:12px 0 6px;background:linear-gradient(180deg,rgba(11,26,36,0) 0%,rgba(11,26,36,0.94) 34%);display:flex;flex-direction:column;align-items:center;gap:9px;z-index:5">'
     +'<div id="mapStartBtn" class="menuBtnMain" style="margin-top:0;width:240px;opacity:0.4;pointer-events:none">▶ ステージを選んでね</div>'
     +'<div id="mapBackBtn" class="menuBtnSub" style="width:160px">◀ ホームに戻る</div>'
     +'</div></div>';
