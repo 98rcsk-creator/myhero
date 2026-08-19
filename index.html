@@ -294,7 +294,7 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
   flex-direction:column;align-items:center;justify-content:center;gap:20px;
   z-index:99;cursor:pointer;text-align:center;padding:40px 24px;min-height:100vh;
   overflow-y:auto;-webkit-overflow-scrolling:touch;}
-#overlay.scrollable{justify-content:flex-start !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch !important;touch-action:pan-y !important;padding-top:16px !important;padding-bottom:16px !important;gap:10px !important;}
+#overlay.scrollable{justify-content:flex-start !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch !important;touch-action:pan-y !important;padding-top:16px !important;/* ★v242 下余白を140pxに拡大。IG内蔵ブラウザの下部ツールバー(約90〜110px)に 最下部のボタンが隠れて押せない実機報告への対応。PCでは末尾に余白が増えるだけ。 */padding-bottom:140px !important;gap:10px !important;}
 /* ★じぶんをつくる・クロップ中：写真の位置合わせ中はページ自体を一切動かさない（スクロール完全禁止）。
    背景も完全不透明にしてプレイ画面が透けて一緒に動いて見えるのを防ぐ。 */
 #overlay.cropmode{justify-content:flex-start !important;overflow:hidden !important;padding-top:16px !important;padding-bottom:16px !important;gap:10px !important;background:linear-gradient(165deg,#0d223e 0%,#0b1a24 48%,#0b2016 100%) !important;}
@@ -7613,7 +7613,9 @@ function showStageMap(){
         +'<span style="font-size:18px">'+WORLD_ICONS[w-1]+'</span>'
         +'<span style="color:#fff;font-size:13px;font-weight:bold">ワールド'+w+'：'+WORLD_NAMES[w-1]+'</span>'
       +'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat('+STAGES_PER_WORLD+',1fr);gap:6px">';
+      // ★v242 STAGES_PER_WORLD=1 だと 1fr が幅いっぱい(340px)になり aspect-ratio:1 で巨大な正方形になっていた。
+      //   上限84pxを付けて中央寄せ。minmax(0,84px) なので将来ステージ数が増えても収まる。
+      +'<div style="display:grid;grid-template-columns:repeat('+STAGES_PER_WORLD+',minmax(0,84px));gap:6px;justify-content:center">';
     for(var i=0;i<STAGES_PER_WORLD;i++){
       var s=(w-1)*STAGES_PER_WORLD+i+1;
       var unlocked=(s<=unlockedStage);
