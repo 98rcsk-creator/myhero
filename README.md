@@ -17,7 +17,7 @@ myhero/
 │   ├── TODO.md            ← TODO・アイデアのメモ
 │   └── DEPLOY.md          ← 公開のしくみと手順（ユーザー向け・初心者向け説明）
 ├── game/
-│   └── my_hero.html       ← ゲーム本体（v236・開発はこちらが本体）
+│   └── my_hero.html       ← ゲーム本体（開発はこちらが本体）
 └── tools/
     ├── check.js           ← コミット前ゲート（構文・禁止API・__dbg）
     ├── render_bg.js       ← 背景の描画コール計測・NaN検出・PNG描き出し
@@ -38,6 +38,20 @@ cd tools && npm install && cd ..
 ```
 
 - Node 18+ 推奨。`canvas` のビルドが環境依存で失敗しても、`check.js` と `render_bg.js` の計測・NaN検出は動く（PNG描き出しだけスキップされる）。
+
+## テストモード（実機確認用）
+
+URLに `?test=1`（または `#test`）を付けて開くと、実機確認を楽にするモードになる。
+
+```
+通常   https://98rcsk-creator.github.io/myhero/
+テスト https://98rcsk-creator.github.io/myhero/?test=1
+```
+
+- 全10ワールドが最初から選べる／所持金 99,999G／右上に `TEST` バッジ
+- **セーブは本番と完全に別**（キー接頭辞 `tk_`）。テストで何をしても本番データは汚れない
+- 通常URLでは分岐に一切入らないため、本番の挙動は不変
+- 触る場所は `TEST_MODE` と `store` の `PFX`
 
 ## 自動チェック（GitHub Actions）
 

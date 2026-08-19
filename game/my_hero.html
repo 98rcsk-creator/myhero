@@ -953,12 +953,22 @@ var dmgFlash=0;  // 被ダメ時の赤フラッシュ
 var winFlash=0;  // ★ボス撃破時の白フラッシュ
 var pops=[];     // スコアポップ {x,y,txt,life,ml,col}
 // 保存の安全ラッパー：localStorage不可の環境（アプリ内プレビュー等）ではメモリ保存に自動切替
+// ★v241 テストモード：URLに ?test=1 または #test が付いているときだけ有効。
+//   実機確認を楽にするための仕組み。通常URLではこの分岐に一切入らない。
+//   セーブのキーに接頭辞 tk_ を付けて本番データと完全に分離する（本番を汚さない）。
+var TEST_MODE=(function(){
+  try{
+    var q=(location.search||''), h=(location.hash||'');
+    return /[?&]test=1/.test(q) || /(^|#)test\b/.test(h);
+  }catch(e){ return false; }
+})();
 var store=(function(){
   var mem={}, ok=false;
+  var PFX=TEST_MODE?'tk_':'';   // ★v241 テストは別のセーブ領域
   try{ var t='__yk_t'; localStorage.setItem(t,'1'); localStorage.removeItem(t); ok=true; }catch(e){ ok=false; }
   return {
-    get:function(k){ if(ok){ try{ return localStorage.getItem(k); }catch(e){} } return (k in mem)?mem[k]:null; },
-    set:function(k,v){ if(ok){ try{ localStorage.setItem(k,v); return; }catch(e){} } mem[k]=v; }
+    get:function(k){ k=PFX+k; if(ok){ try{ return localStorage.getItem(k); }catch(e){} } return (k in mem)?mem[k]:null; },
+    set:function(k,v){ k=PFX+k; if(ok){ try{ localStorage.setItem(k,v); return; }catch(e){} } mem[k]=v; }
   };
 })();
 var bestScore=parseInt(store.get('yk_best')||'0',10)||0; // ハイスコア
@@ -996,6 +1006,7 @@ function saveData(){
 // ===== 実績システム =====
 // 通算コイン（貯金：実績報酬＋プレイで稼いだ分。アンロックで使う土台）
 var totalGold=parseInt(store.get('yk_gold')||'0',10)||0;
+if(TEST_MODE && totalGold<50000){ totalGold=99999; store.set('yk_gold',''+totalGold); } // ★v241 テストのみ
 var lastEarnedGold=0; // ★v199 ⑨: 直近ステージで獲得したゴールド（クリア/GO画面表示用）
 // スキルレベル（前回プレイ時の最終レベルを引き継ぐ）
 var savedSkillLv=parseInt(store.get('yk_skillLv')||'0',10)||0;
@@ -1028,6 +1039,7 @@ var MAX_STAGE=STAGES_PER_WORLD*NUM_WORLDS; // ★v231 =10 (1*10)
   }catch(e){}
 })();
 var unlockedStage=parseInt(store.get('yk_unlocked')||'1',10)||1;
+if(TEST_MODE && unlockedStage<MAX_STAGE){ unlockedStage=MAX_STAGE; store.set('yk_unlocked',''+unlockedStage); } // ★v241 テストのみ
 if(unlockedStage<1) unlockedStage=1;
 if(unlockedStage>MAX_STAGE) unlockedStage=MAX_STAGE;
 // 各ステージの星数 {ステージ番号: 星(0〜3)}
@@ -8171,6 +8183,20 @@ cv.addEventListener('touchstart',function(e){
   if(gs==='paused'){ e.preventDefault(); }
 },{passive:false});
 
+// ★v241 テストモードの表示バッジ。どのモードで遊んでいるか一目で分かるようにする。
+//   #overlay 配下だと ov.innerHTML の書き換えで消えるため body 直下＋fixed（CLAUDE.md §4-6）。
+if(TEST_MODE){
+  try{
+    var _mkTestBadge=document.createElement('div');
+    _mkTestBadge.id='mhTestBadge';
+    _mkTestBadge.textContent='TEST';
+    _mkTestBadge.style.cssText='position:fixed;top:calc(env(safe-area-inset-top) + 4px);right:6px;z-index:99999;'
+      +'pointer-events:none;font:bold 10px monospace;letter-spacing:1px;color:#0d0d1a;'
+      +'background:#ffd24a;border-radius:4px;padding:2px 6px;opacity:0.85;'
+      +'box-shadow:0 1px 4px rgba(0,0,0,0.5)';
+    document.body.appendChild(_mkTestBadge);
+  }catch(e){}
+}
 loop();
 }catch(__bootErr){
   try{ mkBanner('⚠ 起動エラー: '+(__bootErr&&__bootErr.message?__bootErr.message:String(__bootErr))+'\n'+((__bootErr&&__bootErr.stack)?__bootErr.stack.split('\n').slice(1,3).join('\n'):'')); }catch(_){}
