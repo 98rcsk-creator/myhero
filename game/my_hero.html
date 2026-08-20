@@ -6447,6 +6447,91 @@ function bgSky(){   // ★v250 W7空中（新規）
   ctx.stroke();
 }
 
+function bgSea(){   // ★v251 W8海底（新規）
+  // ▶ 差別化：水中／上から差す光の柱／青緑／珊瑚と海藻のシルエット／舞う粒子は気泡と マリンスノー
+  //   bgSpace（黒紫＋星）との違いは「明るい上・暗い下」「光の柱」「揺れる海藻」。
+  // ① 水：浅い水面の明るい青緑 → 深い藍
+  var seaG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  seaG.addColorStop(0,'#2ea3b8');seaG.addColorStop(0.34,'#166a8e');
+  seaG.addColorStop(0.72,'#0c3c63');seaG.addColorStop(1,'#07223f');
+  ctx.fillStyle=seaG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 水面のゆらぎ：上端の明るい帯
+  var surG=ctx.createLinearGradient(0,0,0,46);
+  surG.addColorStop(0,'rgba(180,244,255,0.55)');surG.addColorStop(1,'rgba(140,220,240,0)');
+  ctx.fillStyle=surG;ctx.fillRect(0,0,W,46);
+  // ③ 光の柱：水面から斜めに差す。視差は浅く(0.03)＝光源は遠い。
+  ctx.fillStyle='rgba(180,238,255,0.10)';
+  ctx.beginPath();
+  for(var ri=0;ri<5;ri++){
+    var rper=W+300;
+    var rx=((ri*151+30-cam*0.03)%rper+rper)%rper-150;
+    var rw=13+((ri*23)%14);
+    var rsw=Math.sin(fr*0.012+ri)*7;   // ゆっくり揺れる
+    ctx.moveTo(rx-rw,0);ctx.lineTo(rx+rw,0);
+    ctx.lineTo(rx+rw*2.0+rsw,GROUND-30);ctx.lineTo(rx-rw*0.6+rsw,GROUND-30);
+  }
+  ctx.fill();
+  // ④ 遠景の岩礁：かすんだ藍のシルエット（視差0.02・ラップ）
+  ctx.fillStyle='rgba(9,44,72,0.75)';
+  ctx.beginPath();
+  for(var fi2=0;fi2<5;fi2++){
+    var fper2=W+360;
+    var fx2=((fi2*196+40-cam*0.02)%fper2+fper2)%fper2-180;
+    var fh2=52+((fi2*67)%54);
+    ctx.moveTo(fx2-46,GROUND);
+    ctx.quadraticCurveTo(fx2-16,GROUND-fh2*0.86,fx2,GROUND-fh2);
+    ctx.quadraticCurveTo(fx2+20,GROUND-fh2*0.72,fx2+44,GROUND);
+  }
+  ctx.fill();
+  // ⑤ 珊瑚：暗い赤紫。岩礁より手前(0.05)で少し明るい
+  ctx.fillStyle='rgba(96,44,84,0.72)';
+  ctx.beginPath();
+  for(var ki=0;ki<6;ki++){
+    var kper=W+280;
+    var kx=((ki*143+70-cam*0.05)%kper+kper)%kper-140;
+    var kh=22+((ki*37)%24);
+    ctx.moveTo(kx-9,GROUND);ctx.lineTo(kx-3,GROUND-kh);
+    ctx.lineTo(kx+2,GROUND-kh*0.62);ctx.lineTo(kx+7,GROUND-kh*1.10);
+    ctx.lineTo(kx+11,GROUND-kh*0.30);ctx.lineTo(kx+10,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 海藻：左右に揺れる。海底の生き物感はここが担当。
+  ctx.strokeStyle='rgba(38,122,86,0.66)';ctx.lineWidth=3;
+  ctx.beginPath();
+  for(var wi=0;wi<7;wi++){
+    var wper=W+240;
+    var wx=((wi*121+18-cam*0.07)%wper+wper)%wper-120;
+    var wh=34+((wi*43)%30);
+    var sway=Math.sin(fr*0.035+wi*0.9)*9;
+    ctx.moveTo(wx,GROUND);
+    ctx.quadraticCurveTo(wx+sway*0.5,GROUND-wh*0.55,wx+sway,GROUND-wh);
+  }
+  ctx.stroke();
+  // ⑦ 気泡：下から上へ。水中であることを最も強く示す要素。
+  ctx.fillStyle='rgba(198,240,255,0.42)';
+  ctx.beginPath();
+  for(var bi3=0;bi3<12;bi3++){
+    var bt=(fr*1.05+bi3*37)%330;
+    var bx3=((bi3*97+25-cam*0.08)%W+W)%W+Math.sin((bt+bi3*30)*0.045)*5;
+    var by3=GROUND-6-bt;
+    if(by3<-8) continue;
+    var br=1.6+((bi3*11)%3);
+    ctx.moveTo(bx3+br,by3);ctx.arc(bx3,by3,br,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑧ 魚影：群れで横切る
+  ctx.fillStyle='rgba(14,58,86,0.50)';
+  ctx.beginPath();
+  for(var mi2=0;mi2<9;mi2++){
+    var mper2=W+200;
+    var mx2=((mi2*89+12-cam*0.10-fr*0.5)%mper2+mper2)%mper2-100;
+    var my2=96+((mi2*53)%118)+Math.sin(fr*0.04+mi2)*4;
+    ctx.moveTo(mx2-5,my2);ctx.lineTo(mx2+4,my2-2.4);
+    ctx.lineTo(mx2+4,my2+2.4);
+  }
+  ctx.fill();
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
@@ -6456,7 +6541,7 @@ function bgDraw(w){
     case 5:  bgVolcano();  break;  // ★v236 火山（新規・一致）
     case 6:  bgNightMtn(); break;  // 夜の城（暫定：夜の山岳で城が無い）
     case 7:  bgSky();      break;  // ★v250 空中（新規・一致）
-    case 8:  bgSpace();    break;  // 海底（暫定：深宇宙）
+    case 8:  bgSea();      break;  // ★v251 海底（新規・一致）
     case 9:  bgSpace();    break;  // 魔界（暫定：深宇宙）
     case 10: bgSpace();    break;  // 天空神殿（暫定：深宇宙）
     default: bgGrass();
