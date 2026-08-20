@@ -6346,6 +6346,107 @@ function bgVolcano(){   // ★v236 W5火山（新規）
   ctx.fill();
 }
 
+function bgSky(){   // ★v250 W7空中（新規）
+  // ▶ 差別化：高高度で見下ろす／地平線が無い／下端は一面の雲海／浮遊島＋鳥。
+  //   W1草原との違いは「地面と山が無い」「下が雲」「全ワールドで最も明るい」。
+  // ① 空：天頂の濃い青 → 下へいくほど白く霞む（高度感）
+  var skyA=ctx.createLinearGradient(0,0,0,GROUND+40);
+  skyA.addColorStop(0,'#2f6fc4');skyA.addColorStop(0.42,'#79b6e8');
+  skyA.addColorStop(0.80,'#c5e3f5');skyA.addColorStop(1,'#eef6fb');
+  ctx.fillStyle=skyA;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 太陽：無限遠なので視差なし。固定位置。
+  var sux=W*0.78, suy=52;
+  var sug=ctx.createRadialGradient(sux,suy,6,sux,suy,130);
+  sug.addColorStop(0,'rgba(255,252,232,0.95)');
+  sug.addColorStop(0.30,'rgba(255,240,192,0.40)');
+  sug.addColorStop(1,'rgba(255,236,170,0)');
+  ctx.fillStyle=sug;ctx.fillRect(sux-130,suy-130,260,260);
+  // ③ 巻雲：細い水平の筋。高いところほど薄い（1パスに集約）
+  ctx.fillStyle='rgba(255,255,255,0.34)';
+  ctx.beginPath();
+  for(var ci=0;ci<7;ci++){
+    var cper=W+300;
+    var cxx=((ci*167+40-cam*0.05)%cper+cper)%cper-150;
+    var cyy=40+((ci*61)%92);
+    var cwd=44+((ci*47)%56), cht=2.4+((ci*13)%4);
+    ctx.moveTo(cxx-cwd,cyy);
+    ctx.quadraticCurveTo(cxx,cyy-cht,cxx+cwd,cyy);
+    ctx.quadraticCurveTo(cxx,cyy+cht,cxx-cwd,cyy);
+  }
+  ctx.fill();
+  // ④ 遠景の浮遊島：かすんだ青。視差は浅く(0.02)、ラップさせる。
+  ctx.fillStyle='rgba(126,168,206,0.55)';
+  ctx.beginPath();
+  for(var fi=0;fi<4;fi++){
+    var fper=W+340;
+    var fx=((fi*212+60-cam*0.02)%fper+fper)%fper-170;
+    var fy=118+((fi*53)%58);
+    var fw=26+((fi*29)%20);
+    ctx.moveTo(fx-fw,fy);ctx.lineTo(fx+fw,fy);
+    ctx.lineTo(fx+fw*0.30,fy+fw*1.15);ctx.lineTo(fx-fw*0.44,fy+fw*0.82);
+  }
+  ctx.fill();
+  // ⑤ 中景の浮遊島：岩の底＋草の天面。視差 0.055。
+  //   岩と草は同じ基準座標 mx から描く（片方だけ流れる事故を防ぐ・CLAUDE.md §1-9）
+  var isX=[], isY=[], isW=[];
+  for(var mi=0;mi<3;mi++){
+    var mper=W+420;
+    isX.push(((mi*248+96-cam*0.055)%mper+mper)%mper-210);
+    isY.push(150+((mi*97)%74));
+    isW.push(34+((mi*37)%22));
+  }
+  ctx.fillStyle='#8a7a63';   // 岩の底
+  ctx.beginPath();
+  for(var mj=0;mj<3;mj++){
+    var mx=isX[mj], my=isY[mj], mw=isW[mj];
+    ctx.moveTo(mx-mw,my);ctx.lineTo(mx+mw,my);
+    ctx.lineTo(mx+mw*0.26,my+mw*1.30);ctx.lineTo(mx-mw*0.10,my+mw*0.92);
+    ctx.lineTo(mx-mw*0.52,my+mw*1.02);
+  }
+  ctx.fill();
+  ctx.fillStyle='#5fae52';   // 草の天面
+  ctx.beginPath();
+  for(var mk=0;mk<3;mk++){
+    var gx=isX[mk], gy=isY[mk], gw2=isW[mk];
+    ctx.moveTo(gx-gw2,gy);
+    ctx.quadraticCurveTo(gx,gy-gw2*0.30,gx+gw2,gy);
+    ctx.lineTo(gx+gw2,gy+5);ctx.lineTo(gx-gw2,gy+5);
+  }
+  ctx.fill();
+  // ⑥ 雲海：下端をびっしり埋める。地面ではなく雲であることがこのワールドの肝。
+  var seaTop=GROUND-96;
+  var seaG=ctx.createLinearGradient(0,seaTop,0,GROUND+30);
+  seaG.addColorStop(0,'rgba(255,255,255,0)');
+  seaG.addColorStop(0.42,'rgba(250,253,255,0.82)');
+  seaG.addColorStop(1,'rgba(226,240,250,0.98)');
+  ctx.fillStyle=seaG;ctx.fillRect(0,seaTop,W,GROUND-seaTop+30);
+  // 雲海のふくらみ（1パス・moveTo を各 arc の前に置く）
+  ctx.fillStyle='rgba(255,255,255,0.90)';
+  ctx.beginPath();
+  for(var si2=0;si2<9;si2++){
+    var sper=W+260;
+    var sx2=((si2*118+22-cam*0.09)%sper+sper)%sper-130;
+    var sr2=20+((si2*31)%20);
+    var sy2=seaTop+44+((si2*23)%16);
+    ctx.moveTo(sx2+sr2,sy2);ctx.arc(sx2,sy2,sr2,0,Math.PI*2);
+    var sr3=sr2*0.66;
+    ctx.moveTo(sx2+sr2*0.86+sr3,sy2+7);ctx.arc(sx2+sr2*0.86,sy2+7,sr3,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑦ 鳥：遠くを横切る。視差は雲海より速く、小さく。
+  ctx.strokeStyle='rgba(58,78,96,0.45)';ctx.lineWidth=1.4;
+  ctx.beginPath();
+  for(var bi2=0;bi2<5;bi2++){
+    var bper=W+220;
+    var bx2=((bi2*143+50-cam*0.13-fr*0.28)%bper+bper)%bper-110;
+    var by2=96+((bi2*67)%70)+Math.sin((fr*0.03)+bi2)*3;
+    var bs=2.6+((bi2*7)%3);
+    ctx.moveTo(bx2-bs*2,by2);ctx.quadraticCurveTo(bx2-bs,by2-bs,bx2,by2);
+    ctx.quadraticCurveTo(bx2+bs,by2-bs,bx2+bs*2,by2);
+  }
+  ctx.stroke();
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
@@ -6354,7 +6455,7 @@ function bgDraw(w){
     case 4:  bgSnow();     break;  // ★v234 雪山（新規・一致）
     case 5:  bgVolcano();  break;  // ★v236 火山（新規・一致）
     case 6:  bgNightMtn(); break;  // 夜の城（暫定：夜の山岳で城が無い）
-    case 7:  bgGrass();    break;  // 空中（暫定：地面がある）
+    case 7:  bgSky();      break;  // ★v250 空中（新規・一致）
     case 8:  bgSpace();    break;  // 海底（暫定：深宇宙）
     case 9:  bgSpace();    break;  // 魔界（暫定：深宇宙）
     case 10: bgSpace();    break;  // 天空神殿（暫定：深宇宙）
