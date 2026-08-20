@@ -6700,10 +6700,90 @@ function bgTemple(){   // ★v253 W10天空神殿（新規・最終ワールド�
   ctx.fill();
 }
 
+function bgForest(){   // ★v254 W2夕暮れの森（新規・bgSunsetの「森が無い」を解消）
+  // ▶ 差別化：夕暮れの色は活かしつつ、ピラミッド型の遠景を「木」に置き換える。
+  //   W1草原（昼・なだらかな丘）との違いは「橙の空」「幹と樹冠のシルエット」「蛍」。
+  //   まものの視認性を落とさないよう、樹冠は地平の明るい帯より上に出しすぎない。
+  // ① 空：天頂の紫紺 → 地平の橙（bgSunset の配色を踏襲）
+  var fG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  fG.addColorStop(0,'#2b1b46');fG.addColorStop(0.40,'#7b3560');
+  fG.addColorStop(0.74,'#d1642f');fG.addColorStop(1,'#f0a44e');
+  ctx.fillStyle=fG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 夕日：視差はごく浅く＋クランプ（ラップだと後半で消えたまま戻らない・§1-9）
+  var sx4=W*0.30-cam*0.010;
+  if(sx4<W*0.14) sx4=W*0.14;
+  if(sx4>W*0.52) sx4=W*0.52;
+  var sy4=GROUND-104;
+  var sg2=ctx.createRadialGradient(sx4,sy4,10,sx4,sy4,150);
+  sg2.addColorStop(0,'rgba(255,232,150,0.86)');
+  sg2.addColorStop(0.30,'rgba(255,160,70,0.34)');
+  sg2.addColorStop(1,'rgba(255,130,50,0)');
+  ctx.fillStyle=sg2;ctx.fillRect(sx4-150,sy4-150,300,300);
+  ctx.fillStyle='rgba(255,238,178,0.90)';
+  ctx.beginPath();ctx.moveTo(sx4+26,sy4);ctx.arc(sx4,sy4,26,0,Math.PI*2);ctx.fill();
+  // ③ 遠景の森：木の形が分かる最小限のシルエット（幹＋丸い樹冠・0.02）
+  ctx.fillStyle='rgba(74,44,72,0.62)';
+  ctx.beginPath();
+  for(var di4=0;di4<9;di4++){
+    var dper=W+360;
+    var dx4=((di4*127+30-cam*0.02)%dper+dper)%dper-180;
+    var dh4=44+((di4*53)%34);
+    var dr4=13+((di4*17)%8);
+    ctx.moveTo(dx4-2.4,GROUND);ctx.lineTo(dx4-2.4,GROUND-dh4);
+    ctx.lineTo(dx4+2.4,GROUND-dh4);ctx.lineTo(dx4+2.4,GROUND);
+    ctx.moveTo(dx4+dr4,GROUND-dh4);ctx.arc(dx4,GROUND-dh4,dr4,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ④ 中景の森：手前(0.05)で濃く、幹も太い。幹と樹冠は同じ tx 基準（§1-9）
+  var trX=[], trH=[], trR=[];
+  for(var ti2=0;ti2<6;ti2++){
+    var tper2=W+300;
+    trX.push(((ti2*163+72-cam*0.05)%tper2+tper2)%tper2-150);
+    trH.push(62+((ti2*71)%46));
+    trR.push(19+((ti2*23)%10));
+  }
+  ctx.fillStyle='#3a2036';
+  ctx.beginPath();
+  for(var tj2=0;tj2<6;tj2++){
+    var tx2=trX[tj2], th2=trH[tj2], tr2=trR[tj2];
+    ctx.moveTo(tx2-4.6,GROUND);ctx.lineTo(tx2-3.4,GROUND-th2);
+    ctx.lineTo(tx2+3.4,GROUND-th2);ctx.lineTo(tx2+4.6,GROUND);
+    ctx.moveTo(tx2+tr2,GROUND-th2);ctx.arc(tx2,GROUND-th2,tr2,0,Math.PI*2);
+    ctx.moveTo(tx2-tr2*0.62+tr2*0.70,GROUND-th2-tr2*0.52);
+    ctx.arc(tx2-tr2*0.62,GROUND-th2-tr2*0.52,tr2*0.70,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑤ 木漏れ日：夕日と同じ sx4 基準で、樹冠の隙間から差す光
+  ctx.fillStyle='rgba(255,196,110,0.13)';
+  ctx.beginPath();
+  for(var mi4=0;mi4<4;mi4++){
+    var mox=sx4-46+mi4*31;
+    ctx.moveTo(mox-4,sy4-20);ctx.lineTo(mox+4,sy4-20);
+    ctx.lineTo(mox+16,GROUND);ctx.lineTo(mox-8,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 森の陰：地面付近を沈める。夕暮れの森で足元が翳るのは自然で、
+  //   同時に「まものが背景から見えるか」を成立させている層（CLAUDE.md §1-14/§1-15）。
+  //   これが無いと帯の輝度が0.168まで上がり、ウッドゴーレムの外周比が1.35＝基準割れになる。
+  var shG=ctx.createLinearGradient(0,GROUND-132,0,GROUND+20);
+  shG.addColorStop(0,'rgba(26,10,32,0)');
+  shG.addColorStop(0.50,'rgba(26,10,32,0.40)');
+  shG.addColorStop(1,'rgba(18,7,24,0.70)');
+  ctx.fillStyle=shG;ctx.fillRect(0,GROUND-132,W,152);
+  // ⑦ 蛍：夕暮れの森の目印。ゆっくり明滅しながら漂う。
+  for(var hi=0;hi<9;hi++){
+    var hbl=0.35+0.65*Math.abs(Math.sin(fr*0.028+hi*1.3));
+    var hxx=((hi*113+22-cam*0.09)%W+W)%W+Math.sin(fr*0.016+hi)*11;
+    var hyy=GROUND-30-((hi*37)%86)+Math.cos(fr*0.021+hi*0.7)*7;
+    ctx.fillStyle='rgba(214,255,140,'+(0.62*hbl).toFixed(3)+')';
+    ctx.beginPath();ctx.moveTo(hxx+2.2,hyy);ctx.arc(hxx,hyy,2.2,0,Math.PI*2);ctx.fill();
+  }
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
-    case 2:  bgSunset();   break;  // 夕暮れの森（暫定：夕暮れだが森が無い）
+    case 2:  bgForest();   break;  // ★v254 夕暮れの森（新規・一致）
     case 3:  bgCave();     break;  // ★v236 洞窟（新規・一致）
     case 4:  bgSnow();     break;  // ★v234 雪山（新規・一致）
     case 5:  bgVolcano();  break;  // ★v236 火山（新規・一致）
