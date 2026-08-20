@@ -6532,6 +6532,84 @@ function bgSea(){   // ★v251 W8海底（新規）
   ctx.fill();
 }
 
+function bgHell(){   // ★v252 W9魔界（新規）
+  // ▶ 差別化：血の月／黒曜石の尖塔／紫と深紅／地平の溶けた光／舞う粒子は火の粉
+  //   bgVolcano（赤×黒・円錐の山）との違いは「紫が主」「鋭く細い尖塔」「巨大な月」。
+  //   bgSpace との違いは「地平線がある」「星ではなく火の粉」。
+  // ① 空：天頂の黒紫 → 地平の深紅
+  var hG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  hG.addColorStop(0,'#150a22');hG.addColorStop(0.46,'#301038');
+  hG.addColorStop(0.82,'#5c1330');hG.addColorStop(1,'#7d1a2b');
+  ctx.fillStyle=hG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 血の月：視差はごく浅く(0.010)、画面内にクランプする（CLAUDE.md §1-9）
+  var mx3=W*0.70-cam*0.010;
+  if(mx3<W*0.26) mx3=W*0.26;
+  if(mx3>W*0.80) mx3=W*0.80;
+  var my3=76, mr3=40;
+  var mgl=ctx.createRadialGradient(mx3,my3,mr3*0.5,mx3,my3,mr3*3.1);
+  mgl.addColorStop(0,'rgba(214,52,52,0.34)');mgl.addColorStop(1,'rgba(180,30,60,0)');
+  ctx.fillStyle=mgl;ctx.fillRect(mx3-mr3*3.1,my3-mr3*3.1,mr3*6.2,mr3*6.2);
+  ctx.fillStyle='#c9424a';
+  ctx.beginPath();ctx.moveTo(mx3+mr3,my3);ctx.arc(mx3,my3,mr3,0,Math.PI*2);ctx.fill();
+  // 月の陰（欠け）：同じ mx3 基準
+  ctx.fillStyle='rgba(40,12,28,0.42)';
+  ctx.beginPath();
+  ctx.moveTo(mx3+mr3*0.42+mr3*0.86,my3-mr3*0.16);
+  ctx.arc(mx3+mr3*0.42,my3-mr3*0.16,mr3*0.86,0,Math.PI*2);
+  ctx.fill();
+  // ③ 地平の溶けた光：尖塔のシルエットを背景から分離させる帯
+  var hzG=ctx.createLinearGradient(0,GROUND-150,0,GROUND+10);
+  hzG.addColorStop(0,'rgba(190,40,70,0)');hzG.addColorStop(0.6,'rgba(214,58,66,0.34)');
+  hzG.addColorStop(1,'rgba(120,20,40,0.16)');
+  ctx.fillStyle=hzG;ctx.fillRect(0,GROUND-150,W,160);
+  // ④ 遠景の尖塔：黒曜石。細く鋭い＝火山の円錐とは別シルエット（0.018）
+  ctx.fillStyle='#1b0d20';
+  ctx.beginPath();
+  for(var ti=0;ti<7;ti++){
+    var tper=W+380;
+    var tx=((ti*163+30-cam*0.018)%tper+tper)%tper-190;
+    var th=76+((ti*89)%92);
+    var tw=7+((ti*13)%7);
+    ctx.moveTo(tx-tw,GROUND);ctx.lineTo(tx-tw*0.30,GROUND-th);
+    ctx.lineTo(tx+tw*0.42,GROUND-th*0.80);ctx.lineTo(tx+tw,GROUND);
+  }
+  ctx.fill();
+  // ⑤ 中景の尖塔：手前(0.045)でさらに黒く、根元に溶岩の割れ目
+  ctx.fillStyle='#0e0614';
+  ctx.beginPath();
+  for(var ni=0;ni<5;ni++){
+    var nper=W+300;
+    var nx=((ni*167+96-cam*0.045)%nper+nper)%nper-150;
+    var nh=42+((ni*71)%50);
+    var nw=10+((ni*17)%8);
+    ctx.moveTo(nx-nw,GROUND);ctx.lineTo(nx-nw*0.20,GROUND-nh);
+    ctx.lineTo(nx+nw*0.52,GROUND-nh*0.72);ctx.lineTo(nx+nw,GROUND);
+  }
+  ctx.fill();
+  ctx.fillStyle='rgba(255,96,40,0.55)';   // 割れ目の光。尖塔と同じ nx 基準で描く
+  ctx.beginPath();
+  for(var gi2=0;gi2<5;gi2++){
+    var gper=W+300;
+    var gx2=((gi2*167+96-cam*0.045)%gper+gper)%gper-150;
+    var gh3=42+((gi2*71)%50);
+    ctx.moveTo(gx2-2,GROUND);ctx.lineTo(gx2+0.6,GROUND-gh3*0.42);
+    ctx.lineTo(gx2+2.6,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 火の粉：下から上へ舞い上がる（星ではないのがW9の目印）
+  ctx.fillStyle='rgba(255,150,60,0.62)';
+  ctx.beginPath();
+  for(var ei=0;ei<14;ei++){
+    var et=(fr*0.9+ei*31)%300;
+    var ex=((ei*103+16-cam*0.06)%W+W)%W+Math.sin((et+ei*24)*0.04)*8;
+    var ey=GROUND-4-et*1.02;
+    if(ey<-6) continue;
+    var er=1.1+((ei*7)%3)*0.6;
+    ctx.moveTo(ex+er,ey);ctx.arc(ex,ey,er,0,Math.PI*2);
+  }
+  ctx.fill();
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
@@ -6542,7 +6620,7 @@ function bgDraw(w){
     case 6:  bgNightMtn(); break;  // 夜の城（暫定：夜の山岳で城が無い）
     case 7:  bgSky();      break;  // ★v250 空中（新規・一致）
     case 8:  bgSea();      break;  // ★v251 海底（新規・一致）
-    case 9:  bgSpace();    break;  // 魔界（暫定：深宇宙）
+    case 9:  bgHell();     break;  // ★v252 魔界（新規・一致）
     case 10: bgSpace();    break;  // 天空神殿（暫定：深宇宙）
     default: bgGrass();
   }
