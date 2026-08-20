@@ -6610,6 +6610,96 @@ function bgHell(){   // ★v252 W9魔界（新規）
   ctx.fill();
 }
 
+function bgTemple(){   // ★v253 W10天空神殿（新規・最終ワールド）
+  // ▶ 差別化：金と白／並び立つ石柱／上から降る聖なる光条／舞う粒子は金の光片
+  //   W7空中（青空＋雲海＋浮遊島）との違いは「金基調」「人工物の柱」「垂直の光条」。
+  //   最終ワールドなので、他のどれよりも荘厳で明るい側に振る。
+  // ① 空：天頂の澄んだ藍 → 地平の金
+  var tG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  tG.addColorStop(0,'#2a4d86');tG.addColorStop(0.38,'#6d84b8');
+  tG.addColorStop(0.72,'#d3b483');tG.addColorStop(1,'#f2dcae');
+  ctx.fillStyle=tG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 後光：画面上部中央の光源。視差なし＝無限遠。
+  var hx=W*0.50, hy=64;
+  var hg2=ctx.createRadialGradient(hx,hy,8,hx,hy,190);
+  hg2.addColorStop(0,'rgba(255,250,224,0.88)');
+  hg2.addColorStop(0.34,'rgba(255,236,178,0.34)');
+  hg2.addColorStop(1,'rgba(255,228,160,0)');
+  ctx.fillStyle=hg2;ctx.fillRect(hx-190,hy-190,380,380);
+  // ③ 聖なる光条：上から降りる。ゆっくり明滅する。
+  var tpul=0.72+Math.sin(fr*0.026)*0.28;
+  ctx.fillStyle='rgba(255,246,206,'+(0.13*tpul).toFixed(3)+')';
+  ctx.beginPath();
+  for(var li=0;li<6;li++){
+    var lper=W+280;
+    var lx=((li*137+24-cam*0.025)%lper+lper)%lper-140;
+    var lw=9+((li*19)%12);
+    ctx.moveTo(lx-lw,0);ctx.lineTo(lx+lw,0);
+    ctx.lineTo(lx+lw*1.9,GROUND-20);ctx.lineTo(lx-lw*1.9,GROUND-20);
+  }
+  ctx.fill();
+  // ④ 遠景の神殿：かすんだ白。破風（三角の屋根）＋土台で「建物」と分かる形に（0.015）
+  ctx.fillStyle='rgba(232,226,246,0.50)';
+  ctx.beginPath();
+  for(var si3=0;si3<3;si3++){
+    var sper3=W+420;
+    var sx3=((si3*268+60-cam*0.015)%sper3+sper3)%sper3-210;
+    var sy3=150+((si3*61)%36);
+    var sw3=46+((si3*29)%22);
+    ctx.moveTo(sx3-sw3,sy3);ctx.lineTo(sx3,sy3-sw3*0.46);ctx.lineTo(sx3+sw3,sy3);
+    ctx.lineTo(sx3+sw3*0.86,sy3+52);ctx.lineTo(sx3-sw3*0.86,sy3+52);
+  }
+  ctx.fill();
+  // ⑤ 石柱：このワールドの主役。柱身と柱頭・柱礎を同じ座標式から描く（§1-9）
+  var colX=[], colTop=[];
+  for(var ci3=0;ci3<7;ci3++){
+    var cper3=W+300;
+    colX.push(((ci3*151+40-cam*0.05)%cper3+cper3)%cper3-150);
+    colTop.push(GROUND-(96+((ci3*67)%74)));
+  }
+  ctx.fillStyle='#efe7d4';   // 柱身
+  ctx.beginPath();
+  for(var cj=0;cj<7;cj++){
+    ctx.moveTo(colX[cj]-8,GROUND);ctx.lineTo(colX[cj]-6.4,colTop[cj]);
+    ctx.lineTo(colX[cj]+6.4,colTop[cj]);ctx.lineTo(colX[cj]+8,GROUND);
+  }
+  ctx.fill();
+  ctx.fillStyle='#cdbf9d';   // 柱頭・柱礎（陰）
+  ctx.beginPath();
+  for(var ck=0;ck<7;ck++){
+    ctx.moveTo(colX[ck]-11,colTop[ck]-7);ctx.lineTo(colX[ck]+11,colTop[ck]-7);
+    ctx.lineTo(colX[ck]+11,colTop[ck]);ctx.lineTo(colX[ck]-11,colTop[ck]);
+    ctx.moveTo(colX[ck]-12,GROUND-9);ctx.lineTo(colX[ck]+12,GROUND-9);
+    ctx.lineTo(colX[ck]+12,GROUND);ctx.lineTo(colX[ck]-12,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 雲：足元の高度感。柱の根元をわずかに隠す。
+  ctx.fillStyle='rgba(255,252,240,0.60)';
+  ctx.beginPath();
+  for(var qi2=0;qi2<7;qi2++){
+    var qper=W+260;
+    var qx=((qi2*127+30-cam*0.08)%qper+qper)%qper-130;
+    var qr=16+((qi2*29)%16);
+    var qy=GROUND-16+((qi2*11)%8);
+    ctx.moveTo(qx+qr,qy);ctx.arc(qx,qy,qr,0,Math.PI*2);
+    ctx.moveTo(qx+qr*0.8+qr*0.62,qy+5);ctx.arc(qx+qr*0.8,qy+5,qr*0.62,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑦ 金の光片：ゆっくり舞い上がる。火の粉より遅く上品に。
+  ctx.fillStyle='rgba(255,222,132,0.72)';
+  ctx.beginPath();
+  for(var pi6=0;pi6<11;pi6++){
+    var pt2=(fr*0.42+pi6*33)%330;
+    var px6=((pi6*109+20-cam*0.07)%W+W)%W+Math.sin((pt2+pi6*28)*0.03)*10;
+    var py6=GROUND-6-pt2;
+    if(py6<-6) continue;
+    var pr2=1.5+((pi6*7)%3)*0.5;
+    ctx.moveTo(px6,py6-pr2);ctx.lineTo(px6+pr2,py6);
+    ctx.lineTo(px6,py6+pr2);ctx.lineTo(px6-pr2,py6);
+  }
+  ctx.fill();
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
@@ -6621,7 +6711,7 @@ function bgDraw(w){
     case 7:  bgSky();      break;  // ★v250 空中（新規・一致）
     case 8:  bgSea();      break;  // ★v251 海底（新規・一致）
     case 9:  bgHell();     break;  // ★v252 魔界（新規・一致）
-    case 10: bgSpace();    break;  // 天空神殿（暫定：深宇宙）
+    case 10: bgTemple();   break;  // ★v253 天空神殿（新規・一致）
     default: bgGrass();
   }
 }
