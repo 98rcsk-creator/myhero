@@ -6780,6 +6780,100 @@ function bgForest(){   // ★v254 W2夕暮れの森（新規・bgSunsetの「森
   }
 }
 
+function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が無い」を解消）
+  // ▶ 差別化：夜だが自然物ではなく人工物。塔・城壁・銃眼のシルエットと窓の灯り。
+  //   W9魔界（紫×深紅・血の月・尖塔）との違いは「青い夜」「白い月」「四角い建造物」。
+  //   W3洞窟（閉じた岩）との違いは「空がある」「窓の灯りが点在する」。
+  // ① 空：天頂の濃紺 → 地平のわずかな藍。夜だが真っ黒にはしない。
+  var cG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  cG.addColorStop(0,'#0a1030');cG.addColorStop(0.48,'#152048');
+  cG.addColorStop(0.84,'#243560');cG.addColorStop(1,'#33487a');
+  ctx.fillStyle=cG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 星：城壁より上だけ。W9の火の粉と違い動かない。
+  ctx.fillStyle='rgba(224,236,255,0.62)';
+  ctx.beginPath();
+  for(var ci4=0;ci4<26;ci4++){
+    var cxs=((ci4*97+13-cam*0.008)%W+W)%W;
+    var cys=8+((ci4*61)%150);
+    var crs=0.7+((ci4*7)%3)*0.4;
+    ctx.moveTo(cxs+crs,cys);ctx.arc(cxs,cys,crs,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ③ 月：白い満月。視差ごく浅く＋クランプ（§1-9）
+  var lx=W*0.24-cam*0.009;
+  if(lx<W*0.10) lx=W*0.10;
+  if(lx>W*0.40) lx=W*0.40;
+  var ly=62, lr=27;
+  var lgl=ctx.createRadialGradient(lx,ly,lr*0.6,lx,ly,lr*3.4);
+  lgl.addColorStop(0,'rgba(190,214,255,0.30)');lgl.addColorStop(1,'rgba(150,180,255,0)');
+  ctx.fillStyle=lgl;ctx.fillRect(lx-lr*3.4,ly-lr*3.4,lr*6.8,lr*6.8);
+  ctx.fillStyle='#e6edff';
+  ctx.beginPath();ctx.moveTo(lx+lr,ly);ctx.arc(lx,ly,lr,0,Math.PI*2);ctx.fill();
+  // ④ 遠景の城：主塔＋屋根。視差0.014でクランプせずラップ（複数棟が流れてよい）
+  ctx.fillStyle='rgba(20,28,58,0.86)';
+  ctx.beginPath();
+  for(var ki2=0;ki2<3;ki2++){
+    var kper2=W+420;
+    var kx2=((ki2*252+40-cam*0.014)%kper2+kper2)%kper2-210;
+    var kh2=118+((ki2*83)%64);
+    var kw2=22+((ki2*19)%12);
+    ctx.moveTo(kx2-kw2,GROUND);ctx.lineTo(kx2-kw2,GROUND-kh2);
+    ctx.lineTo(kx2,GROUND-kh2-kw2*1.15);ctx.lineTo(kx2+kw2,GROUND-kh2);
+    ctx.lineTo(kx2+kw2,GROUND);
+  }
+  ctx.fill();
+  // ⑤ 城壁：銃眼（凹凸）付き。手前(0.04)でさらに暗い。
+  ctx.fillStyle='#0e142e';
+  ctx.beginPath();
+  for(var wi2=0;wi2<10;wi2++){
+    var wper2=W+300;
+    var wx2=((wi2*97+20-cam*0.04)%wper2+wper2)%wper2-150;
+    var wh3=46+((wi2*31)%18);
+    ctx.moveTo(wx2-16,GROUND);ctx.lineTo(wx2-16,GROUND-wh3);
+    ctx.lineTo(wx2-9,GROUND-wh3);ctx.lineTo(wx2-9,GROUND-wh3-7);
+    ctx.lineTo(wx2-2,GROUND-wh3-7);ctx.lineTo(wx2-2,GROUND-wh3);
+    ctx.lineTo(wx2+6,GROUND-wh3);ctx.lineTo(wx2+6,GROUND-wh3-7);
+    ctx.lineTo(wx2+13,GROUND-wh3-7);ctx.lineTo(wx2+13,GROUND-wh3);
+    ctx.lineTo(wx2+16,GROUND-wh3);ctx.lineTo(wx2+16,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 窓の灯り：城壁と同じ座標式から描く（片方だけ流れる事故の防止・§1-9）
+  var lpul=0.72+Math.sin(fr*0.04)*0.14;
+  ctx.fillStyle='rgba(255,196,96,'+(0.82*lpul).toFixed(3)+')';
+  ctx.beginPath();
+  for(var gi3=0;gi3<10;gi3++){
+    var gper2=W+300;
+    var gx3=((gi3*97+20-cam*0.04)%gper2+gper2)%gper2-150;
+    var gh4=46+((gi3*31)%18);
+    if(gi3%3===2) continue;                 // 全部は灯さない
+    ctx.moveTo(gx3-6,GROUND-gh4+12);ctx.lineTo(gx3-1,GROUND-gh4+12);
+    ctx.lineTo(gx3-1,GROUND-gh4+21);ctx.lineTo(gx3-6,GROUND-gh4+21);
+    ctx.moveTo(gx3+4,GROUND-gh4+12);ctx.lineTo(gx3+9,GROUND-gh4+12);
+    ctx.lineTo(gx3+9,GROUND-gh4+21);ctx.lineTo(gx3+4,GROUND-gh4+21);
+  }
+  ctx.fill();
+  // ⑦ 夜霧：城壁の根元をやわらげ、まものが立つ帯の輝度を下げる（§1-14/§1-15）
+  var mgG=ctx.createLinearGradient(0,GROUND-92,0,GROUND+20);
+  mgG.addColorStop(0,'rgba(18,26,56,0)');
+  mgG.addColorStop(0.55,'rgba(18,26,56,0.42)');
+  mgG.addColorStop(1,'rgba(12,18,42,0.66)');
+  ctx.fillStyle=mgG;ctx.fillRect(0,GROUND-92,W,112);
+  // ⑧ コウモリ：夜の城の目印。月の側を横切る。
+  ctx.fillStyle='rgba(14,18,40,0.72)';
+  ctx.beginPath();
+  for(var bi4=0;bi4<6;bi4++){
+    var bper2=W+220;
+    var bx4=((bi4*131+18-cam*0.11-fr*0.36)%bper2+bper2)%bper2-110;
+    var by4=54+((bi4*47)%86)+Math.sin(fr*0.06+bi4)*5;
+    var bs2=3+((bi4*5)%2);
+    var bfl=Math.sin(fr*0.22+bi4)*bs2*0.5;
+    ctx.moveTo(bx4,by4);ctx.lineTo(bx4-bs2*2,by4-bs2*0.5+bfl);
+    ctx.lineTo(bx4-bs2*0.7,by4+bs2*0.4);ctx.lineTo(bx4+bs2*0.7,by4+bs2*0.4);
+    ctx.lineTo(bx4+bs2*2,by4-bs2*0.5+bfl);
+  }
+  ctx.fill();
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
@@ -6787,7 +6881,7 @@ function bgDraw(w){
     case 3:  bgCave();     break;  // ★v236 洞窟（新規・一致）
     case 4:  bgSnow();     break;  // ★v234 雪山（新規・一致）
     case 5:  bgVolcano();  break;  // ★v236 火山（新規・一致）
-    case 6:  bgNightMtn(); break;  // 夜の城（暫定：夜の山岳で城が無い）
+    case 6:  bgCastle();   break;  // ★v255 夜の城（新規・一致）
     case 7:  bgSky();      break;  // ★v250 空中（新規・一致）
     case 8:  bgSea();      break;  // ★v251 海底（新規・一致）
     case 9:  bgHell();     break;  // ★v252 魔界（新規・一致）
