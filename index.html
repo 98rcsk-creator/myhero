@@ -923,6 +923,21 @@ var GRAV=0.52, GROUND=H-55, GOAL_X=4200, BW=13, BH=34;
 //   この値は「旧の合算式より厳しくなるケースが0件」になるよう選んである。
 var STAR_KILL2=0.50, STAR_KILL3=0.70, STAR_COIN=0.70;
 
+// ★v260 坂での歩行速度。上りは遅く、下りは速く。
+//   ⚠ 掛けるのは「横移動」だけ。攻撃間隔(p.atkCD)・ジャンプ(p.vy)・弾速には一切掛けない。
+//   勾配は実際の地面の表面から出す（getGroundY が坂を補間しているので坂だけに効く）。
+//   実地形の勾配は W10 で 50px/95px = 53% と急なため、実質は下のクランプ値に張り付く。
+//   ＝「上りは 0.85倍・下りは 1.15倍」の ±15% と考えてよい。強すぎたらこの2つを 1 に近づける。
+var SLOPE_SPD_K=0.55, SLOPE_SPD_MIN=0.85, SLOPE_SPD_MAX=1.15;
+function slopeSpd(cx,dir){
+  if(!dir) return 1;
+  var gL=getGroundY(cx-8), gR=getGroundY(cx+8);
+  if(gL>GROUND+80 || gR>GROUND+80) return 1;      // 穴の上では素の速度
+  var along=((gR-gL)/16)*(dir>0?1:-1);            // +なら進行方向が下り
+  var m=1+along*SLOPE_SPD_K;
+  return m<SLOPE_SPD_MIN?SLOPE_SPD_MIN:(m>SLOPE_SPD_MAX?SLOPE_SPD_MAX:m);
+}
+
 // ★v247 弾の属性。ワールドの世界観に合わせて火の玉の見た目を変える
 //   （雪山のまものがオレンジの火を吐いていたため）。
 //   描画は色の差し替えだけで図形は同じ＝描画コールは増えない。
@@ -4177,6 +4192,8 @@ function update(){
   else if(p.guardHold>0){ p.guardHold--; }
   var guarding=(hasSk(3))&&(gG()||p.guardHold>0);
   var MAXSPD=guarding?1.5:(4.4*(p.trait==='speed'?1.22:1));  // 俊足：移動速度UP
+  // ★v260 坂：接地して歩いている間だけ上限を上下させる（攻撃・ジャンプには非干渉）
+  if(p.onG && p.vx!==0) MAXSPD*=slopeSpd(p.x+pw()/2, p.vx>0?1:-1);
   var ACCEL=p.onG?0.7:0.5;        // 空中はやや鈍く（慣性感）
   var FRIC=p.onG?0.78:0.96;       // 空中は摩擦弱め＝勢いが残る
   if(p.bossFreeze){ p.dir=1; p.vx=Math.min(3.2,p.vx+0.35); p.st='run'; }  // ボス撃破後はゴールへ自動ラン
@@ -4479,13 +4496,13 @@ function update(){
         e.vx=-baseSpd;
       }
       e.vx=checkHole(e,e.vx);
-      e.vy+=GRAV; e.x+=e.vx; e.onG=false;
+      e.vy+=GRAV; e.x+=e.vx*(e.onG?slopeSpd(e.x+e.w/2,e.vx>0?1:-1):1); e.onG=false;  // ★v260 坂で加減速
       moveY(e,e.w,e.h);
     } else if(e.type==='fire'){
       // ファイアー：左右往復しながら進む
       e.vx=-baseSpd;
       e.vx=checkHole(e,e.vx);
-      e.vy+=GRAV; e.x+=e.vx; e.onG=false;
+      e.vy+=GRAV; e.x+=e.vx*(e.onG?slopeSpd(e.x+e.w/2,e.vx>0?1:-1):1); e.onG=false;  // ★v260 坂で加減速
       moveY(e,e.w,e.h);
     } else if(e.type==='boss'){
       // ボスドラゴン：定位置付近でゆっくり上下＋プレイヤーへ寄る
@@ -4523,7 +4540,7 @@ function update(){
       var vx0=e.vx;
       e.vx=checkHole(e,e.vx);
       if(e.vx!==vx0) e.moveDir=-e.moveDir;             // 穴で折り返したら向き反転
-      e.vy+=GRAV; e.x+=e.vx; e.onG=false;
+      e.vy+=GRAV; e.x+=e.vx*(e.onG?slopeSpd(e.x+e.w/2,e.vx>0?1:-1):1); e.onG=false;  // ★v260 坂で加減速
       moveY(e,e.w,e.h);
     }
 
