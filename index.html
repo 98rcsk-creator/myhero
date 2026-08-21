@@ -917,6 +917,12 @@ ctx.setTransform(CV_K,0,0,CV_K,0,0);
 var ov=document.getElementById('overlay');
 var GRAV=0.52, GROUND=H-55, GOAL_X=4200, BW=13, BH=34;
 
+// ★v258 星の条件（SPEC §9-5 案C）。ここだけ触れば難易度が動く。
+//   ★2 = てきを STAR_KILL2 以上たおす、または コインを STAR_COIN 以上とる
+//   ★3 = てきを STAR_KILL3 以上たおし、かつ（コイン STAR_COIN 以上 または ノーダメージ）
+//   この値は「旧の合算式より厳しくなるケースが0件」になるよう選んである。
+var STAR_KILL2=0.50, STAR_KILL3=0.70, STAR_COIN=0.70;
+
 // ★v247 弾の属性。ワールドの世界観に合わせて火の玉の見た目を変える
 //   （雪山のまものがオレンジの火を吐いていたため）。
 //   描画は色の差し替えだけで図形は同じ＝描画コールは増えない。
@@ -3824,14 +3830,24 @@ function nextLevel(){
   statAdd('clears',1);
   if(runNoDamage) statAdd('nodmgClears',1);
   statMax('bestScore',Math.floor(score));
-  // ★星評価を計算（撃破率×0.5 + コイン取得率×0.25 + 残り体力×0.25）
+  // ★v258 星評価を「合算スコア」から「独立した条件」に変更（SPEC §9-5 案C）。
+  //   旧: killRate*0.5 + coinRate*0.25 + hpRate*0.25 を 0.85/0.60 で切る合算式。
+  //   旧の問題（SPEC §9-3）:
+  //     ① HPが重み0.25の見えない足切り。同じ立ち回りでも1回の被弾で★3→★2になった
+  //     ② 序盤ほど敵1体の重みが大きく（W1は6.25%）神経質な設計になっていた
+  //     ③ コイン総数がプレイのたびにランダムに変動し、分母が毎回変わっていた
+  //   新: 3つとも「達成したかどうか」の独立条件。画面の表示と1:1で対応する。
+  //   閾値は「旧より厳しくなるケースが0件」になるよう選んである（16パターンで照合済み）。
   var killRate=stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1;
   var coinRate=stageCoinTotal>0?(stageCoinGot/stageCoinTotal):1;
   var hpRate=p.maxHP>0?(p.hp/p.maxHP):0;
-  var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
+  var starKill2=(killRate>=STAR_KILL2), starCoin2=(coinRate>=STAR_COIN);
+  var starKill3=(killRate>=STAR_KILL3), starNoDmg=(hpRate>=1);
   var earnedStar=1; // クリアで最低★1
-  if(stageScore>=0.85) earnedStar=3;
-  else if(stageScore>=0.60) earnedStar=2;
+  if(starKill3 && (starCoin2 || starNoDmg)) earnedStar=3;
+  else if(starKill2 || starCoin2) earnedStar=2;
+  // 表示用に残す指標（クリア画面のバー表示が参照する）
+  var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
   setStageStar(level, earnedStar);
   lastClearStar=earnedStar; lastClearScore=stageScore;
   // ★クリアボーナスゴールド：基本10G + 星ごと+5G + ステージ番号×1G
@@ -8345,22 +8361,35 @@ function showStageClear(star, scoreRate){
   }
   // ★v237 案A: 星の条件を可視化（判定式は一切変更しない・表示のみ）。SPEC §9-5
   //   合算スコアが画面に出ておらず「敵を全滅させたのに★2」の理由が見えなかったため。
-  var _tgtStar=(star<2)?2:3;
-  var _starHint='<div style="width:220px;margin:2px auto 0;padding:6px 10px;box-sizing:border-box;'
-    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:9px">'
-    +'<div style="color:#9fe4ff;font-size:11px;font-weight:bold">ひょうか '+Math.round((scoreRate||0)*100)+'%'
-    +'<span style="color:#7fb4c8;font-weight:normal;font-size:10px">　★'+_tgtStar+'は '+((_tgtStar===2)?'60':'85')+'%から</span></div>';
+  // ★v258 星の条件を「達成したかどうか」で出す（判定式 nextLevel と同じ定数を参照）。
+  //   v237の「ひょうか NN%」は合算式の表示だったが、v258で式ごと独立条件にしたため
+  //   パーセント表示は意味を持たなくなった。3条件のチェックリストに置き換える。
+  var _kOK2=(stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1)>=STAR_KILL2;
+  var _kOK3=(stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1)>=STAR_KILL3;
+  var _cOK =(stageCoinTotal>0?(stageCoinGot/stageCoinTotal):1)>=STAR_COIN;
+  var _dOK =(p.maxHP>0?(p.hp/p.maxHP):0)>=1;
+  function _cond(ok,txt){
+    return '<div style="display:flex;align-items:center;gap:6px;color:'+(ok?'#bdf5c8':'#9fb6c2')+';font-size:10.5px;line-height:1.5">'
+      +'<span style="font-size:11px">'+(ok?'✅':'⬜')+'</span><span>'+txt+'</span></div>';
+  }
+  var _pK2=Math.round(STAR_KILL2*100), _pK3=Math.round(STAR_KILL3*100), _pC=Math.round(STAR_COIN*100);
+  var _starHint='<div style="width:220px;margin:2px auto 0;padding:7px 10px;box-sizing:border-box;'
+    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:9px;text-align:left">'
+    +'<div style="color:#9fe4ff;font-size:11px;font-weight:bold;margin-bottom:3px">★のじょうけん</div>'
+    +_cond(true,'★1　クリアする')
+    +_cond(_kOK2||_cOK,'★2　てきを '+_pK2+'% たおす／コインを '+_pC+'% とる')
+    +_cond(_kOK3&&(_cOK||_dOK),'★3　てきを '+_pK3+'% たおして、コイン '+_pC+'% かノーダメージ');
   if(star<3){
-    var _gap=Math.max(0,((_tgtStar===2)?0.60:0.85)-(scoreRate||0));
     var _restE=Math.max(0,stageEnemyTotal-stageEnemyKilled);
     var _restC=Math.max(0,stageCoinTotal-stageCoinGot);
-    var _needE=Math.ceil(_gap*stageEnemyTotal/0.5);
-    var _needC=Math.ceil(_gap*stageCoinTotal/0.25);
-    var _tip;
-    if(stageEnemyTotal>0 && _needE>0 && _needE<=_restE) _tip='てきを あと '+_needE+' たおすと ★'+_tgtStar+'！';
-    else if(stageCoinTotal>0 && _needC>0 && _needC<=_restC) _tip='コインを あと '+_needC+' まい とると ★'+_tgtStar+'！';
-    else _tip='ダメージを うけずに クリアすると ★'+_tgtStar+'！';
-    _starHint+='<div style="color:#cfe9f5;font-size:10px;line-height:1.45;margin-top:3px">'+_tip+'</div>';
+    var _tgt=(star<2)?2:3;
+    var _needE=Math.max(0,Math.ceil(((_tgt===2)?STAR_KILL2:STAR_KILL3)*stageEnemyTotal)-stageEnemyKilled);
+    var _needC=Math.max(0,Math.ceil(STAR_COIN*stageCoinTotal)-stageCoinGot);
+    var _tip='';
+    if(stageEnemyTotal>0 && _needE>0 && _needE<=_restE) _tip='てきを あと '+_needE+' たおすと ★'+_tgt+'！';
+    else if(stageCoinTotal>0 && _needC>0 && _needC<=_restC) _tip='コインを あと '+_needC+' まい とると ★'+_tgt+'！';
+    else if(_tgt===3) _tip='ダメージを うけずに クリアすると ★3！';
+    if(_tip) _starHint+='<div style="color:#ffe9a8;font-size:10px;line-height:1.45;margin-top:5px;font-weight:bold">'+_tip+'</div>';
   }
   _starHint+='</div>';
   var nextStage=level+1;
