@@ -454,6 +454,14 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
    ★#howtoBtn の margin-top は静的HTML側とJS注入側の両方にインラインで入っているので
      !important が必要（CLAUDE.md §2-2 の二重マークアップ）。
    内訳: ロゴ -83px / menuRow4 -6px / あそびかた -4px = 計93px を回収 */
+/* ★v263 実機(393×604)で「あそびかた」が16pxはみ出していた。
+   v257の閾値600pxをわずか4px上回って効いていなかったため、段階を1つ足す。
+   主要ターゲット 390×674 には効かせない（660 < 674）。 */
+@media (max-height:660px){
+  .home-logo{max-width:360px;}
+  .menuRow4{margin-top:12px;}
+  #howtoBtn{margin-top:9px !important;}
+}
 @media (max-height:600px){
   .home-logo{max-width:320px;}
   .menuRow4{margin-top:10px;}
@@ -929,6 +937,8 @@ var STAR_KILL2=0.50, STAR_KILL3=0.70, STAR_COIN=0.70;
 //   実地形の勾配は W10 で 50px/95px = 53% と急なため、実質は下のクランプ値に張り付く。
 //   ＝「上りは 0.85倍・下りは 1.15倍」の ±15% と考えてよい。強すぎたらこの2つを 1 に近づける。
 var SLOPE_SPD_K=0.55, SLOPE_SPD_MIN=0.85, SLOPE_SPD_MAX=1.15;
+// ★v261 坂への吸着。SLOPE_STICK=0 にすれば吸着が消えて v259 の挙動に戻る。
+var SLOPE_STICK=7, SLOPE_STICK_VY=7;
 function slopeSpd(cx,dir){
   if(!dir) return 1;
   var gL=getGroundY(cx-8), gR=getGroundY(cx+8);
@@ -3811,6 +3821,19 @@ function _drawPreviewFace(ctx2,cid,c,HR,headCY){
   }
 }
 
+// ★v263 星評価用カウンタの初期化。**buildWorld のたびに必ず呼ぶこと。**
+//   旧実装は doStart（ホーム/マップから開始）でしか呼んでおらず、連続プレイで
+//   ステージが進んでもリセットされなかった。その結果:
+//     ・stageEnemyKilled が全ステージ分たまり続ける
+//     ・stageEnemyTotal は1面目の値のまま
+//   → クリア画面に「たおした 442%」のような値が出て、さらに killRate が1を
+//     超えるため★3の条件が常に成立していた（星評価そのものが壊れていた）。
+function resetStageStats(){
+  stageCoinTotal=cins.length;
+  stageEnemyTotal=enms.filter(function(e){return !e.isBoss;}).length + (lvCfg(level).boss?1:0);
+  stageCoinGot=0; stageEnemyKilled=0;
+}
+
 // ===== スタート =====
 function doStart(keepSkill){
   level=fromStageMap?selectedStage:1; score=0;
@@ -3823,10 +3846,7 @@ function doStart(keepSkill){
   _btnState={bg:null,binv:null,blas:null,bj:null,ba:null,bu:null,bd:null}; // ボタン状態をリセット
   runNoDamage=true;          // ノーダメ判定開始
   statSet('runGold',0);      // 今回稼いだコインをリセット
-  // 星評価用：このステージのコイン総数・敵総数を記録、取得/撃破カウントをリセット
-  stageCoinTotal=cins.length;
-  stageEnemyTotal=enms.filter(function(e){return !e.isBoss;}).length + (lvCfg(level).boss?1:0);
-  stageCoinGot=0; stageEnemyKilled=0;
+  resetStageStats();   // ★v263 星評価用カウンタ（buildWorld のたびに呼ぶ）
   markCharPlayed(selectedChar); // プレイ済みキャラ記録（全キャラ制覇実績）
   checkAchievements();       // 全キャラ制覇など即時チェック
   updHUD();
@@ -3855,6 +3875,7 @@ function restartStage(){
   // 穴落下 → ステージ最初から（lives/skillは維持）
   resetP(true);
   buildWorld(level);
+  resetStageStats();   // ★v263 やり直しなので星評価用カウンタも初期化
   cam=0;
   gs='play';
   ov.style.display='none';
@@ -3941,6 +3962,7 @@ function advanceStage(){
   checkAchievements();  // ステージクリアごとに実績チェック
   resetP(true);
   buildWorld(level);
+  resetStageStats();   // ★v263 連続プレイで次ステージへ進むとき。ここが抜けていたのが442%の原因
   cam=0;
   var cfg=lvCfg(level);
   // LV4開始：強敵ゾーン突入につき短時間無敵ボーナス（3秒=180f）
@@ -3979,10 +4001,109 @@ function advanceStage(){
   if(cfg.boss){ SFX.bossRoar(); }
 }
 
+// ★v262 浮き台のワールド別デザイン。
+//   台は 幅50〜110 × 高さ10 と薄いので、形はほぼ「上端のシルエットと質感」で出す。
+//   当たり判定は従来どおり矩形(t.x,t.y,t.w,t.h)。上面は必ず t.y に合わせること
+//   （雲などで上へ膨らませると、乗ったときに台の中に埋まって見える）。
+//   描画コールは1枚あたり4〜7。従来は5だったので、重くならない範囲に収める。
+var PLAT_BODY=['#7a5533','#5a3a22','#4a4a52','#8fa4b4','#3a2420','#4a4450','#e8eef6','#c2a877','#241830','#efe7d4'];
+var PLAT_DARK=['#5a3d22','#3e2716','#31313a','#6b8090','#241412','#302c38','#c9d8ea','#9c8355','#160e20','#cdbf9d'];
+var PLAT_EDGE=['#5fae52','#8a6a3a','#7a7a86','#ffffff','#ff6a20','#7a7490','#ffffff','#e2685f','#a05cd6','#d9a63f'];
+function drawPlat(tx,t,w){
+  var i=w-1, x=tx, y=t.y, ww=t.w, hh=t.h;
+  var body=PLAT_BODY[i], dark=PLAT_DARK[i], edge=PLAT_EDGE[i];
+  ctx.fillStyle='rgba(0,0,0,0.14)';ctx.fillRect(x+2,y+hh,ww-4,3);   // 接地影（共通）
+  if(w===7){
+    // 空中：雲。下と左右へふくらませ、上面は y のまま平ら
+    ctx.fillStyle=body;
+    ctx.beginPath();
+    ctx.moveTo(x,y);ctx.lineTo(x+ww,y);ctx.lineTo(x+ww,y+hh*0.5);ctx.lineTo(x,y+hh*0.5);
+    for(var c=0;c<5;c++){
+      var cr=hh*0.62+((c*7)%4), cx2=x+4+ (ww-8)*(c/4);
+      ctx.moveTo(cx2+cr,y+hh*0.55);ctx.arc(cx2,y+hh*0.55,cr,0,Math.PI*2);
+    }
+    ctx.fill();
+    ctx.fillStyle=dark;
+    ctx.beginPath();
+    for(var c2=0;c2<4;c2++){
+      var cr2=hh*0.42, cx3=x+8+(ww-16)*(c2/3);
+      ctx.moveTo(cx3+cr2,y+hh*0.95);ctx.arc(cx3,y+hh*0.95,cr2,0,Math.PI*2);
+    }
+    ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.85)';ctx.fillRect(x,y,ww,2);
+    return;
+  }
+  // 共通の土台
+  ctx.fillStyle=body;ctx.fillRect(x,y,ww,hh);
+  ctx.fillStyle=dark;ctx.fillRect(x,y+hh*0.55,ww,hh*0.45);
+  if(w===1){                       // 草原：土＋草＋毛先
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,3);
+    ctx.beginPath();
+    for(var g=0;g<ww-2;g+=7){ ctx.moveTo(x+g,y);ctx.lineTo(x+g+2,y-3.5);ctx.lineTo(x+g+4,y); }
+    ctx.fill();
+  } else if(w===2){                // 夕暮れの森：丸太（木目）
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,2);
+    ctx.strokeStyle='rgba(0,0,0,0.28)';ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x+2,y+hh*0.5);ctx.lineTo(x+ww-2,y+hh*0.5);
+    ctx.moveTo(x+ww*0.32,y+1);ctx.lineTo(x+ww*0.32,y+hh-1);
+    ctx.moveTo(x+ww*0.68,y+1);ctx.lineTo(x+ww*0.68,y+hh-1);
+    ctx.stroke();
+  } else if(w===3||w===9){         // 洞窟／魔界：ゴツゴツした岩（魔界は下も尖らせる）
+    ctx.fillStyle=edge;
+    ctx.beginPath();
+    ctx.moveTo(x,y+2);
+    for(var r=0;r<ww;r+=9){ ctx.lineTo(x+r+4,y-((r*5)%3)); ctx.lineTo(x+r+9,y+2); }
+    ctx.lineTo(x+ww,y+3);ctx.lineTo(x,y+3);
+    ctx.fill();
+    if(w===9){
+      ctx.fillStyle=dark;
+      ctx.beginPath();
+      for(var q=0;q<ww-8;q+=14){ ctx.moveTo(x+q+2,y+hh);ctx.lineTo(x+q+7,y+hh+4);ctx.lineTo(x+q+12,y+hh); }
+      ctx.fill();
+    }
+  } else if(w===4){                // 雪山：雪をかぶった岩（雪が少し垂れる）
+    ctx.fillStyle=edge;
+    ctx.beginPath();
+    ctx.moveTo(x,y+4);ctx.lineTo(x,y);ctx.lineTo(x+ww,y);ctx.lineTo(x+ww,y+4);
+    for(var sw=ww;sw>0;sw-=11){ ctx.lineTo(x+sw-5,y+6.5);ctx.lineTo(x+sw-11,y+4); }
+    ctx.fill();
+  } else if(w===5){                // 火山：溶岩石。ひび割れが光る
+    ctx.fillStyle='#1a0e0c';ctx.fillRect(x,y,ww,2);
+    ctx.strokeStyle=edge;ctx.lineWidth=1.4;
+    ctx.beginPath();
+    for(var k=0;k<ww-6;k+=16){
+      ctx.moveTo(x+k+3,y+hh-1);ctx.lineTo(x+k+7,y+hh*0.45);ctx.lineTo(x+k+12,y+hh-1);
+    }
+    ctx.stroke();
+  } else if(w===6){                // 夜の城：石畳（目地）
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,2);
+    ctx.strokeStyle='rgba(0,0,0,0.34)';ctx.lineWidth=1;
+    ctx.beginPath();
+    for(var m=12;m<ww;m+=16){ ctx.moveTo(x+m,y+2);ctx.lineTo(x+m,y+hh); }
+    ctx.moveTo(x,y+hh*0.6);ctx.lineTo(x+ww,y+hh*0.6);
+    ctx.stroke();
+  } else if(w===8){                // 海底：砂の台＋珊瑚のこぶ
+    ctx.fillStyle=edge;
+    ctx.beginPath();
+    for(var co=0;co<ww-4;co+=13){
+      var cr3=3+((co*3)%2);
+      ctx.moveTo(x+co+5+cr3,y+1);ctx.arc(x+co+5,y+1,cr3,Math.PI,Math.PI*2);
+    }
+    ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.22)';ctx.fillRect(x,y,ww,1.5);
+  } else {                         // 10 天空神殿：大理石＋金の縁
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,2);
+    ctx.fillRect(x,y+hh-2,ww,2);
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(x+2,y+3,ww-4,1);
+  }
+}
+
 // ===== 衝突 =====
 function aabb(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 
 function moveY(ent,ew,eh,limitStep){
+  var _sy0=ent.y;   // ★v261 坂の吸着判定用（このフレームの開始位置）
   var steps=Math.ceil(Math.abs(ent.vy)/4)+1;
   var dy=ent.vy/steps;
   for(var s=0;s<steps;s++){
@@ -3992,8 +4113,10 @@ function moveY(ent,ew,eh,limitStep){
     for(var ti=0;ti<tiles.length;ti++){
       var t=tiles[ti]; if(t.goal) continue;
       if(ent.x+ew<t.x-2||ent.x>t.x+t.w+2) continue;
-      // ★v259 地面は坂なら足元xでの表面高さを使う（浮き台は従来どおり平ら）
-      var tTop=t.g?tileTopAt(t,ent.x+ew/2):t.y;
+      // ★v261 地面は「足元xの地面タイル」から一意に引く。
+      //   v259は候補タイルごとに補間していたため、隣のタイルが先にヒットすると
+      //   端でクランプされた別の高さにスナップし、坂で上下に揺れていた。
+      var tTop=t.g?getGroundY(ent.x+ew/2):t.y;
       var cb=ent.y+eh;
       if(cb>=tTop && ent.y<tTop){
         if(ent.x+ew>t.x+2&&ent.x<t.x+t.w-2){
@@ -4014,6 +4137,19 @@ function moveY(ent,ew,eh,limitStep){
       }
     }
     if(ent.onG) break;
+  }
+  // ★v261 坂への吸着：下り坂を歩くと毎フレーム「地面から離れて落ちる→着地」を
+  //   繰り返し、キャラが小刻みに上下する（実測でズレ最大8.26px・60フレームで15回）。
+  //   落下量が小さいうちだけ地面へ吸い付かせると、この微動が完全に消える（実測0.00px）。
+  //   ⚠ 崖から落ちる動きを殺さないよう、条件は厳しく：
+  //     ・下向きに落ち始めた直後だけ（0<vy<SLOPE_STICK_VY）
+  //     ・地面が足元の SLOPE_STICK px 以内にあるときだけ（穴の上は対象外）
+  if(!ent.onG && ent.vy>0 && ent.vy<SLOPE_STICK_VY && ent.y>=_sy0){
+    var _sgy=getGroundY(ent.x+ew/2);
+    if(_sgy<GROUND+80){
+      var _sd=_sgy-(ent.y+eh);
+      if(_sd>=-2 && _sd<=SLOPE_STICK){ ent.y=_sgy-eh; ent.vy=0; ent.onG=true; }
+    }
   }
 }
 
@@ -4517,8 +4653,12 @@ function update(){
         burst(e.x+e.w/2,e.y+e.h/2,'#cc00ff',24);
         burst(e.x+e.w/2,e.y+e.h/2,'#ff44ff',16);
       }
+      // ★v263 ボスが地形を無視して平らな GROUND 基準で浮いていた（実機で指摘）。
+      //   足元の地面に追従させ、さらに Math.abs で「地面より下へは沈まない」ようにする。
+      //   ＝地面の上をふわふわ浮く挙動になる。穴の上では GROUND 扱い。
       var bobSpd=e.rage?0.08:0.04, bobAmp=e.rage?22:14;
-      e.y=GROUND-e.h+Math.sin(fr*bobSpd)*bobAmp;
+      var _bgy=getGroundY(e.x+e.w/2); if(_bgy>GROUND+10) _bgy=GROUND;
+      e.y=_bgy-e.h-Math.abs(Math.sin(fr*bobSpd))*bobAmp;
       var bdist=p.x-e.x;
       var chase=e.rage?0.9:0.6;
       if(Math.abs(bdist)<260){ e.x+=(bdist>0?chase:-chase); }
@@ -7072,18 +7212,8 @@ function draw(){
       ctx.fillRect(tx,t.y,t.w,t.h);
       ctx.fillStyle='rgba(0,0,0,0.35)';ctx.fillRect(tx+1,t.y,t.w-2,t.h);
     } else {
-      // 浮き台（軽量：単色＋下部陰影）
-      var _pw=Math.min(10,Math.max(1,stageWorld(level)))-1;
-      var platCol=['#7a5533','#6a4520','#2a4060','#4a5a68','#661a10','#4a1030','#0d4a4a','#4a1010','#4a1040','#4a4010'][_pw];
-      var platDk =['#5a3d22','#4a3010','#1c2c44','#34404a','#440a08','#340a20','#063434','#340808','#340830','#342e08'][_pw];
-      var platTop=['#9b7a55','#bb8a50','#4a70a0','#7a90a8','#992200','#7a3068','#1ab0b0','#aa3030','#aa30aa','#aaaa30'][_pw];
-      ctx.fillStyle=platCol;ctx.fillRect(tx,t.y,t.w,t.h);
-      ctx.fillStyle=platDk;ctx.fillRect(tx,t.y+t.h*0.55,t.w,t.h*0.45);
-      ctx.fillStyle=platTop;ctx.fillRect(tx,t.y,t.w,3);
-      // 縁のハイライト
-      ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillRect(tx,t.y,t.w,1);
-      // 影（下に落ちる）
-      ctx.fillStyle='rgba(0,0,0,0.12)';ctx.fillRect(tx,t.y+t.h,t.w,3);
+      // ★v262 浮き台をワールド別のデザインに（当たり判定は矩形のまま・見た目だけ）
+      drawPlat(tx,t,Math.min(10,Math.max(1,stageWorld(level))));
     }
   }
 
@@ -8396,10 +8526,7 @@ function showStageClear(star, scoreRate){
   gs='stageclear';  // ★ボタン専用state（全画面タップでホームに飛ばない＝誤タップ防止）
   ov.classList.add('scrollable');
   ov.classList.remove('home');
-  var killRate=stageEnemyTotal>0?Math.round(stageEnemyKilled/stageEnemyTotal*100):100;
-  var coinRate=stageCoinTotal>0?Math.round(stageCoinGot/stageCoinTotal*100):100;
-  var hpRate=p.maxHP>0?Math.round(p.hp/p.maxHP*100):0;
-  var _w=stageWorld(level);
+  var _w=stageWorld(level);   // ★v263 評価バー撤去に伴い killRate/coinRate/hpRate は _kPct等に一本化
   // 星表示（獲得分は金＋発光・大きめ。アニメで順番に光る感じ）
   var starHTML='<div style="display:flex;gap:14px;justify-content:center;margin:6px 0 18px">';
   for(var i=0;i<3;i++){
@@ -8408,47 +8535,48 @@ function showStageClear(star, scoreRate){
       +(got?'animation:starPop 0.5s cubic-bezier(.2,1.5,.4,1) both, starTwinkle 1.6s ease-in-out infinite;animation-delay:'+(0.18+i*0.32)+'s, '+(0.7+i*0.32)+'s;':'')+'">★</span>';
   }
   starHTML+='</div>';
-  // 評価バー1行（アイコン＋％を横並びで大きく）
-  function statRow(icon,label,val,col){
-    return '<div style="display:flex;align-items:center;gap:8px;width:200px;margin:5px auto">'
-      +'<span style="font-size:18px;width:24px">'+icon+'</span>'
-      +'<span style="color:#ccc;font-size:12px;width:54px;text-align:left">'+label+'</span>'
-      +'<div style="flex:1;height:10px;background:rgba(255,255,255,0.12);border-radius:5px;overflow:hidden">'
-        +'<div style="width:'+val+'%;height:100%;background:'+col+';border-radius:5px"></div></div>'
-      +'<span style="color:#fff;font-size:12px;font-weight:bold;width:38px;text-align:right">'+val+'%</span>'
-    +'</div>';
-  }
   // ★v237 案A: 星の条件を可視化（判定式は一切変更しない・表示のみ）。SPEC §9-5
   //   合算スコアが画面に出ておらず「敵を全滅させたのに★2」の理由が見えなかったため。
-  // ★v258 星の条件を「達成したかどうか」で出す（判定式 nextLevel と同じ定数を参照）。
-  //   v237の「ひょうか NN%」は合算式の表示だったが、v258で式ごと独立条件にしたため
-  //   パーセント表示は意味を持たなくなった。3条件のチェックリストに置き換える。
-  var _kOK2=(stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1)>=STAR_KILL2;
-  var _kOK3=(stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1)>=STAR_KILL3;
-  var _cOK =(stageCoinTotal>0?(stageCoinGot/stageCoinTotal):1)>=STAR_COIN;
-  var _dOK =(p.maxHP>0?(p.hp/p.maxHP):0)>=1;
-  function _cond(ok,txt){
-    return '<div style="display:flex;align-items:center;gap:6px;color:'+(ok?'#bdf5c8':'#9fb6c2')+';font-size:10.5px;line-height:1.5">'
-      +'<span style="font-size:11px">'+(ok?'✅':'⬜')+'</span><span>'+txt+'</span></div>';
+  // ★v263 クリア画面を「どうなったら★いくつか」1枚に集約（実機で見にくいと指摘）。
+  //   v258 は別々だった「評価バー3本」と「条件チェックリスト」が同じ内容の二重表示で、
+  //   さらに幅220pxに長文を入れていたため途中で折り返して読めなかった。
+  //   1行＝1つの★にして、条件と現在値を横並びにする。幅は 276px。
+  var _kPct=stageEnemyTotal>0?Math.round(stageEnemyKilled/stageEnemyTotal*100):100;
+  var _cPct=stageCoinTotal>0?Math.round(stageCoinGot/stageCoinTotal*100):100;
+  var _hPct=p.maxHP>0?Math.round(p.hp/p.maxHP*100):0;
+  var _kOK2=(_kPct>=STAR_KILL2*100), _kOK3=(_kPct>=STAR_KILL3*100);
+  var _cOK=(_cPct>=STAR_COIN*100), _dOK=(_hPct>=100);
+  function _row(ok,star,cond,now){
+    // 条件と現在値を横に並べると幅が足りず折り返すので、上下2行にして全幅を使う
+    return '<div style="padding:6px 0;'+(star<3?'border-bottom:1px solid rgba(159,228,255,0.16);':'')+'">'
+      +'<div style="display:flex;align-items:center;gap:7px">'
+        +'<span style="font-size:13px;width:16px;flex:none">'+(ok?'✅':'⬜')+'</span>'
+        +'<span style="font-size:13px;font-weight:bold;color:'+(ok?'#ffd24a':'#7f8f99')+';width:26px;flex:none">★'+star+'</span>'
+        +'<span style="flex:1;font-size:12px;line-height:1.35;color:'+(ok?'#eaf6ff':'#9fb6c2')+';text-align:left">'+cond+'</span>'
+      +'</div>'
+      +(now?'<div style="margin-left:49px;font-size:10.5px;line-height:1.3;color:'+(ok?'#bdf5c8':'#8fa4b0')+';text-align:left">'+now+'</div>':'')
+    +'</div>';
   }
   var _pK2=Math.round(STAR_KILL2*100), _pK3=Math.round(STAR_KILL3*100), _pC=Math.round(STAR_COIN*100);
-  var _starHint='<div style="width:220px;margin:2px auto 0;padding:7px 10px;box-sizing:border-box;'
-    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:9px;text-align:left">'
-    +'<div style="color:#9fe4ff;font-size:11px;font-weight:bold;margin-bottom:3px">★のじょうけん</div>'
-    +_cond(true,'★1　クリアする')
-    +_cond(_kOK2||_cOK,'★2　てきを '+_pK2+'% たおす／コインを '+_pC+'% とる')
-    +_cond(_kOK3&&(_cOK||_dOK),'★3　てきを '+_pK3+'% たおして、コイン '+_pC+'% かノーダメージ');
+  var _starHint='<div style="width:300px;max-width:94%;margin:10px auto 0;padding:9px 12px;box-sizing:border-box;'
+    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:11px">'
+    +'<div style="color:#9fe4ff;font-size:11.5px;font-weight:bold;text-align:left;margin-bottom:2px">★のじょうけん</div>'
+    +_row(true,1,'クリアする','')
+    +_row(_kOK2||_cOK,2,'てき '+_pK2+'% か コイン '+_pC+'%',
+          'いま　てき '+_kPct+'% ・ コイン '+_cPct+'%')
+    +_row(_kOK3&&(_cOK||_dOK),3,'てき '+_pK3+'% ＋（コイン '+_pC+'% か ノーダメ）',
+          _dOK?'いま　てき '+_kPct+'% ・ ノーダメージ！':'いま　てき '+_kPct+'% ・ たいりょく '+_hPct+'%');
   if(star<3){
+    var _tgt=(star<2)?2:3;
     var _restE=Math.max(0,stageEnemyTotal-stageEnemyKilled);
     var _restC=Math.max(0,stageCoinTotal-stageCoinGot);
-    var _tgt=(star<2)?2:3;
     var _needE=Math.max(0,Math.ceil(((_tgt===2)?STAR_KILL2:STAR_KILL3)*stageEnemyTotal)-stageEnemyKilled);
     var _needC=Math.max(0,Math.ceil(STAR_COIN*stageCoinTotal)-stageCoinGot);
     var _tip='';
     if(stageEnemyTotal>0 && _needE>0 && _needE<=_restE) _tip='てきを あと '+_needE+' たおすと ★'+_tgt+'！';
     else if(stageCoinTotal>0 && _needC>0 && _needC<=_restC) _tip='コインを あと '+_needC+' まい とると ★'+_tgt+'！';
     else if(_tgt===3) _tip='ダメージを うけずに クリアすると ★3！';
-    if(_tip) _starHint+='<div style="color:#ffe9a8;font-size:10px;line-height:1.45;margin-top:5px;font-weight:bold">'+_tip+'</div>';
+    if(_tip) _starHint+='<div style="color:#ffe9a8;font-size:11px;line-height:1.5;margin-top:7px;font-weight:bold;text-align:center">'+_tip+'</div>';
   }
   _starHint+='</div>';
   var nextStage=level+1;
@@ -8457,9 +8585,6 @@ function showStageClear(star, scoreRate){
     +'<h2 style="color:#ffe44d;font-size:24px;margin-bottom:2px">クリア！</h2>'
     +'<div style="color:#9fe4ff;font-size:13px;font-weight:bold;margin-bottom:4px">WORLD '+_w+'</div>'
     +starHTML
-    +statRow('⚔️','たおした',killRate,'#ff8866')
-    +statRow('🪙','コイン',coinRate,'#ffd24a')
-    +statRow('❤️','たいりょく',hpRate,'#66dd88')
     +_starHint
     +'<div style="color:#ffe44d;font-size:14px;margin:12px 0 4px">スコア <b style="font-size:22px">'+Math.floor(score)+'</b></div>'
     +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,210,74,0.16);border:1.5px solid rgba(255,210,74,0.5);border-radius:10px;padding:6px 14px;margin:2px 0 4px"><span style="font-size:18px">💰</span><span style="color:#ffd24a;font-size:17px;font-weight:bold">+'+lastEarnedGold+'G</span><span style="color:#cda84a;font-size:11px">ゲット！</span></div>'
