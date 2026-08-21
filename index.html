@@ -929,6 +929,8 @@ var STAR_KILL2=0.50, STAR_KILL3=0.70, STAR_COIN=0.70;
 //   実地形の勾配は W10 で 50px/95px = 53% と急なため、実質は下のクランプ値に張り付く。
 //   ＝「上りは 0.85倍・下りは 1.15倍」の ±15% と考えてよい。強すぎたらこの2つを 1 に近づける。
 var SLOPE_SPD_K=0.55, SLOPE_SPD_MIN=0.85, SLOPE_SPD_MAX=1.15;
+// ★v261 坂への吸着。SLOPE_STICK=0 にすれば吸着が消えて v259 の挙動に戻る。
+var SLOPE_STICK=7, SLOPE_STICK_VY=7;
 function slopeSpd(cx,dir){
   if(!dir) return 1;
   var gL=getGroundY(cx-8), gR=getGroundY(cx+8);
@@ -3983,6 +3985,7 @@ function advanceStage(){
 function aabb(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 
 function moveY(ent,ew,eh,limitStep){
+  var _sy0=ent.y;   // ★v261 坂の吸着判定用（このフレームの開始位置）
   var steps=Math.ceil(Math.abs(ent.vy)/4)+1;
   var dy=ent.vy/steps;
   for(var s=0;s<steps;s++){
@@ -3992,8 +3995,10 @@ function moveY(ent,ew,eh,limitStep){
     for(var ti=0;ti<tiles.length;ti++){
       var t=tiles[ti]; if(t.goal) continue;
       if(ent.x+ew<t.x-2||ent.x>t.x+t.w+2) continue;
-      // ★v259 地面は坂なら足元xでの表面高さを使う（浮き台は従来どおり平ら）
-      var tTop=t.g?tileTopAt(t,ent.x+ew/2):t.y;
+      // ★v261 地面は「足元xの地面タイル」から一意に引く。
+      //   v259は候補タイルごとに補間していたため、隣のタイルが先にヒットすると
+      //   端でクランプされた別の高さにスナップし、坂で上下に揺れていた。
+      var tTop=t.g?getGroundY(ent.x+ew/2):t.y;
       var cb=ent.y+eh;
       if(cb>=tTop && ent.y<tTop){
         if(ent.x+ew>t.x+2&&ent.x<t.x+t.w-2){
@@ -4014,6 +4019,19 @@ function moveY(ent,ew,eh,limitStep){
       }
     }
     if(ent.onG) break;
+  }
+  // ★v261 坂への吸着：下り坂を歩くと毎フレーム「地面から離れて落ちる→着地」を
+  //   繰り返し、キャラが小刻みに上下する（実測でズレ最大8.26px・60フレームで15回）。
+  //   落下量が小さいうちだけ地面へ吸い付かせると、この微動が完全に消える（実測0.00px）。
+  //   ⚠ 崖から落ちる動きを殺さないよう、条件は厳しく：
+  //     ・下向きに落ち始めた直後だけ（0<vy<SLOPE_STICK_VY）
+  //     ・地面が足元の SLOPE_STICK px 以内にあるときだけ（穴の上は対象外）
+  if(!ent.onG && ent.vy>0 && ent.vy<SLOPE_STICK_VY && ent.y>=_sy0){
+    var _sgy=getGroundY(ent.x+ew/2);
+    if(_sgy<GROUND+80){
+      var _sd=_sgy-(ent.y+eh);
+      if(_sd>=-2 && _sd<=SLOPE_STICK){ ent.y=_sgy-eh; ent.vy=0; ent.onG=true; }
+    }
   }
 }
 
