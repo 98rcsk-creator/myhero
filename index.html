@@ -3981,6 +3981,104 @@ function advanceStage(){
   if(cfg.boss){ SFX.bossRoar(); }
 }
 
+// ★v262 浮き台のワールド別デザイン。
+//   台は 幅50〜110 × 高さ10 と薄いので、形はほぼ「上端のシルエットと質感」で出す。
+//   当たり判定は従来どおり矩形(t.x,t.y,t.w,t.h)。上面は必ず t.y に合わせること
+//   （雲などで上へ膨らませると、乗ったときに台の中に埋まって見える）。
+//   描画コールは1枚あたり4〜7。従来は5だったので、重くならない範囲に収める。
+var PLAT_BODY=['#7a5533','#5a3a22','#4a4a52','#8fa4b4','#3a2420','#4a4450','#e8eef6','#c2a877','#241830','#efe7d4'];
+var PLAT_DARK=['#5a3d22','#3e2716','#31313a','#6b8090','#241412','#302c38','#c9d8ea','#9c8355','#160e20','#cdbf9d'];
+var PLAT_EDGE=['#5fae52','#8a6a3a','#7a7a86','#ffffff','#ff6a20','#7a7490','#ffffff','#e2685f','#a05cd6','#d9a63f'];
+function drawPlat(tx,t,w){
+  var i=w-1, x=tx, y=t.y, ww=t.w, hh=t.h;
+  var body=PLAT_BODY[i], dark=PLAT_DARK[i], edge=PLAT_EDGE[i];
+  ctx.fillStyle='rgba(0,0,0,0.14)';ctx.fillRect(x+2,y+hh,ww-4,3);   // 接地影（共通）
+  if(w===7){
+    // 空中：雲。下と左右へふくらませ、上面は y のまま平ら
+    ctx.fillStyle=body;
+    ctx.beginPath();
+    ctx.moveTo(x,y);ctx.lineTo(x+ww,y);ctx.lineTo(x+ww,y+hh*0.5);ctx.lineTo(x,y+hh*0.5);
+    for(var c=0;c<5;c++){
+      var cr=hh*0.62+((c*7)%4), cx2=x+4+ (ww-8)*(c/4);
+      ctx.moveTo(cx2+cr,y+hh*0.55);ctx.arc(cx2,y+hh*0.55,cr,0,Math.PI*2);
+    }
+    ctx.fill();
+    ctx.fillStyle=dark;
+    ctx.beginPath();
+    for(var c2=0;c2<4;c2++){
+      var cr2=hh*0.42, cx3=x+8+(ww-16)*(c2/3);
+      ctx.moveTo(cx3+cr2,y+hh*0.95);ctx.arc(cx3,y+hh*0.95,cr2,0,Math.PI*2);
+    }
+    ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.85)';ctx.fillRect(x,y,ww,2);
+    return;
+  }
+  // 共通の土台
+  ctx.fillStyle=body;ctx.fillRect(x,y,ww,hh);
+  ctx.fillStyle=dark;ctx.fillRect(x,y+hh*0.55,ww,hh*0.45);
+  if(w===1){                       // 草原：土＋草＋毛先
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,3);
+    ctx.beginPath();
+    for(var g=0;g<ww-2;g+=7){ ctx.moveTo(x+g,y);ctx.lineTo(x+g+2,y-3.5);ctx.lineTo(x+g+4,y); }
+    ctx.fill();
+  } else if(w===2){                // 夕暮れの森：丸太（木目）
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,2);
+    ctx.strokeStyle='rgba(0,0,0,0.28)';ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x+2,y+hh*0.5);ctx.lineTo(x+ww-2,y+hh*0.5);
+    ctx.moveTo(x+ww*0.32,y+1);ctx.lineTo(x+ww*0.32,y+hh-1);
+    ctx.moveTo(x+ww*0.68,y+1);ctx.lineTo(x+ww*0.68,y+hh-1);
+    ctx.stroke();
+  } else if(w===3||w===9){         // 洞窟／魔界：ゴツゴツした岩（魔界は下も尖らせる）
+    ctx.fillStyle=edge;
+    ctx.beginPath();
+    ctx.moveTo(x,y+2);
+    for(var r=0;r<ww;r+=9){ ctx.lineTo(x+r+4,y-((r*5)%3)); ctx.lineTo(x+r+9,y+2); }
+    ctx.lineTo(x+ww,y+3);ctx.lineTo(x,y+3);
+    ctx.fill();
+    if(w===9){
+      ctx.fillStyle=dark;
+      ctx.beginPath();
+      for(var q=0;q<ww-8;q+=14){ ctx.moveTo(x+q+2,y+hh);ctx.lineTo(x+q+7,y+hh+4);ctx.lineTo(x+q+12,y+hh); }
+      ctx.fill();
+    }
+  } else if(w===4){                // 雪山：雪をかぶった岩（雪が少し垂れる）
+    ctx.fillStyle=edge;
+    ctx.beginPath();
+    ctx.moveTo(x,y+4);ctx.lineTo(x,y);ctx.lineTo(x+ww,y);ctx.lineTo(x+ww,y+4);
+    for(var sw=ww;sw>0;sw-=11){ ctx.lineTo(x+sw-5,y+6.5);ctx.lineTo(x+sw-11,y+4); }
+    ctx.fill();
+  } else if(w===5){                // 火山：溶岩石。ひび割れが光る
+    ctx.fillStyle='#1a0e0c';ctx.fillRect(x,y,ww,2);
+    ctx.strokeStyle=edge;ctx.lineWidth=1.4;
+    ctx.beginPath();
+    for(var k=0;k<ww-6;k+=16){
+      ctx.moveTo(x+k+3,y+hh-1);ctx.lineTo(x+k+7,y+hh*0.45);ctx.lineTo(x+k+12,y+hh-1);
+    }
+    ctx.stroke();
+  } else if(w===6){                // 夜の城：石畳（目地）
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,2);
+    ctx.strokeStyle='rgba(0,0,0,0.34)';ctx.lineWidth=1;
+    ctx.beginPath();
+    for(var m=12;m<ww;m+=16){ ctx.moveTo(x+m,y+2);ctx.lineTo(x+m,y+hh); }
+    ctx.moveTo(x,y+hh*0.6);ctx.lineTo(x+ww,y+hh*0.6);
+    ctx.stroke();
+  } else if(w===8){                // 海底：砂の台＋珊瑚のこぶ
+    ctx.fillStyle=edge;
+    ctx.beginPath();
+    for(var co=0;co<ww-4;co+=13){
+      var cr3=3+((co*3)%2);
+      ctx.moveTo(x+co+5+cr3,y+1);ctx.arc(x+co+5,y+1,cr3,Math.PI,Math.PI*2);
+    }
+    ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.22)';ctx.fillRect(x,y,ww,1.5);
+  } else {                         // 10 天空神殿：大理石＋金の縁
+    ctx.fillStyle=edge;ctx.fillRect(x,y,ww,2);
+    ctx.fillRect(x,y+hh-2,ww,2);
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(x+2,y+3,ww-4,1);
+  }
+}
+
 // ===== 衝突 =====
 function aabb(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
 
@@ -7090,18 +7188,8 @@ function draw(){
       ctx.fillRect(tx,t.y,t.w,t.h);
       ctx.fillStyle='rgba(0,0,0,0.35)';ctx.fillRect(tx+1,t.y,t.w-2,t.h);
     } else {
-      // 浮き台（軽量：単色＋下部陰影）
-      var _pw=Math.min(10,Math.max(1,stageWorld(level)))-1;
-      var platCol=['#7a5533','#6a4520','#2a4060','#4a5a68','#661a10','#4a1030','#0d4a4a','#4a1010','#4a1040','#4a4010'][_pw];
-      var platDk =['#5a3d22','#4a3010','#1c2c44','#34404a','#440a08','#340a20','#063434','#340808','#340830','#342e08'][_pw];
-      var platTop=['#9b7a55','#bb8a50','#4a70a0','#7a90a8','#992200','#7a3068','#1ab0b0','#aa3030','#aa30aa','#aaaa30'][_pw];
-      ctx.fillStyle=platCol;ctx.fillRect(tx,t.y,t.w,t.h);
-      ctx.fillStyle=platDk;ctx.fillRect(tx,t.y+t.h*0.55,t.w,t.h*0.45);
-      ctx.fillStyle=platTop;ctx.fillRect(tx,t.y,t.w,3);
-      // 縁のハイライト
-      ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillRect(tx,t.y,t.w,1);
-      // 影（下に落ちる）
-      ctx.fillStyle='rgba(0,0,0,0.12)';ctx.fillRect(tx,t.y+t.h,t.w,3);
+      // ★v262 浮き台をワールド別のデザインに（当たり判定は矩形のまま・見た目だけ）
+      drawPlat(tx,t,Math.min(10,Math.max(1,stageWorld(level))));
     }
   }
 
