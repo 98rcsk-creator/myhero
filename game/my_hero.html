@@ -445,6 +445,20 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
   0%{transform:translate(-50%,-50%) scale(.3) rotate(0deg);opacity:0}
   18%{opacity:1}
   100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1) rotate(140deg);opacity:0}}
+
+/* ═══ ★v257 縦の短い端末でホームのボタンが画面外に出る対策 ═══
+   実測(375×548 = iPhone SE): 「あそびかた」が61px、サブボタン4つが12px はみ出して
+   タップできなかった。ホームはスクロール不可なので、詰めるしかない。
+   ロゴ(375×563)が高さの大半を占めるため、短い端末でだけ幅を絞って高さを落とす。
+   ★主要ターゲットの 390×674 には効かせない（max-height:600px でゲート）。
+   ★#howtoBtn の margin-top は静的HTML側とJS注入側の両方にインラインで入っているので
+     !important が必要（CLAUDE.md §2-2 の二重マークアップ）。
+   内訳: ロゴ -83px / menuRow4 -6px / あそびかた -4px = 計93px を回収 */
+@media (max-height:600px){
+  .home-logo{max-width:320px;}
+  .menuRow4{margin-top:10px;}
+  #howtoBtn{margin-top:8px !important;}
+}
 </style>
 </head>
 <body>
@@ -902,6 +916,27 @@ cv.style.width=W+'px'; cv.style.height=H+'px';
 ctx.setTransform(CV_K,0,0,CV_K,0,0);
 var ov=document.getElementById('overlay');
 var GRAV=0.52, GROUND=H-55, GOAL_X=4200, BW=13, BH=34;
+
+// ★v258 星の条件（SPEC §9-5 案C）。ここだけ触れば難易度が動く。
+//   ★2 = てきを STAR_KILL2 以上たおす、または コインを STAR_COIN 以上とる
+//   ★3 = てきを STAR_KILL3 以上たおし、かつ（コイン STAR_COIN 以上 または ノーダメージ）
+//   この値は「旧の合算式より厳しくなるケースが0件」になるよう選んである。
+var STAR_KILL2=0.50, STAR_KILL3=0.70, STAR_COIN=0.70;
+
+// ★v260 坂での歩行速度。上りは遅く、下りは速く。
+//   ⚠ 掛けるのは「横移動」だけ。攻撃間隔(p.atkCD)・ジャンプ(p.vy)・弾速には一切掛けない。
+//   勾配は実際の地面の表面から出す（getGroundY が坂を補間しているので坂だけに効く）。
+//   実地形の勾配は W10 で 50px/95px = 53% と急なため、実質は下のクランプ値に張り付く。
+//   ＝「上りは 0.85倍・下りは 1.15倍」の ±15% と考えてよい。強すぎたらこの2つを 1 に近づける。
+var SLOPE_SPD_K=0.55, SLOPE_SPD_MIN=0.85, SLOPE_SPD_MAX=1.15;
+function slopeSpd(cx,dir){
+  if(!dir) return 1;
+  var gL=getGroundY(cx-8), gR=getGroundY(cx+8);
+  if(gL>GROUND+80 || gR>GROUND+80) return 1;      // 穴の上では素の速度
+  var along=((gR-gL)/16)*(dir>0?1:-1);            // +なら進行方向が下り
+  var m=1+along*SLOPE_SPD_K;
+  return m<SLOPE_SPD_MIN?SLOPE_SPD_MIN:(m>SLOPE_SPD_MAX?SLOPE_SPD_MAX:m);
+}
 
 // ★v247 弾の属性。ワールドの世界観に合わせて火の玉の見た目を変える
 //   （雪山のまものがオレンジの火を吐いていたため）。
@@ -1697,11 +1732,16 @@ function buildWorld(lv){
   }
 
   // 地形生成（ステージが進むほど起伏が激しく＝メリハリ重視）
-  var sNow=Math.max(1,lv);
-  // S2から起伏。高低差はしっかりめ（中途半端な凸凹を避ける）
-  var maxH=   sNow<=1 ? 0 : Math.min(135, 45+(sNow-1)*5.0);   // S2で50、徐々に増
-  var SEG=    Math.max(95, 150 - sNow*2.0);
-  var stepMax=sNow<=1 ? 0 : Math.min(50, 22+(sNow-1)*1.6);    // 1段差をしっかり
+  // ★v256 起伏3つをワールド基準に張り直した。
+  //   旧式は sNow（=ステージ番号）に係数を掛ける形で、設計上のキャップ
+  //   （maxH=135 / SEG=95 / stepMax=50）に届くのに 19〜28 ステージ必要だった。
+  //   実際は10ワールド×1ステージしかないため、W10でも maxH=90 / SEG=130 / step=36 止まり
+  //   ＝後半ワールドがずっと平坦なままだった。
+  //   W1は起伏なし、W2で旧来とほぼ同じ、W10でキャップちょうど、になるよう線形に配り直す。
+  //   （W1〜W3は「低学年でもクリアできる易しさ」が要件なので、ここはほぼ据え置き）
+  var maxH=   lvW<=1 ? 0 : Math.round(45+(lvW-2)*(135-45)/8);      // W2=45 → W10=135
+  var SEG=    Math.round(Math.max(95, 150-(lvW-1)*(150-95)/9));    // W1=150 → W10=95
+  var stepMax=lvW<=1 ? 0 : Math.round(22+(lvW-2)*(50-22)/8);       // W2=22 → W10=50
   var segs=Math.ceil((GOAL_X+600)/SEG);
   var segY=new Array(segs).fill(0);
   // 坂道フラグ（連続して同方向に変化する区間＝坂。ここでは敵速度が変わる）
@@ -1758,7 +1798,7 @@ function buildWorld(lv){
     var ta=tiles[ti2-1], tb=tiles[ti2];
     if(!ta.g||!tb.g) continue;
     var diff=tb.gy-ta.gy;
-    if(Math.abs(diff)>8&&ta.x+ta.w===tb.x){
+    if(Math.abs(diff)>8&&ta.x+ta.w===tb.x&&!slopeSmooth(ta,tb)){   // ★v259 坂の区間は崖面を作らない
       // 段差部分に縦タイルを追加（側面を埋める）
       var sideY=Math.min(ta.gy,tb.gy);
       var sideH=Math.abs(diff);
@@ -2037,6 +2077,27 @@ function buildGroundIndex(){
     var bx=Math.floor((gtiles[gi].x-GT_BASE)/GT_STEP);
     if(bx>=0 && bx<n) gtIdx[bx]=gi;
   }
+  // ★v259 坂タイルの「左端・右端の地面の高さ」を前計算する。
+  //   隣と滑らかにつなぐ区間だけ中点を採り、タイル内を線形補間して坂にする。
+  //   坂でない段差は従来どおり sL=sR=t.y のまま＝カクッとした段差が残る。
+  //   毎フレーム隣を引くと重いので、地形が確定したここで1回だけ計算する。
+  for(var gj=0;gj<gtiles.length;gj++){
+    var tt=gtiles[gj], pv=gtiles[gj-1], nx=gtiles[gj+1];
+    tt.sL = slopeSmooth(pv,tt) ? (tt.y+pv.y)/2 : tt.y;
+    tt.sR = slopeSmooth(tt,nx) ? (tt.y+nx.y)/2 : tt.y;
+  }
+}
+// ★v259 2枚の地面タイルの境目を「坂として滑らかにつなぐ」かどうか。
+//   隣接していて、どちらかが坂セグメント(slope!==0)なら滑らかにする。
+function slopeSmooth(a,b){
+  return !!(a&&b&&a.g&&b.g&&(a.x+a.w===b.x)&&(((a.slope||0)!==0)||((b.slope||0)!==0)));
+}
+// ★v259 指定xでの地面の表面高さ。坂タイルはタイル内を線形補間する。
+function tileTopAt(t,x){
+  if(!t) return GROUND+200;
+  if(!t.g || t.sL===undefined || t.sL===t.sR) return t.y;
+  var f=(x-t.x)/t.w; if(f<0)f=0; else if(f>1)f=1;
+  return t.sL+(t.sR-t.sL)*f;
 }
 // 指定xの地面タイルを索引で引く（無ければnull）。
 //   タイル範囲は[t.x-2, t.x+t.w+2)で隣接が4px重なる。旧実装は配列順(x昇順)で
@@ -2114,7 +2175,7 @@ function checkHole(ent, vx){
 // 指定X座標の地面Y取得（地形対応）
 function getGroundY(x){
   var t=groundTileAt(x);          // ★v229 索引参照（旧:全tiles線形走査）
-  return t ? t.y : GROUND+200;    // 穴のとき大きな値を返す
+  return t ? tileTopAt(t,x) : GROUND+200;   // ★v259 坂は補間。穴のとき大きな値
 }
 // 指定X座標の坂の向きを返す（-1:右で下がる +1:右で上がる 0:平坦）
 function getSlopeAt(x){
@@ -3805,14 +3866,24 @@ function nextLevel(){
   statAdd('clears',1);
   if(runNoDamage) statAdd('nodmgClears',1);
   statMax('bestScore',Math.floor(score));
-  // ★星評価を計算（撃破率×0.5 + コイン取得率×0.25 + 残り体力×0.25）
+  // ★v258 星評価を「合算スコア」から「独立した条件」に変更（SPEC §9-5 案C）。
+  //   旧: killRate*0.5 + coinRate*0.25 + hpRate*0.25 を 0.85/0.60 で切る合算式。
+  //   旧の問題（SPEC §9-3）:
+  //     ① HPが重み0.25の見えない足切り。同じ立ち回りでも1回の被弾で★3→★2になった
+  //     ② 序盤ほど敵1体の重みが大きく（W1は6.25%）神経質な設計になっていた
+  //     ③ コイン総数がプレイのたびにランダムに変動し、分母が毎回変わっていた
+  //   新: 3つとも「達成したかどうか」の独立条件。画面の表示と1:1で対応する。
+  //   閾値は「旧より厳しくなるケースが0件」になるよう選んである（16パターンで照合済み）。
   var killRate=stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1;
   var coinRate=stageCoinTotal>0?(stageCoinGot/stageCoinTotal):1;
   var hpRate=p.maxHP>0?(p.hp/p.maxHP):0;
-  var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
+  var starKill2=(killRate>=STAR_KILL2), starCoin2=(coinRate>=STAR_COIN);
+  var starKill3=(killRate>=STAR_KILL3), starNoDmg=(hpRate>=1);
   var earnedStar=1; // クリアで最低★1
-  if(stageScore>=0.85) earnedStar=3;
-  else if(stageScore>=0.60) earnedStar=2;
+  if(starKill3 && (starCoin2 || starNoDmg)) earnedStar=3;
+  else if(starKill2 || starCoin2) earnedStar=2;
+  // 表示用に残す指標（クリア画面のバー表示が参照する）
+  var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
   setStageStar(level, earnedStar);
   lastClearStar=earnedStar; lastClearScore=stageScore;
   // ★クリアボーナスゴールド：基本10G + 星ごと+5G + ステージ番号×1G
@@ -3921,20 +3992,23 @@ function moveY(ent,ew,eh,limitStep){
     for(var ti=0;ti<tiles.length;ti++){
       var t=tiles[ti]; if(t.goal) continue;
       if(ent.x+ew<t.x-2||ent.x>t.x+t.w+2) continue;
+      // ★v259 地面は坂なら足元xでの表面高さを使う（浮き台は従来どおり平ら）
+      var tTop=t.g?tileTopAt(t,ent.x+ew/2):t.y;
       var cb=ent.y+eh;
-      if(cb>=t.y && ent.y<t.y){
+      if(cb>=tTop && ent.y<tTop){
         if(ent.x+ew>t.x+2&&ent.x<t.x+t.w-2){
           // ★浮き台(g:false)は「上から降りてきた時」だけ着地（横潜り込みワープ防止）。
           //   地面(g:true)は厚みがあるのでスナップするが、limitStep指定時（プレイヤー）は
           //   歩いて登れる段差を26pxまでに制限。それ以上の高さはジャンプでしか登れない。
+          //   坂は表面が連続しているので、この26px制限に引っかからず歩いて登れる。
           if(t.g){
-            if(!limitStep || prevBottom<=t.y+Math.max(26,Math.abs(dy)+3)){
-              ent.y=t.y-eh;ent.vy=0;ent.onG=true;break;
+            if(!limitStep || prevBottom<=tTop+Math.max(26,Math.abs(dy)+3)){
+              ent.y=tTop-eh;ent.vy=0;ent.onG=true;break;
             } else {
               ent.stepBlocked=true; // 高い段差＝壁。横移動は呼び出し側で巻き戻す
             }
-          } else if(prevBottom<=t.y+Math.max(8,Math.abs(dy)+3)){
-            ent.y=t.y-eh;ent.vy=0;ent.onG=true;break;
+          } else if(prevBottom<=tTop+Math.max(8,Math.abs(dy)+3)){
+            ent.y=tTop-eh;ent.vy=0;ent.onG=true;break;
           }
         }
       }
@@ -4118,6 +4192,8 @@ function update(){
   else if(p.guardHold>0){ p.guardHold--; }
   var guarding=(hasSk(3))&&(gG()||p.guardHold>0);
   var MAXSPD=guarding?1.5:(4.4*(p.trait==='speed'?1.22:1));  // 俊足：移動速度UP
+  // ★v260 坂：接地して歩いている間だけ上限を上下させる（攻撃・ジャンプには非干渉）
+  if(p.onG && p.vx!==0) MAXSPD*=slopeSpd(p.x+pw()/2, p.vx>0?1:-1);
   var ACCEL=p.onG?0.7:0.5;        // 空中はやや鈍く（慣性感）
   var FRIC=p.onG?0.78:0.96;       // 空中は摩擦弱め＝勢いが残る
   if(p.bossFreeze){ p.dir=1; p.vx=Math.min(3.2,p.vx+0.35); p.st='run'; }  // ボス撃破後はゴールへ自動ラン
@@ -4420,13 +4496,13 @@ function update(){
         e.vx=-baseSpd;
       }
       e.vx=checkHole(e,e.vx);
-      e.vy+=GRAV; e.x+=e.vx; e.onG=false;
+      e.vy+=GRAV; e.x+=e.vx*(e.onG?slopeSpd(e.x+e.w/2,e.vx>0?1:-1):1); e.onG=false;  // ★v260 坂で加減速
       moveY(e,e.w,e.h);
     } else if(e.type==='fire'){
       // ファイアー：左右往復しながら進む
       e.vx=-baseSpd;
       e.vx=checkHole(e,e.vx);
-      e.vy+=GRAV; e.x+=e.vx; e.onG=false;
+      e.vy+=GRAV; e.x+=e.vx*(e.onG?slopeSpd(e.x+e.w/2,e.vx>0?1:-1):1); e.onG=false;  // ★v260 坂で加減速
       moveY(e,e.w,e.h);
     } else if(e.type==='boss'){
       // ボスドラゴン：定位置付近でゆっくり上下＋プレイヤーへ寄る
@@ -4464,7 +4540,7 @@ function update(){
       var vx0=e.vx;
       e.vx=checkHole(e,e.vx);
       if(e.vx!==vx0) e.moveDir=-e.moveDir;             // 穴で折り返したら向き反転
-      e.vy+=GRAV; e.x+=e.vx; e.onG=false;
+      e.vy+=GRAV; e.x+=e.vx*(e.onG?slopeSpd(e.x+e.w/2,e.vx>0?1:-1):1); e.onG=false;  // ★v260 坂で加減速
       moveY(e,e.w,e.h);
     }
 
@@ -6346,18 +6422,546 @@ function bgVolcano(){   // ★v236 W5火山（新規）
   ctx.fill();
 }
 
+function bgSky(){   // ★v250 W7空中（新規）
+  // ▶ 差別化：高高度で見下ろす／地平線が無い／下端は一面の雲海／浮遊島＋鳥。
+  //   W1草原との違いは「地面と山が無い」「下が雲」「全ワールドで最も明るい」。
+  // ① 空：天頂の濃い青 → 下へいくほど白く霞む（高度感）
+  var skyA=ctx.createLinearGradient(0,0,0,GROUND+40);
+  skyA.addColorStop(0,'#2f6fc4');skyA.addColorStop(0.42,'#79b6e8');
+  skyA.addColorStop(0.80,'#c5e3f5');skyA.addColorStop(1,'#eef6fb');
+  ctx.fillStyle=skyA;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 太陽：無限遠なので視差なし。固定位置。
+  var sux=W*0.78, suy=52;
+  var sug=ctx.createRadialGradient(sux,suy,6,sux,suy,130);
+  sug.addColorStop(0,'rgba(255,252,232,0.95)');
+  sug.addColorStop(0.30,'rgba(255,240,192,0.40)');
+  sug.addColorStop(1,'rgba(255,236,170,0)');
+  ctx.fillStyle=sug;ctx.fillRect(sux-130,suy-130,260,260);
+  // ③ 巻雲：細い水平の筋。高いところほど薄い（1パスに集約）
+  ctx.fillStyle='rgba(255,255,255,0.34)';
+  ctx.beginPath();
+  for(var ci=0;ci<7;ci++){
+    var cper=W+300;
+    var cxx=((ci*167+40-cam*0.05)%cper+cper)%cper-150;
+    var cyy=40+((ci*61)%92);
+    var cwd=44+((ci*47)%56), cht=2.4+((ci*13)%4);
+    ctx.moveTo(cxx-cwd,cyy);
+    ctx.quadraticCurveTo(cxx,cyy-cht,cxx+cwd,cyy);
+    ctx.quadraticCurveTo(cxx,cyy+cht,cxx-cwd,cyy);
+  }
+  ctx.fill();
+  // ④ 遠景の浮遊島：かすんだ青。視差は浅く(0.02)、ラップさせる。
+  ctx.fillStyle='rgba(126,168,206,0.55)';
+  ctx.beginPath();
+  for(var fi=0;fi<4;fi++){
+    var fper=W+340;
+    var fx=((fi*212+60-cam*0.02)%fper+fper)%fper-170;
+    var fy=118+((fi*53)%58);
+    var fw=26+((fi*29)%20);
+    ctx.moveTo(fx-fw,fy);ctx.lineTo(fx+fw,fy);
+    ctx.lineTo(fx+fw*0.30,fy+fw*1.15);ctx.lineTo(fx-fw*0.44,fy+fw*0.82);
+  }
+  ctx.fill();
+  // ⑤ 中景の浮遊島：岩の底＋草の天面。視差 0.055。
+  //   岩と草は同じ基準座標 mx から描く（片方だけ流れる事故を防ぐ・CLAUDE.md §1-9）
+  var isX=[], isY=[], isW=[];
+  for(var mi=0;mi<3;mi++){
+    var mper=W+420;
+    isX.push(((mi*248+96-cam*0.055)%mper+mper)%mper-210);
+    isY.push(150+((mi*97)%74));
+    isW.push(34+((mi*37)%22));
+  }
+  ctx.fillStyle='#8a7a63';   // 岩の底
+  ctx.beginPath();
+  for(var mj=0;mj<3;mj++){
+    var mx=isX[mj], my=isY[mj], mw=isW[mj];
+    ctx.moveTo(mx-mw,my);ctx.lineTo(mx+mw,my);
+    ctx.lineTo(mx+mw*0.26,my+mw*1.30);ctx.lineTo(mx-mw*0.10,my+mw*0.92);
+    ctx.lineTo(mx-mw*0.52,my+mw*1.02);
+  }
+  ctx.fill();
+  ctx.fillStyle='#5fae52';   // 草の天面
+  ctx.beginPath();
+  for(var mk=0;mk<3;mk++){
+    var gx=isX[mk], gy=isY[mk], gw2=isW[mk];
+    ctx.moveTo(gx-gw2,gy);
+    ctx.quadraticCurveTo(gx,gy-gw2*0.30,gx+gw2,gy);
+    ctx.lineTo(gx+gw2,gy+5);ctx.lineTo(gx-gw2,gy+5);
+  }
+  ctx.fill();
+  // ⑥ 雲海：下端をびっしり埋める。地面ではなく雲であることがこのワールドの肝。
+  var seaTop=GROUND-96;
+  var seaG=ctx.createLinearGradient(0,seaTop,0,GROUND+30);
+  seaG.addColorStop(0,'rgba(255,255,255,0)');
+  seaG.addColorStop(0.42,'rgba(250,253,255,0.82)');
+  seaG.addColorStop(1,'rgba(226,240,250,0.98)');
+  ctx.fillStyle=seaG;ctx.fillRect(0,seaTop,W,GROUND-seaTop+30);
+  // 雲海のふくらみ（1パス・moveTo を各 arc の前に置く）
+  ctx.fillStyle='rgba(255,255,255,0.90)';
+  ctx.beginPath();
+  for(var si2=0;si2<9;si2++){
+    var sper=W+260;
+    var sx2=((si2*118+22-cam*0.09)%sper+sper)%sper-130;
+    var sr2=20+((si2*31)%20);
+    var sy2=seaTop+44+((si2*23)%16);
+    ctx.moveTo(sx2+sr2,sy2);ctx.arc(sx2,sy2,sr2,0,Math.PI*2);
+    var sr3=sr2*0.66;
+    ctx.moveTo(sx2+sr2*0.86+sr3,sy2+7);ctx.arc(sx2+sr2*0.86,sy2+7,sr3,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑦ 鳥：遠くを横切る。視差は雲海より速く、小さく。
+  ctx.strokeStyle='rgba(58,78,96,0.45)';ctx.lineWidth=1.4;
+  ctx.beginPath();
+  for(var bi2=0;bi2<5;bi2++){
+    var bper=W+220;
+    var bx2=((bi2*143+50-cam*0.13-fr*0.28)%bper+bper)%bper-110;
+    var by2=96+((bi2*67)%70)+Math.sin((fr*0.03)+bi2)*3;
+    var bs=2.6+((bi2*7)%3);
+    ctx.moveTo(bx2-bs*2,by2);ctx.quadraticCurveTo(bx2-bs,by2-bs,bx2,by2);
+    ctx.quadraticCurveTo(bx2+bs,by2-bs,bx2+bs*2,by2);
+  }
+  ctx.stroke();
+}
+
+function bgSea(){   // ★v251 W8海底（新規）
+  // ▶ 差別化：水中／上から差す光の柱／青緑／珊瑚と海藻のシルエット／舞う粒子は気泡と マリンスノー
+  //   bgSpace（黒紫＋星）との違いは「明るい上・暗い下」「光の柱」「揺れる海藻」。
+  // ① 水：浅い水面の明るい青緑 → 深い藍
+  var seaG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  seaG.addColorStop(0,'#2ea3b8');seaG.addColorStop(0.34,'#166a8e');
+  seaG.addColorStop(0.72,'#0c3c63');seaG.addColorStop(1,'#07223f');
+  ctx.fillStyle=seaG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 水面のゆらぎ：上端の明るい帯
+  var surG=ctx.createLinearGradient(0,0,0,46);
+  surG.addColorStop(0,'rgba(180,244,255,0.55)');surG.addColorStop(1,'rgba(140,220,240,0)');
+  ctx.fillStyle=surG;ctx.fillRect(0,0,W,46);
+  // ③ 光の柱：水面から斜めに差す。視差は浅く(0.03)＝光源は遠い。
+  ctx.fillStyle='rgba(180,238,255,0.10)';
+  ctx.beginPath();
+  for(var ri=0;ri<5;ri++){
+    var rper=W+300;
+    var rx=((ri*151+30-cam*0.03)%rper+rper)%rper-150;
+    var rw=13+((ri*23)%14);
+    var rsw=Math.sin(fr*0.012+ri)*7;   // ゆっくり揺れる
+    ctx.moveTo(rx-rw,0);ctx.lineTo(rx+rw,0);
+    ctx.lineTo(rx+rw*2.0+rsw,GROUND-30);ctx.lineTo(rx-rw*0.6+rsw,GROUND-30);
+  }
+  ctx.fill();
+  // ④ 遠景の岩礁：かすんだ藍のシルエット（視差0.02・ラップ）
+  ctx.fillStyle='rgba(9,44,72,0.75)';
+  ctx.beginPath();
+  for(var fi2=0;fi2<5;fi2++){
+    var fper2=W+360;
+    var fx2=((fi2*196+40-cam*0.02)%fper2+fper2)%fper2-180;
+    var fh2=52+((fi2*67)%54);
+    ctx.moveTo(fx2-46,GROUND);
+    ctx.quadraticCurveTo(fx2-16,GROUND-fh2*0.86,fx2,GROUND-fh2);
+    ctx.quadraticCurveTo(fx2+20,GROUND-fh2*0.72,fx2+44,GROUND);
+  }
+  ctx.fill();
+  // ⑤ 珊瑚：暗い赤紫。岩礁より手前(0.05)で少し明るい
+  ctx.fillStyle='rgba(96,44,84,0.72)';
+  ctx.beginPath();
+  for(var ki=0;ki<6;ki++){
+    var kper=W+280;
+    var kx=((ki*143+70-cam*0.05)%kper+kper)%kper-140;
+    var kh=22+((ki*37)%24);
+    ctx.moveTo(kx-9,GROUND);ctx.lineTo(kx-3,GROUND-kh);
+    ctx.lineTo(kx+2,GROUND-kh*0.62);ctx.lineTo(kx+7,GROUND-kh*1.10);
+    ctx.lineTo(kx+11,GROUND-kh*0.30);ctx.lineTo(kx+10,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 海藻：左右に揺れる。海底の生き物感はここが担当。
+  ctx.strokeStyle='rgba(38,122,86,0.66)';ctx.lineWidth=3;
+  ctx.beginPath();
+  for(var wi=0;wi<7;wi++){
+    var wper=W+240;
+    var wx=((wi*121+18-cam*0.07)%wper+wper)%wper-120;
+    var wh=34+((wi*43)%30);
+    var sway=Math.sin(fr*0.035+wi*0.9)*9;
+    ctx.moveTo(wx,GROUND);
+    ctx.quadraticCurveTo(wx+sway*0.5,GROUND-wh*0.55,wx+sway,GROUND-wh);
+  }
+  ctx.stroke();
+  // ⑦ 気泡：下から上へ。水中であることを最も強く示す要素。
+  ctx.fillStyle='rgba(198,240,255,0.42)';
+  ctx.beginPath();
+  for(var bi3=0;bi3<12;bi3++){
+    var bt=(fr*1.05+bi3*37)%330;
+    var bx3=((bi3*97+25-cam*0.08)%W+W)%W+Math.sin((bt+bi3*30)*0.045)*5;
+    var by3=GROUND-6-bt;
+    if(by3<-8) continue;
+    var br=1.6+((bi3*11)%3);
+    ctx.moveTo(bx3+br,by3);ctx.arc(bx3,by3,br,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑧ 魚影：群れで横切る
+  ctx.fillStyle='rgba(14,58,86,0.50)';
+  ctx.beginPath();
+  for(var mi2=0;mi2<9;mi2++){
+    var mper2=W+200;
+    var mx2=((mi2*89+12-cam*0.10-fr*0.5)%mper2+mper2)%mper2-100;
+    var my2=96+((mi2*53)%118)+Math.sin(fr*0.04+mi2)*4;
+    ctx.moveTo(mx2-5,my2);ctx.lineTo(mx2+4,my2-2.4);
+    ctx.lineTo(mx2+4,my2+2.4);
+  }
+  ctx.fill();
+}
+
+function bgHell(){   // ★v252 W9魔界（新規）
+  // ▶ 差別化：血の月／黒曜石の尖塔／紫と深紅／地平の溶けた光／舞う粒子は火の粉
+  //   bgVolcano（赤×黒・円錐の山）との違いは「紫が主」「鋭く細い尖塔」「巨大な月」。
+  //   bgSpace との違いは「地平線がある」「星ではなく火の粉」。
+  // ① 空：天頂の黒紫 → 地平の深紅
+  var hG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  hG.addColorStop(0,'#150a22');hG.addColorStop(0.46,'#301038');
+  hG.addColorStop(0.82,'#5c1330');hG.addColorStop(1,'#7d1a2b');
+  ctx.fillStyle=hG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 血の月：視差はごく浅く(0.010)、画面内にクランプする（CLAUDE.md §1-9）
+  var mx3=W*0.70-cam*0.010;
+  if(mx3<W*0.26) mx3=W*0.26;
+  if(mx3>W*0.80) mx3=W*0.80;
+  var my3=76, mr3=40;
+  var mgl=ctx.createRadialGradient(mx3,my3,mr3*0.5,mx3,my3,mr3*3.1);
+  mgl.addColorStop(0,'rgba(214,52,52,0.34)');mgl.addColorStop(1,'rgba(180,30,60,0)');
+  ctx.fillStyle=mgl;ctx.fillRect(mx3-mr3*3.1,my3-mr3*3.1,mr3*6.2,mr3*6.2);
+  ctx.fillStyle='#c9424a';
+  ctx.beginPath();ctx.moveTo(mx3+mr3,my3);ctx.arc(mx3,my3,mr3,0,Math.PI*2);ctx.fill();
+  // 月の陰（欠け）：同じ mx3 基準
+  ctx.fillStyle='rgba(40,12,28,0.42)';
+  ctx.beginPath();
+  ctx.moveTo(mx3+mr3*0.42+mr3*0.86,my3-mr3*0.16);
+  ctx.arc(mx3+mr3*0.42,my3-mr3*0.16,mr3*0.86,0,Math.PI*2);
+  ctx.fill();
+  // ③ 地平の溶けた光：尖塔のシルエットを背景から分離させる帯
+  var hzG=ctx.createLinearGradient(0,GROUND-150,0,GROUND+10);
+  hzG.addColorStop(0,'rgba(190,40,70,0)');hzG.addColorStop(0.6,'rgba(214,58,66,0.34)');
+  hzG.addColorStop(1,'rgba(120,20,40,0.16)');
+  ctx.fillStyle=hzG;ctx.fillRect(0,GROUND-150,W,160);
+  // ④ 遠景の尖塔：黒曜石。細く鋭い＝火山の円錐とは別シルエット（0.018）
+  ctx.fillStyle='#1b0d20';
+  ctx.beginPath();
+  for(var ti=0;ti<7;ti++){
+    var tper=W+380;
+    var tx=((ti*163+30-cam*0.018)%tper+tper)%tper-190;
+    var th=76+((ti*89)%92);
+    var tw=7+((ti*13)%7);
+    ctx.moveTo(tx-tw,GROUND);ctx.lineTo(tx-tw*0.30,GROUND-th);
+    ctx.lineTo(tx+tw*0.42,GROUND-th*0.80);ctx.lineTo(tx+tw,GROUND);
+  }
+  ctx.fill();
+  // ⑤ 中景の尖塔：手前(0.045)でさらに黒く、根元に溶岩の割れ目
+  ctx.fillStyle='#0e0614';
+  ctx.beginPath();
+  for(var ni=0;ni<5;ni++){
+    var nper=W+300;
+    var nx=((ni*167+96-cam*0.045)%nper+nper)%nper-150;
+    var nh=42+((ni*71)%50);
+    var nw=10+((ni*17)%8);
+    ctx.moveTo(nx-nw,GROUND);ctx.lineTo(nx-nw*0.20,GROUND-nh);
+    ctx.lineTo(nx+nw*0.52,GROUND-nh*0.72);ctx.lineTo(nx+nw,GROUND);
+  }
+  ctx.fill();
+  ctx.fillStyle='rgba(255,96,40,0.55)';   // 割れ目の光。尖塔と同じ nx 基準で描く
+  ctx.beginPath();
+  for(var gi2=0;gi2<5;gi2++){
+    var gper=W+300;
+    var gx2=((gi2*167+96-cam*0.045)%gper+gper)%gper-150;
+    var gh3=42+((gi2*71)%50);
+    ctx.moveTo(gx2-2,GROUND);ctx.lineTo(gx2+0.6,GROUND-gh3*0.42);
+    ctx.lineTo(gx2+2.6,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 火の粉：下から上へ舞い上がる（星ではないのがW9の目印）
+  ctx.fillStyle='rgba(255,150,60,0.62)';
+  ctx.beginPath();
+  for(var ei=0;ei<14;ei++){
+    var et=(fr*0.9+ei*31)%300;
+    var ex=((ei*103+16-cam*0.06)%W+W)%W+Math.sin((et+ei*24)*0.04)*8;
+    var ey=GROUND-4-et*1.02;
+    if(ey<-6) continue;
+    var er=1.1+((ei*7)%3)*0.6;
+    ctx.moveTo(ex+er,ey);ctx.arc(ex,ey,er,0,Math.PI*2);
+  }
+  ctx.fill();
+}
+
+function bgTemple(){   // ★v253 W10天空神殿（新規・最終ワールド）
+  // ▶ 差別化：金と白／並び立つ石柱／上から降る聖なる光条／舞う粒子は金の光片
+  //   W7空中（青空＋雲海＋浮遊島）との違いは「金基調」「人工物の柱」「垂直の光条」。
+  //   最終ワールドなので、他のどれよりも荘厳で明るい側に振る。
+  // ① 空：天頂の澄んだ藍 → 地平の金
+  var tG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  tG.addColorStop(0,'#2a4d86');tG.addColorStop(0.38,'#6d84b8');
+  tG.addColorStop(0.72,'#d3b483');tG.addColorStop(1,'#f2dcae');
+  ctx.fillStyle=tG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 後光：画面上部中央の光源。視差なし＝無限遠。
+  var hx=W*0.50, hy=64;
+  var hg2=ctx.createRadialGradient(hx,hy,8,hx,hy,190);
+  hg2.addColorStop(0,'rgba(255,250,224,0.88)');
+  hg2.addColorStop(0.34,'rgba(255,236,178,0.34)');
+  hg2.addColorStop(1,'rgba(255,228,160,0)');
+  ctx.fillStyle=hg2;ctx.fillRect(hx-190,hy-190,380,380);
+  // ③ 聖なる光条：上から降りる。ゆっくり明滅する。
+  var tpul=0.72+Math.sin(fr*0.026)*0.28;
+  ctx.fillStyle='rgba(255,246,206,'+(0.13*tpul).toFixed(3)+')';
+  ctx.beginPath();
+  for(var li=0;li<6;li++){
+    var lper=W+280;
+    var lx=((li*137+24-cam*0.025)%lper+lper)%lper-140;
+    var lw=9+((li*19)%12);
+    ctx.moveTo(lx-lw,0);ctx.lineTo(lx+lw,0);
+    ctx.lineTo(lx+lw*1.9,GROUND-20);ctx.lineTo(lx-lw*1.9,GROUND-20);
+  }
+  ctx.fill();
+  // ④ 遠景の神殿：かすんだ白。破風（三角の屋根）＋土台で「建物」と分かる形に（0.015）
+  ctx.fillStyle='rgba(232,226,246,0.50)';
+  ctx.beginPath();
+  for(var si3=0;si3<3;si3++){
+    var sper3=W+420;
+    var sx3=((si3*268+60-cam*0.015)%sper3+sper3)%sper3-210;
+    var sy3=150+((si3*61)%36);
+    var sw3=46+((si3*29)%22);
+    ctx.moveTo(sx3-sw3,sy3);ctx.lineTo(sx3,sy3-sw3*0.46);ctx.lineTo(sx3+sw3,sy3);
+    ctx.lineTo(sx3+sw3*0.86,sy3+52);ctx.lineTo(sx3-sw3*0.86,sy3+52);
+  }
+  ctx.fill();
+  // ⑤ 石柱：このワールドの主役。柱身と柱頭・柱礎を同じ座標式から描く（§1-9）
+  var colX=[], colTop=[];
+  for(var ci3=0;ci3<7;ci3++){
+    var cper3=W+300;
+    colX.push(((ci3*151+40-cam*0.05)%cper3+cper3)%cper3-150);
+    colTop.push(GROUND-(96+((ci3*67)%74)));
+  }
+  ctx.fillStyle='#efe7d4';   // 柱身
+  ctx.beginPath();
+  for(var cj=0;cj<7;cj++){
+    ctx.moveTo(colX[cj]-8,GROUND);ctx.lineTo(colX[cj]-6.4,colTop[cj]);
+    ctx.lineTo(colX[cj]+6.4,colTop[cj]);ctx.lineTo(colX[cj]+8,GROUND);
+  }
+  ctx.fill();
+  ctx.fillStyle='#cdbf9d';   // 柱頭・柱礎（陰）
+  ctx.beginPath();
+  for(var ck=0;ck<7;ck++){
+    ctx.moveTo(colX[ck]-11,colTop[ck]-7);ctx.lineTo(colX[ck]+11,colTop[ck]-7);
+    ctx.lineTo(colX[ck]+11,colTop[ck]);ctx.lineTo(colX[ck]-11,colTop[ck]);
+    ctx.moveTo(colX[ck]-12,GROUND-9);ctx.lineTo(colX[ck]+12,GROUND-9);
+    ctx.lineTo(colX[ck]+12,GROUND);ctx.lineTo(colX[ck]-12,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 雲：足元の高度感。柱の根元をわずかに隠す。
+  ctx.fillStyle='rgba(255,252,240,0.60)';
+  ctx.beginPath();
+  for(var qi2=0;qi2<7;qi2++){
+    var qper=W+260;
+    var qx=((qi2*127+30-cam*0.08)%qper+qper)%qper-130;
+    var qr=16+((qi2*29)%16);
+    var qy=GROUND-16+((qi2*11)%8);
+    ctx.moveTo(qx+qr,qy);ctx.arc(qx,qy,qr,0,Math.PI*2);
+    ctx.moveTo(qx+qr*0.8+qr*0.62,qy+5);ctx.arc(qx+qr*0.8,qy+5,qr*0.62,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑦ 金の光片：ゆっくり舞い上がる。火の粉より遅く上品に。
+  ctx.fillStyle='rgba(255,222,132,0.72)';
+  ctx.beginPath();
+  for(var pi6=0;pi6<11;pi6++){
+    var pt2=(fr*0.42+pi6*33)%330;
+    var px6=((pi6*109+20-cam*0.07)%W+W)%W+Math.sin((pt2+pi6*28)*0.03)*10;
+    var py6=GROUND-6-pt2;
+    if(py6<-6) continue;
+    var pr2=1.5+((pi6*7)%3)*0.5;
+    ctx.moveTo(px6,py6-pr2);ctx.lineTo(px6+pr2,py6);
+    ctx.lineTo(px6,py6+pr2);ctx.lineTo(px6-pr2,py6);
+  }
+  ctx.fill();
+}
+
+function bgForest(){   // ★v254 W2夕暮れの森（新規・bgSunsetの「森が無い」を解消）
+  // ▶ 差別化：夕暮れの色は活かしつつ、ピラミッド型の遠景を「木」に置き換える。
+  //   W1草原（昼・なだらかな丘）との違いは「橙の空」「幹と樹冠のシルエット」「蛍」。
+  //   まものの視認性を落とさないよう、樹冠は地平の明るい帯より上に出しすぎない。
+  // ① 空：天頂の紫紺 → 地平の橙（bgSunset の配色を踏襲）
+  var fG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  fG.addColorStop(0,'#2b1b46');fG.addColorStop(0.40,'#7b3560');
+  fG.addColorStop(0.74,'#d1642f');fG.addColorStop(1,'#f0a44e');
+  ctx.fillStyle=fG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 夕日：視差はごく浅く＋クランプ（ラップだと後半で消えたまま戻らない・§1-9）
+  var sx4=W*0.30-cam*0.010;
+  if(sx4<W*0.14) sx4=W*0.14;
+  if(sx4>W*0.52) sx4=W*0.52;
+  var sy4=GROUND-104;
+  var sg2=ctx.createRadialGradient(sx4,sy4,10,sx4,sy4,150);
+  sg2.addColorStop(0,'rgba(255,232,150,0.86)');
+  sg2.addColorStop(0.30,'rgba(255,160,70,0.34)');
+  sg2.addColorStop(1,'rgba(255,130,50,0)');
+  ctx.fillStyle=sg2;ctx.fillRect(sx4-150,sy4-150,300,300);
+  ctx.fillStyle='rgba(255,238,178,0.90)';
+  ctx.beginPath();ctx.moveTo(sx4+26,sy4);ctx.arc(sx4,sy4,26,0,Math.PI*2);ctx.fill();
+  // ③ 遠景の森：木の形が分かる最小限のシルエット（幹＋丸い樹冠・0.02）
+  ctx.fillStyle='rgba(74,44,72,0.62)';
+  ctx.beginPath();
+  for(var di4=0;di4<9;di4++){
+    var dper=W+360;
+    var dx4=((di4*127+30-cam*0.02)%dper+dper)%dper-180;
+    var dh4=44+((di4*53)%34);
+    var dr4=13+((di4*17)%8);
+    ctx.moveTo(dx4-2.4,GROUND);ctx.lineTo(dx4-2.4,GROUND-dh4);
+    ctx.lineTo(dx4+2.4,GROUND-dh4);ctx.lineTo(dx4+2.4,GROUND);
+    ctx.moveTo(dx4+dr4,GROUND-dh4);ctx.arc(dx4,GROUND-dh4,dr4,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ④ 中景の森：手前(0.05)で濃く、幹も太い。幹と樹冠は同じ tx 基準（§1-9）
+  var trX=[], trH=[], trR=[];
+  for(var ti2=0;ti2<6;ti2++){
+    var tper2=W+300;
+    trX.push(((ti2*163+72-cam*0.05)%tper2+tper2)%tper2-150);
+    trH.push(62+((ti2*71)%46));
+    trR.push(19+((ti2*23)%10));
+  }
+  ctx.fillStyle='#3a2036';
+  ctx.beginPath();
+  for(var tj2=0;tj2<6;tj2++){
+    var tx2=trX[tj2], th2=trH[tj2], tr2=trR[tj2];
+    ctx.moveTo(tx2-4.6,GROUND);ctx.lineTo(tx2-3.4,GROUND-th2);
+    ctx.lineTo(tx2+3.4,GROUND-th2);ctx.lineTo(tx2+4.6,GROUND);
+    ctx.moveTo(tx2+tr2,GROUND-th2);ctx.arc(tx2,GROUND-th2,tr2,0,Math.PI*2);
+    ctx.moveTo(tx2-tr2*0.62+tr2*0.70,GROUND-th2-tr2*0.52);
+    ctx.arc(tx2-tr2*0.62,GROUND-th2-tr2*0.52,tr2*0.70,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ⑤ 木漏れ日：夕日と同じ sx4 基準で、樹冠の隙間から差す光
+  ctx.fillStyle='rgba(255,196,110,0.13)';
+  ctx.beginPath();
+  for(var mi4=0;mi4<4;mi4++){
+    var mox=sx4-46+mi4*31;
+    ctx.moveTo(mox-4,sy4-20);ctx.lineTo(mox+4,sy4-20);
+    ctx.lineTo(mox+16,GROUND);ctx.lineTo(mox-8,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 森の陰：地面付近を沈める。夕暮れの森で足元が翳るのは自然で、
+  //   同時に「まものが背景から見えるか」を成立させている層（CLAUDE.md §1-14/§1-15）。
+  //   これが無いと帯の輝度が0.168まで上がり、ウッドゴーレムの外周比が1.35＝基準割れになる。
+  var shG=ctx.createLinearGradient(0,GROUND-132,0,GROUND+20);
+  shG.addColorStop(0,'rgba(26,10,32,0)');
+  shG.addColorStop(0.50,'rgba(26,10,32,0.40)');
+  shG.addColorStop(1,'rgba(18,7,24,0.70)');
+  ctx.fillStyle=shG;ctx.fillRect(0,GROUND-132,W,152);
+  // ⑦ 蛍：夕暮れの森の目印。ゆっくり明滅しながら漂う。
+  for(var hi=0;hi<9;hi++){
+    var hbl=0.35+0.65*Math.abs(Math.sin(fr*0.028+hi*1.3));
+    var hxx=((hi*113+22-cam*0.09)%W+W)%W+Math.sin(fr*0.016+hi)*11;
+    var hyy=GROUND-30-((hi*37)%86)+Math.cos(fr*0.021+hi*0.7)*7;
+    ctx.fillStyle='rgba(214,255,140,'+(0.62*hbl).toFixed(3)+')';
+    ctx.beginPath();ctx.moveTo(hxx+2.2,hyy);ctx.arc(hxx,hyy,2.2,0,Math.PI*2);ctx.fill();
+  }
+}
+
+function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が無い」を解消）
+  // ▶ 差別化：夜だが自然物ではなく人工物。塔・城壁・銃眼のシルエットと窓の灯り。
+  //   W9魔界（紫×深紅・血の月・尖塔）との違いは「青い夜」「白い月」「四角い建造物」。
+  //   W3洞窟（閉じた岩）との違いは「空がある」「窓の灯りが点在する」。
+  // ① 空：天頂の濃紺 → 地平のわずかな藍。夜だが真っ黒にはしない。
+  var cG=ctx.createLinearGradient(0,0,0,GROUND+40);
+  cG.addColorStop(0,'#0a1030');cG.addColorStop(0.48,'#152048');
+  cG.addColorStop(0.84,'#243560');cG.addColorStop(1,'#33487a');
+  ctx.fillStyle=cG;ctx.fillRect(0,0,W,GROUND+40);
+  // ② 星：城壁より上だけ。W9の火の粉と違い動かない。
+  ctx.fillStyle='rgba(224,236,255,0.62)';
+  ctx.beginPath();
+  for(var ci4=0;ci4<26;ci4++){
+    var cxs=((ci4*97+13-cam*0.008)%W+W)%W;
+    var cys=8+((ci4*61)%150);
+    var crs=0.7+((ci4*7)%3)*0.4;
+    ctx.moveTo(cxs+crs,cys);ctx.arc(cxs,cys,crs,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ③ 月：白い満月。視差ごく浅く＋クランプ（§1-9）
+  var lx=W*0.24-cam*0.009;
+  if(lx<W*0.10) lx=W*0.10;
+  if(lx>W*0.40) lx=W*0.40;
+  var ly=62, lr=27;
+  var lgl=ctx.createRadialGradient(lx,ly,lr*0.6,lx,ly,lr*3.4);
+  lgl.addColorStop(0,'rgba(190,214,255,0.30)');lgl.addColorStop(1,'rgba(150,180,255,0)');
+  ctx.fillStyle=lgl;ctx.fillRect(lx-lr*3.4,ly-lr*3.4,lr*6.8,lr*6.8);
+  ctx.fillStyle='#e6edff';
+  ctx.beginPath();ctx.moveTo(lx+lr,ly);ctx.arc(lx,ly,lr,0,Math.PI*2);ctx.fill();
+  // ④ 遠景の城：主塔＋屋根。視差0.014でクランプせずラップ（複数棟が流れてよい）
+  ctx.fillStyle='rgba(20,28,58,0.86)';
+  ctx.beginPath();
+  for(var ki2=0;ki2<3;ki2++){
+    var kper2=W+420;
+    var kx2=((ki2*252+40-cam*0.014)%kper2+kper2)%kper2-210;
+    var kh2=118+((ki2*83)%64);
+    var kw2=22+((ki2*19)%12);
+    ctx.moveTo(kx2-kw2,GROUND);ctx.lineTo(kx2-kw2,GROUND-kh2);
+    ctx.lineTo(kx2,GROUND-kh2-kw2*1.15);ctx.lineTo(kx2+kw2,GROUND-kh2);
+    ctx.lineTo(kx2+kw2,GROUND);
+  }
+  ctx.fill();
+  // ⑤ 城壁：銃眼（凹凸）付き。手前(0.04)でさらに暗い。
+  ctx.fillStyle='#0e142e';
+  ctx.beginPath();
+  for(var wi2=0;wi2<10;wi2++){
+    var wper2=W+300;
+    var wx2=((wi2*97+20-cam*0.04)%wper2+wper2)%wper2-150;
+    var wh3=46+((wi2*31)%18);
+    ctx.moveTo(wx2-16,GROUND);ctx.lineTo(wx2-16,GROUND-wh3);
+    ctx.lineTo(wx2-9,GROUND-wh3);ctx.lineTo(wx2-9,GROUND-wh3-7);
+    ctx.lineTo(wx2-2,GROUND-wh3-7);ctx.lineTo(wx2-2,GROUND-wh3);
+    ctx.lineTo(wx2+6,GROUND-wh3);ctx.lineTo(wx2+6,GROUND-wh3-7);
+    ctx.lineTo(wx2+13,GROUND-wh3-7);ctx.lineTo(wx2+13,GROUND-wh3);
+    ctx.lineTo(wx2+16,GROUND-wh3);ctx.lineTo(wx2+16,GROUND);
+  }
+  ctx.fill();
+  // ⑥ 窓の灯り：城壁と同じ座標式から描く（片方だけ流れる事故の防止・§1-9）
+  var lpul=0.72+Math.sin(fr*0.04)*0.14;
+  ctx.fillStyle='rgba(255,196,96,'+(0.82*lpul).toFixed(3)+')';
+  ctx.beginPath();
+  for(var gi3=0;gi3<10;gi3++){
+    var gper2=W+300;
+    var gx3=((gi3*97+20-cam*0.04)%gper2+gper2)%gper2-150;
+    var gh4=46+((gi3*31)%18);
+    if(gi3%3===2) continue;                 // 全部は灯さない
+    ctx.moveTo(gx3-6,GROUND-gh4+12);ctx.lineTo(gx3-1,GROUND-gh4+12);
+    ctx.lineTo(gx3-1,GROUND-gh4+21);ctx.lineTo(gx3-6,GROUND-gh4+21);
+    ctx.moveTo(gx3+4,GROUND-gh4+12);ctx.lineTo(gx3+9,GROUND-gh4+12);
+    ctx.lineTo(gx3+9,GROUND-gh4+21);ctx.lineTo(gx3+4,GROUND-gh4+21);
+  }
+  ctx.fill();
+  // ⑦ 夜霧：城壁の根元をやわらげ、まものが立つ帯の輝度を下げる（§1-14/§1-15）
+  var mgG=ctx.createLinearGradient(0,GROUND-92,0,GROUND+20);
+  mgG.addColorStop(0,'rgba(18,26,56,0)');
+  mgG.addColorStop(0.55,'rgba(18,26,56,0.42)');
+  mgG.addColorStop(1,'rgba(12,18,42,0.66)');
+  ctx.fillStyle=mgG;ctx.fillRect(0,GROUND-92,W,112);
+  // ⑧ コウモリ：夜の城の目印。月の側を横切る。
+  ctx.fillStyle='rgba(14,18,40,0.72)';
+  ctx.beginPath();
+  for(var bi4=0;bi4<6;bi4++){
+    var bper2=W+220;
+    var bx4=((bi4*131+18-cam*0.11-fr*0.36)%bper2+bper2)%bper2-110;
+    var by4=54+((bi4*47)%86)+Math.sin(fr*0.06+bi4)*5;
+    var bs2=3+((bi4*5)%2);
+    var bfl=Math.sin(fr*0.22+bi4)*bs2*0.5;
+    ctx.moveTo(bx4,by4);ctx.lineTo(bx4-bs2*2,by4-bs2*0.5+bfl);
+    ctx.lineTo(bx4-bs2*0.7,by4+bs2*0.4);ctx.lineTo(bx4+bs2*0.7,by4+bs2*0.4);
+    ctx.lineTo(bx4+bs2*2,by4-bs2*0.5+bfl);
+  }
+  ctx.fill();
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
-    case 2:  bgSunset();   break;  // 夕暮れの森（暫定：夕暮れだが森が無い）
+    case 2:  bgForest();   break;  // ★v254 夕暮れの森（新規・一致）
     case 3:  bgCave();     break;  // ★v236 洞窟（新規・一致）
     case 4:  bgSnow();     break;  // ★v234 雪山（新規・一致）
     case 5:  bgVolcano();  break;  // ★v236 火山（新規・一致）
-    case 6:  bgNightMtn(); break;  // 夜の城（暫定：夜の山岳で城が無い）
-    case 7:  bgGrass();    break;  // 空中（暫定：地面がある）
-    case 8:  bgSpace();    break;  // 海底（暫定：深宇宙）
-    case 9:  bgSpace();    break;  // 魔界（暫定：深宇宙）
-    case 10: bgSpace();    break;  // 天空神殿（暫定：深宇宙）
+    case 6:  bgCastle();   break;  // ★v255 夜の城（新規・一致）
+    case 7:  bgSky();      break;  // ★v250 空中（新規・一致）
+    case 8:  bgSea();      break;  // ★v251 海底（新規・一致）
+    case 9:  bgHell();     break;  // ★v252 魔界（新規・一致）
+    case 10: bgTemple();   break;  // ★v253 天空神殿（新規・一致）
     default: bgGrass();
   }
 }
@@ -6427,19 +7031,37 @@ function draw(){
       var gndBot =['#1a4030','#3a2410','#0e1825','#243640','#3a1008','#240618','#062424','#240808','#240420','#241e08'][_gw];
       var topCol =['#52b788','#9a6a30','#3a5a80','#6a8aa8','#aa3322','#7a3068','#1aa0a0','#aa3030','#aa3088','#aa9030'][_gw];
       var topLit =['#6dd89e','#bb8a44','#5278a8','#8aaac8','#cc5533','#9a4088','#3ac0c0','#cc4444','#cc44aa','#ccaa44'][_gw];
-      ctx.fillStyle=gndCol;ctx.fillRect(tx,t.y,t.w,H-(t.y)+2);
-      // 下部に陰影バンド（奥行き感・グラデの代わり）
-      ctx.fillStyle=gndBot;ctx.fillRect(tx,t.y+40,t.w,H-(t.y)-38);
-      // 草・表面（明るいハイライトライン付き）
-      ctx.fillStyle=topCol;ctx.fillRect(tx,t.y,t.w,5);
-      ctx.fillStyle=topLit;ctx.fillRect(tx,t.y,t.w,2);
-      // 草の毛先（W1-2のみ）
+      // ★v259 坂タイルは上面を斜めに描く（sL→sR）。平らなタイルは従来どおり矩形。
+      var _yL=(t.sL===undefined)?t.y:t.sL, _yR=(t.sR===undefined)?t.y:t.sR;
+      var _slp=(_yL!==_yR);
+      if(_slp){
+        var _yBand=Math.max(_yL,_yR);
+        ctx.fillStyle=gndCol;
+        ctx.beginPath();ctx.moveTo(tx,_yL);ctx.lineTo(tx+t.w,_yR);
+        ctx.lineTo(tx+t.w,H+2);ctx.lineTo(tx,H+2);ctx.fill();
+        ctx.fillStyle=gndBot;ctx.fillRect(tx,_yBand+40,t.w,H-_yBand-38);
+        ctx.fillStyle=topCol;
+        ctx.beginPath();ctx.moveTo(tx,_yL);ctx.lineTo(tx+t.w,_yR);
+        ctx.lineTo(tx+t.w,_yR+5);ctx.lineTo(tx,_yL+5);ctx.fill();
+        ctx.fillStyle=topLit;
+        ctx.beginPath();ctx.moveTo(tx,_yL);ctx.lineTo(tx+t.w,_yR);
+        ctx.lineTo(tx+t.w,_yR+2);ctx.lineTo(tx,_yL+2);ctx.fill();
+      } else {
+        ctx.fillStyle=gndCol;ctx.fillRect(tx,t.y,t.w,H-(t.y)+2);
+        // 下部に陰影バンド（奥行き感・グラデの代わり）
+        ctx.fillStyle=gndBot;ctx.fillRect(tx,t.y+40,t.w,H-(t.y)-38);
+        // 草・表面（明るいハイライトライン付き）
+        ctx.fillStyle=topCol;ctx.fillRect(tx,t.y,t.w,5);
+        ctx.fillStyle=topLit;ctx.fillRect(tx,t.y,t.w,2);
+      }
+      // 草の毛先（W1-2のみ）。坂では表面の傾きに沿わせる。
       if(stageWorld(level)<=2){
         ctx.fillStyle=topCol;
         for(var gr=0;gr<t.w;gr+=8){
           var gh2=3+((tx+gr)%3);
+          var _gy=_yL+(_yR-_yL)*(gr/t.w);
           ctx.beginPath();
-          ctx.moveTo(tx+gr,t.y);ctx.lineTo(tx+gr+2,t.y-gh2);ctx.lineTo(tx+gr+4,t.y);
+          ctx.moveTo(tx+gr,_gy);ctx.lineTo(tx+gr+2,_gy-gh2);ctx.lineTo(tx+gr+4,_gy);
           ctx.fill();
         }
       }
@@ -7798,22 +8420,35 @@ function showStageClear(star, scoreRate){
   }
   // ★v237 案A: 星の条件を可視化（判定式は一切変更しない・表示のみ）。SPEC §9-5
   //   合算スコアが画面に出ておらず「敵を全滅させたのに★2」の理由が見えなかったため。
-  var _tgtStar=(star<2)?2:3;
-  var _starHint='<div style="width:220px;margin:2px auto 0;padding:6px 10px;box-sizing:border-box;'
-    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:9px">'
-    +'<div style="color:#9fe4ff;font-size:11px;font-weight:bold">ひょうか '+Math.round((scoreRate||0)*100)+'%'
-    +'<span style="color:#7fb4c8;font-weight:normal;font-size:10px">　★'+_tgtStar+'は '+((_tgtStar===2)?'60':'85')+'%から</span></div>';
+  // ★v258 星の条件を「達成したかどうか」で出す（判定式 nextLevel と同じ定数を参照）。
+  //   v237の「ひょうか NN%」は合算式の表示だったが、v258で式ごと独立条件にしたため
+  //   パーセント表示は意味を持たなくなった。3条件のチェックリストに置き換える。
+  var _kOK2=(stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1)>=STAR_KILL2;
+  var _kOK3=(stageEnemyTotal>0?(stageEnemyKilled/stageEnemyTotal):1)>=STAR_KILL3;
+  var _cOK =(stageCoinTotal>0?(stageCoinGot/stageCoinTotal):1)>=STAR_COIN;
+  var _dOK =(p.maxHP>0?(p.hp/p.maxHP):0)>=1;
+  function _cond(ok,txt){
+    return '<div style="display:flex;align-items:center;gap:6px;color:'+(ok?'#bdf5c8':'#9fb6c2')+';font-size:10.5px;line-height:1.5">'
+      +'<span style="font-size:11px">'+(ok?'✅':'⬜')+'</span><span>'+txt+'</span></div>';
+  }
+  var _pK2=Math.round(STAR_KILL2*100), _pK3=Math.round(STAR_KILL3*100), _pC=Math.round(STAR_COIN*100);
+  var _starHint='<div style="width:220px;margin:2px auto 0;padding:7px 10px;box-sizing:border-box;'
+    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:9px;text-align:left">'
+    +'<div style="color:#9fe4ff;font-size:11px;font-weight:bold;margin-bottom:3px">★のじょうけん</div>'
+    +_cond(true,'★1　クリアする')
+    +_cond(_kOK2||_cOK,'★2　てきを '+_pK2+'% たおす／コインを '+_pC+'% とる')
+    +_cond(_kOK3&&(_cOK||_dOK),'★3　てきを '+_pK3+'% たおして、コイン '+_pC+'% かノーダメージ');
   if(star<3){
-    var _gap=Math.max(0,((_tgtStar===2)?0.60:0.85)-(scoreRate||0));
     var _restE=Math.max(0,stageEnemyTotal-stageEnemyKilled);
     var _restC=Math.max(0,stageCoinTotal-stageCoinGot);
-    var _needE=Math.ceil(_gap*stageEnemyTotal/0.5);
-    var _needC=Math.ceil(_gap*stageCoinTotal/0.25);
-    var _tip;
-    if(stageEnemyTotal>0 && _needE>0 && _needE<=_restE) _tip='てきを あと '+_needE+' たおすと ★'+_tgtStar+'！';
-    else if(stageCoinTotal>0 && _needC>0 && _needC<=_restC) _tip='コインを あと '+_needC+' まい とると ★'+_tgtStar+'！';
-    else _tip='ダメージを うけずに クリアすると ★'+_tgtStar+'！';
-    _starHint+='<div style="color:#cfe9f5;font-size:10px;line-height:1.45;margin-top:3px">'+_tip+'</div>';
+    var _tgt=(star<2)?2:3;
+    var _needE=Math.max(0,Math.ceil(((_tgt===2)?STAR_KILL2:STAR_KILL3)*stageEnemyTotal)-stageEnemyKilled);
+    var _needC=Math.max(0,Math.ceil(STAR_COIN*stageCoinTotal)-stageCoinGot);
+    var _tip='';
+    if(stageEnemyTotal>0 && _needE>0 && _needE<=_restE) _tip='てきを あと '+_needE+' たおすと ★'+_tgt+'！';
+    else if(stageCoinTotal>0 && _needC>0 && _needC<=_restC) _tip='コインを あと '+_needC+' まい とると ★'+_tgt+'！';
+    else if(_tgt===3) _tip='ダメージを うけずに クリアすると ★3！';
+    if(_tip) _starHint+='<div style="color:#ffe9a8;font-size:10px;line-height:1.45;margin-top:5px;font-weight:bold">'+_tip+'</div>';
   }
   _starHint+='</div>';
   var nextStage=level+1;
