@@ -1783,7 +1783,7 @@ function buildWorld(lv){
     var ta=tiles[ti2-1], tb=tiles[ti2];
     if(!ta.g||!tb.g) continue;
     var diff=tb.gy-ta.gy;
-    if(Math.abs(diff)>8&&ta.x+ta.w===tb.x){
+    if(Math.abs(diff)>8&&ta.x+ta.w===tb.x&&!slopeSmooth(ta,tb)){   // ★v259 坂の区間は崖面を作らない
       // 段差部分に縦タイルを追加（側面を埋める）
       var sideY=Math.min(ta.gy,tb.gy);
       var sideH=Math.abs(diff);
@@ -2062,6 +2062,27 @@ function buildGroundIndex(){
     var bx=Math.floor((gtiles[gi].x-GT_BASE)/GT_STEP);
     if(bx>=0 && bx<n) gtIdx[bx]=gi;
   }
+  // ★v259 坂タイルの「左端・右端の地面の高さ」を前計算する。
+  //   隣と滑らかにつなぐ区間だけ中点を採り、タイル内を線形補間して坂にする。
+  //   坂でない段差は従来どおり sL=sR=t.y のまま＝カクッとした段差が残る。
+  //   毎フレーム隣を引くと重いので、地形が確定したここで1回だけ計算する。
+  for(var gj=0;gj<gtiles.length;gj++){
+    var tt=gtiles[gj], pv=gtiles[gj-1], nx=gtiles[gj+1];
+    tt.sL = slopeSmooth(pv,tt) ? (tt.y+pv.y)/2 : tt.y;
+    tt.sR = slopeSmooth(tt,nx) ? (tt.y+nx.y)/2 : tt.y;
+  }
+}
+// ★v259 2枚の地面タイルの境目を「坂として滑らかにつなぐ」かどうか。
+//   隣接していて、どちらかが坂セグメント(slope!==0)なら滑らかにする。
+function slopeSmooth(a,b){
+  return !!(a&&b&&a.g&&b.g&&(a.x+a.w===b.x)&&(((a.slope||0)!==0)||((b.slope||0)!==0)));
+}
+// ★v259 指定xでの地面の表面高さ。坂タイルはタイル内を線形補間する。
+function tileTopAt(t,x){
+  if(!t) return GROUND+200;
+  if(!t.g || t.sL===undefined || t.sL===t.sR) return t.y;
+  var f=(x-t.x)/t.w; if(f<0)f=0; else if(f>1)f=1;
+  return t.sL+(t.sR-t.sL)*f;
 }
 // 指定xの地面タイルを索引で引く（無ければnull）。
 //   タイル範囲は[t.x-2, t.x+t.w+2)で隣接が4px重なる。旧実装は配列順(x昇順)で
@@ -2139,7 +2160,7 @@ function checkHole(ent, vx){
 // 指定X座標の地面Y取得（地形対応）
 function getGroundY(x){
   var t=groundTileAt(x);          // ★v229 索引参照（旧:全tiles線形走査）
-  return t ? t.y : GROUND+200;    // 穴のとき大きな値を返す
+  return t ? tileTopAt(t,x) : GROUND+200;   // ★v259 坂は補間。穴のとき大きな値
 }
 // 指定X座標の坂の向きを返す（-1:右で下がる +1:右で上がる 0:平坦）
 function getSlopeAt(x){
@@ -3956,20 +3977,23 @@ function moveY(ent,ew,eh,limitStep){
     for(var ti=0;ti<tiles.length;ti++){
       var t=tiles[ti]; if(t.goal) continue;
       if(ent.x+ew<t.x-2||ent.x>t.x+t.w+2) continue;
+      // ★v259 地面は坂なら足元xでの表面高さを使う（浮き台は従来どおり平ら）
+      var tTop=t.g?tileTopAt(t,ent.x+ew/2):t.y;
       var cb=ent.y+eh;
-      if(cb>=t.y && ent.y<t.y){
+      if(cb>=tTop && ent.y<tTop){
         if(ent.x+ew>t.x+2&&ent.x<t.x+t.w-2){
           // ★浮き台(g:false)は「上から降りてきた時」だけ着地（横潜り込みワープ防止）。
           //   地面(g:true)は厚みがあるのでスナップするが、limitStep指定時（プレイヤー）は
           //   歩いて登れる段差を26pxまでに制限。それ以上の高さはジャンプでしか登れない。
+          //   坂は表面が連続しているので、この26px制限に引っかからず歩いて登れる。
           if(t.g){
-            if(!limitStep || prevBottom<=t.y+Math.max(26,Math.abs(dy)+3)){
-              ent.y=t.y-eh;ent.vy=0;ent.onG=true;break;
+            if(!limitStep || prevBottom<=tTop+Math.max(26,Math.abs(dy)+3)){
+              ent.y=tTop-eh;ent.vy=0;ent.onG=true;break;
             } else {
               ent.stepBlocked=true; // 高い段差＝壁。横移動は呼び出し側で巻き戻す
             }
-          } else if(prevBottom<=t.y+Math.max(8,Math.abs(dy)+3)){
-            ent.y=t.y-eh;ent.vy=0;ent.onG=true;break;
+          } else if(prevBottom<=tTop+Math.max(8,Math.abs(dy)+3)){
+            ent.y=tTop-eh;ent.vy=0;ent.onG=true;break;
           }
         }
       }
@@ -6990,19 +7014,37 @@ function draw(){
       var gndBot =['#1a4030','#3a2410','#0e1825','#243640','#3a1008','#240618','#062424','#240808','#240420','#241e08'][_gw];
       var topCol =['#52b788','#9a6a30','#3a5a80','#6a8aa8','#aa3322','#7a3068','#1aa0a0','#aa3030','#aa3088','#aa9030'][_gw];
       var topLit =['#6dd89e','#bb8a44','#5278a8','#8aaac8','#cc5533','#9a4088','#3ac0c0','#cc4444','#cc44aa','#ccaa44'][_gw];
-      ctx.fillStyle=gndCol;ctx.fillRect(tx,t.y,t.w,H-(t.y)+2);
-      // 下部に陰影バンド（奥行き感・グラデの代わり）
-      ctx.fillStyle=gndBot;ctx.fillRect(tx,t.y+40,t.w,H-(t.y)-38);
-      // 草・表面（明るいハイライトライン付き）
-      ctx.fillStyle=topCol;ctx.fillRect(tx,t.y,t.w,5);
-      ctx.fillStyle=topLit;ctx.fillRect(tx,t.y,t.w,2);
-      // 草の毛先（W1-2のみ）
+      // ★v259 坂タイルは上面を斜めに描く（sL→sR）。平らなタイルは従来どおり矩形。
+      var _yL=(t.sL===undefined)?t.y:t.sL, _yR=(t.sR===undefined)?t.y:t.sR;
+      var _slp=(_yL!==_yR);
+      if(_slp){
+        var _yBand=Math.max(_yL,_yR);
+        ctx.fillStyle=gndCol;
+        ctx.beginPath();ctx.moveTo(tx,_yL);ctx.lineTo(tx+t.w,_yR);
+        ctx.lineTo(tx+t.w,H+2);ctx.lineTo(tx,H+2);ctx.fill();
+        ctx.fillStyle=gndBot;ctx.fillRect(tx,_yBand+40,t.w,H-_yBand-38);
+        ctx.fillStyle=topCol;
+        ctx.beginPath();ctx.moveTo(tx,_yL);ctx.lineTo(tx+t.w,_yR);
+        ctx.lineTo(tx+t.w,_yR+5);ctx.lineTo(tx,_yL+5);ctx.fill();
+        ctx.fillStyle=topLit;
+        ctx.beginPath();ctx.moveTo(tx,_yL);ctx.lineTo(tx+t.w,_yR);
+        ctx.lineTo(tx+t.w,_yR+2);ctx.lineTo(tx,_yL+2);ctx.fill();
+      } else {
+        ctx.fillStyle=gndCol;ctx.fillRect(tx,t.y,t.w,H-(t.y)+2);
+        // 下部に陰影バンド（奥行き感・グラデの代わり）
+        ctx.fillStyle=gndBot;ctx.fillRect(tx,t.y+40,t.w,H-(t.y)-38);
+        // 草・表面（明るいハイライトライン付き）
+        ctx.fillStyle=topCol;ctx.fillRect(tx,t.y,t.w,5);
+        ctx.fillStyle=topLit;ctx.fillRect(tx,t.y,t.w,2);
+      }
+      // 草の毛先（W1-2のみ）。坂では表面の傾きに沿わせる。
       if(stageWorld(level)<=2){
         ctx.fillStyle=topCol;
         for(var gr=0;gr<t.w;gr+=8){
           var gh2=3+((tx+gr)%3);
+          var _gy=_yL+(_yR-_yL)*(gr/t.w);
           ctx.beginPath();
-          ctx.moveTo(tx+gr,t.y);ctx.lineTo(tx+gr+2,t.y-gh2);ctx.lineTo(tx+gr+4,t.y);
+          ctx.moveTo(tx+gr,_gy);ctx.lineTo(tx+gr+2,_gy-gh2);ctx.lineTo(tx+gr+4,_gy);
           ctx.fill();
         }
       }
