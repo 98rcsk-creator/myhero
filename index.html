@@ -454,11 +454,27 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
    ★#howtoBtn の margin-top は静的HTML側とJS注入側の両方にインラインで入っているので
      !important が必要（CLAUDE.md §2-2 の二重マークアップ）。
    内訳: ロゴ -83px / menuRow4 -6px / あそびかた -4px = 計93px を回収 */
+/* ═══ ★v264 ボタンをロゴ画像に重ねない ═══
+   実機で「ボタンと背景が重なってる」と指摘。従来は .home-btns の
+   margin-top:-26vh でボタンをロゴの上に約157px重ねていた。
+   ロゴ画像は下の28%が「看板より下のただの草原」で、実測すると
+   木の看板の下端は画像高さの71.7%の位置。そこから少し余裕をとって
+   76.8%(=1180/1536)で下を切り落とし、空いた分にボタンを普通に置く。
+   ★ロゴの見えている部分（王冠・タイトル・看板）は原寸のまま。縮んでいない。
+   ★画像そのものは無加工（CSSの表示範囲だけ）。CLAUDE.md §地雷2 に非干渉。
+   ⚠ この1ブロックを丸ごと消せば v263 の見た目（重なりあり）に戻る。 */
+.home-logo{aspect-ratio:1024/1180;background-size:100% auto;
+  /* 切り落とした下端が直線で目立つので内側の影でぼかす。
+     mask-image / filter は WKWebView で高コストなので使わない（CLAUDE.md §1-6）。
+     色は実機レンダを実測した下地 rgb(51,110,119) に寄せてある。 */
+  box-shadow:inset 0 -30px 26px -14px rgba(38,86,94,0.95);}
+.home-btns{margin-top:8px;}
+
 /* ★v263 実機(393×604)で「あそびかた」が16pxはみ出していた。
    v257の閾値600pxをわずか4px上回って効いていなかったため、段階を1つ足す。
    主要ターゲット 390×674 には効かせない（660 < 674）。 */
 @media (max-height:660px){
-  .home-logo{max-width:360px;}
+  .home-logo{max-width:335px;}
   .menuRow4{margin-top:12px;}
   #howtoBtn{margin-top:9px !important;}
 }
@@ -466,6 +482,14 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
   .home-logo{max-width:320px;}
   .menuRow4{margin-top:10px;}
   #howtoBtn{margin-top:8px !important;}
+}
+/* ★v264 重なりを無くしたぶん縦が必要になるので、最も短い端末はもう一段詰める */
+@media (max-height:560px){
+  .home-logo{max-width:272px;}
+  .home-btns{margin-top:4px;}
+  .home-cta{padding-top:12px;padding-bottom:12px;}
+  .menuRow4{margin-top:8px;}
+  #howtoBtn{margin-top:6px !important;}
 }
 </style>
 </head>
