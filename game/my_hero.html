@@ -236,6 +236,9 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 .csCard .csShineBar{position:absolute;top:-35%;left:0;width:36%;height:170%;pointer-events:none;
   background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.30) 50%,rgba(255,255,255,0) 100%);
   animation:csShine 3.4s ease-in-out infinite;}
+/* ★v273 縦3分割の背の高いカードでは、同じ帯が画面を横切る巨大な灰色の斜線に見える。
+   カードが縦長のときだけ細く薄くする（.csTall は _showGenderStep が付ける）。 */
+.csTall .csShineBar{width:20%;background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.16) 50%,rgba(255,255,255,0) 100%);}
 .csSel{animation:csSelPulse 1.6s ease-in-out infinite;}
 .csBobber{animation:csBob 2.2s ease-in-out infinite;}
 .csSpark{position:absolute;pointer-events:none;font-size:13px;animation:csFloat 3.6s linear infinite;
@@ -2678,54 +2681,56 @@ function _showGenderStep(){
       +'<span class="csSpark" style="left:48%;bottom:68%;animation-delay:1.2s;font-size:11px">⭐</span>'
       +'<span class="csSpark" style="left:90%;bottom:60%;animation-delay:2.9s">✨</span>'
     +'</div>'
-    +'<div class="title-logo" style="font-size:32px;color:#ffe44d;animation:csLogoGlow 2.4s ease-in-out infinite">My HERO</div>'
-    +'<div style="color:#ffcc88;font-size:14px;letter-spacing:3px;margin-bottom:14px">⚔️ ― 勇者を選べ ― 🛡️</div>'
-    +'<div style="color:#0e1420;font-size:12px;font-weight:800;margin-bottom:18px;'
+    +'<div class="title-logo" style="font-size:28px;color:#ffe44d;animation:csLogoGlow 2.4s ease-in-out infinite">My HERO</div>'
+    +'<div style="color:#ffcc88;font-size:13px;letter-spacing:3px;margin-bottom:10px">\u2694\ufe0f \u2015 \u52c7\u8005\u3092\u9078\u3079 \u2015 \ud83d\udee1\ufe0f</div>'
+    +'<div style="color:#0e1420;font-size:12px;font-weight:800;margin-bottom:14px;'
       +'background:linear-gradient(180deg,#9fe4ff,#57b4e6);padding:5px 16px;border-radius:999px;'
-      +'box-shadow:0 2px 6px rgba(0,0,0,0.35)">STEP ①　性別を選択</div>'
-    +'<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;justify-content:center">';
-  [
-    {g:'men',  icon:'♂',label:'MEN',  desc:'男の子キャラ',
-      bg:'linear-gradient(165deg,rgba(90,160,255,0.22),rgba(30,60,120,0.10))', col:'#9fc8ff'},
-    {g:'women',icon:'♀',label:'WOMEN',desc:'女の子キャラ',
-      bg:'linear-gradient(165deg,rgba(255,130,190,0.22),rgba(130,40,95,0.10))', col:'#ffb3d6'},
-  ].forEach(function(item){
-    var sel=(!_pickedCustom && item.g===selectedGender);html+='<div class="charCard csCard'+(sel?' csSel':'')+'" data-gender="'+item.g+'" style="'
-      +'border:3px solid '+(sel?'#ffe44d':'rgba(120,150,175,0.35)')+';'
-      +'border-radius:16px;padding:13px 14px 10px;cursor:pointer;'
-      +'background:'+(sel?'linear-gradient(165deg,rgba(255,228,77,0.20),rgba(255,170,40,0.08))':item.bg)+';'
-      +'display:flex;flex-direction:column;align-items:center;gap:5px;min-width:106px;">'
-      +'<div class="csShineBar"></div>'
-      +'<canvas class="genderPreview'+(sel?' csBobber':'')+'" data-gender="'+item.g+'" width="68" height="88" style="display:block"></canvas>'
-      +'<div style="font-size:15px;font-weight:bold;letter-spacing:1px;color:'+(sel?'#ffe44d':item.col)+'">'+item.icon+' '+item.label+'</div>'
-      +'<div style="font-size:10px;color:'+(sel?'#ffd9a0':'rgba(220,230,245,0.65)')+'">'+item.desc+'</div>'
+      +'box-shadow:0 2px 6px rgba(0,0,0,0.35)">STEP \u2460\u3000\u30ad\u30e3\u30e9\u3092\u9078\u629e</div>';
+  // \u2605v273 \u753b\u9762\u3092\u7e26\u306b3\u5206\u5272\u3057\u3066 MEN / WOMEN / \u30de\u30a4\u30d2\u30fc\u30ed\u30fc\u3092\u540c\u683c\u306b\u4e26\u3079\u308b\u3002
+  //   \u5217\u5e45\u306f flex:1 1 0 \u3067\u5747\u7b49\u3002\u30ab\u30fc\u30c9\u306e\u9ad8\u3055\u3092\u63c3\u3048\u308b\u306e\u306f align-items:stretch \u3067\u306a\u304f
+  //   \u884c\u306e height \u56fa\u5b9a\uff08\u4e2d\u8eab\u306e\u91cf\u304c\u9055\u3063\u3066\u3082\u898b\u305f\u76ee\u304c\u63c3\u3046\uff09\u3002
+  var _hasCustom=!!HEAD_READY['custom'];
+  var _cards=[
+    {k:'men',  sel:(!_pickedCustom && selectedGender==='men'),   label:'MEN',   icon:'\u2642', sub:'\u7537\u306e\u5b50\u30ad\u30e3\u30e9',
+     col:'#9fc8ff', bg:'linear-gradient(180deg,rgba(96,168,255,0.34),rgba(34,68,132,0.18))', bd:'rgba(120,150,175,0.35)'},
+    {k:'women',sel:(!_pickedCustom && selectedGender==='women'), label:'WOMEN', icon:'\u2640', sub:'\u5973\u306e\u5b50\u30ad\u30e3\u30e9',
+     col:'#ffb3d6', bg:'linear-gradient(180deg,rgba(255,140,196,0.34),rgba(140,46,104,0.18))', bd:'rgba(120,150,175,0.35)'},
+    {k:'custom',sel:!!_pickedCustom, label:'MY HERO', icon:'\u2b50', sub:(_hasCustom?'\u30ad\u30df\u306e\u9854\u3067\u5192\u967a\uff01':'\u5199\u771f\u304b\u3089\u3064\u304f\u308b'),
+     col:'#ffd97e', bg:'linear-gradient(180deg,rgba(255,202,74,0.28),rgba(255,130,186,0.16))', bd:'rgba(255,210,90,0.55)'}
+  ];
+  // ★v273 #overlay の左右 padding:24px を負マージンで食い込ませて列幅を稼ぐ。
+  //   キャラは倍率2.0で既に canvas 幅の89%（実測96/108px）を使っており、
+  //   倍率を上げると横がはみ出す。大きく見せるには列自体を広げるしかない。
+  html+='<div style="display:flex;gap:7px;width:calc(100% + 36px);margin-left:-18px;margin-right:-18px;'
+    +'max-width:none;padding:0 3px;box-sizing:border-box;'
+    +'height:clamp(236px,46vh,330px);margin-bottom:18px">';
+  _cards.forEach(function(c){
+    html+='<div class="charCard csCard csTall'+(c.sel?' csSel':'')+'" '
+      +(c.k==='custom'?'id="customSlot" ':'data-gender="'+c.k+'" ')
+      +'style="flex:1 1 0;min-width:0;height:100%;box-sizing:border-box;'
+      +'border:3px solid '+(c.sel?'#ffe44d':c.bd)+';border-radius:18px;padding:9px 3px 8px;cursor:pointer;'
+      +'background:'+(c.sel?'linear-gradient(180deg,rgba(255,228,77,0.22),rgba(255,170,40,0.09))':c.bg)+';'
+      +'display:flex;flex-direction:column;align-items:center;justify-content:space-between;">'
+      +'<div class="csShineBar"></div>';
+    // \u4e0a\uff1a\u30d7\u30ec\u30d3\u30e5\u30fc\uff08\u53ef\u5909\u9ad8\u3055\u3092\u5410\u304d\u51fa\u3055\u305b\u308b\u305f\u3081 flex:1 \u306e\u5165\u308c\u7269\u306b\u5165\u308c\u308b\uff09
+    html+='<div style="flex:1 1 auto;display:flex;align-items:center;justify-content:center;width:100%;min-height:0">';
+    if(c.k==='custom' && !_hasCustom){
+      html+='<div class="csBobber" style="font-size:44px;line-height:1">\ud83d\udcf7</div>';
+    } else {
+      html+='<canvas class="'+(c.k==='custom'?'':'genderPreview ')+(c.sel?'csBobber':'')+'" '
+        +(c.k==='custom'?'id="customPreview" ':'data-gender="'+c.k+'" ')
+        +'width="120" height="150" style="display:block;width:100%;height:auto"></canvas>';
+    }
+    html+='</div>';
+    // \u4e0b\uff1a\u30e9\u30d9\u30eb
+    html+='<div style="width:100%;flex:0 0 auto">'
+      +'<div style="font-size:13px;font-weight:bold;letter-spacing:0.5px;line-height:1.15;'
+        +'color:'+(c.sel?'#ffe44d':c.col)+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.icon+' '+c.label+'</div>'
+      +'<div style="font-size:9.5px;margin-top:3px;line-height:1.25;'
+        +'color:'+(c.sel?'#ffd9a0':'rgba(220,230,245,0.68)')+'">'+c.sub+'</div>'
+      +'</div>'
       +'</div>';
   });
-  // ── MEN/WOMENの行はここで閉じる ──
-  html+='</div>';
-  // ── マイヒーロー：一段下のスロット。タップで選択→「次へ」で進む（MEN/WOMENと同じ操作感） ──
-  var hasCustom=!!HEAD_READY['custom'];
-  var customSel=!!_pickedCustom;
-  html+='<div class="charCard csCard'+(customSel?' csSel':'')+'" id="customSlot" style="'
-    +'border:3px solid '+(customSel?'#ffe44d':'rgba(255,210,90,0.55)')+';'
-    +'border-radius:16px;padding:12px 18px;cursor:pointer;margin-bottom:22px;'
-    +'background:'+(customSel?'linear-gradient(165deg,rgba(255,228,77,0.20),rgba(255,170,40,0.08))':'linear-gradient(135deg,rgba(255,196,60,0.15),rgba(255,120,180,0.10),rgba(120,160,255,0.13))')+';'
-    +'display:flex;flex-direction:row;align-items:center;justify-content:center;gap:14px;min-width:240px;max-width:330px;">'
-    +'<div class="csShineBar"></div>';
-  if(hasCustom){
-    html+='<canvas id="customPreview" class="'+(customSel?'csBobber':'')+'" width="68" height="88" style="display:block;flex-shrink:0"></canvas>'
-      +'<div style="text-align:left">'
-      +'<div style="font-size:15px;font-weight:bold;letter-spacing:0.5px;color:'+(customSel?'#ffe44d':'#ffd97e')+'">⭐ マイヒーロー</div>'
-      +'<div style="font-size:10px;color:rgba(230,238,250,0.75);margin-top:3px">キミの顔の勇者で冒険！</div>'
-      +'</div>';
-  } else {
-    html+='<div class="csBobber" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;'
-      +'font-size:30px;flex-shrink:0">📷</div>'
-      +'<div style="text-align:left">'
-      +'<div style="font-size:15px;font-weight:bold;letter-spacing:0.5px;color:'+(customSel?'#ffe44d':'#ffd97e')+'">マイヒーローをつくる</div>'
-      +'<div style="font-size:10px;color:rgba(230,238,250,0.75);margin-top:3px">写真からキミだけの勇者に！</div>'
-      +'</div>';
-  }
   html+='</div>';
   html+='<div class="menuBtnMain" id="nextBtn" style="margin-top:0;width:210px;font-size:19px">次へ <span style="display:inline-block;animation:csArrow 0.9s ease-in-out infinite">▶</span></div>'
     +'<div class="menuBtnSub" id="genderHomeBtn" style="margin-top:16px;width:170px;font-size:14px">◀ ホームに戻る</div>';
@@ -2737,10 +2742,12 @@ function _showGenderStep(){
     document.querySelectorAll('.genderPreview').forEach(function(cv2){
       var g=cv2.dataset.gender;
       var ctx2=cv2.getContext('2d');
-      drawCharPreview(ctx2,34,84,g+'_0',true,1.32,true); // ★v208: 勇者装備(マント+剣+オーラ)付きプレビュー
+      // ★v273 canvas 68x88 → 120x150、倍率 1.32→2.2。実測でキャラは幅106px（canvas120の88%）
+      //   に収まり、横のはみ出しなし。これ以上上げると剣・オーラが切れる。
+      drawCharPreview(ctx2,60,144,g+'_0',true,2.2,true); // ★v208: 勇者装備(マント+剣+オーラ)付きプレビュー
     });
     var cpv=document.getElementById('customPreview');
-    if(cpv){ drawCharPreview(cpv.getContext('2d'),34,84,'custom',false,1.32,true); }
+    if(cpv){ drawCharPreview(cpv.getContext('2d'),60,144,'custom',false,2.2,true); }
     document.querySelectorAll('.charCard[data-gender]').forEach(function(el){
       function pick(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
         _pickedCustom=false;
