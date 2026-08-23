@@ -1,6 +1,6 @@
 # My HERO — 仕様・現状・タスク（作業用の正本）
 
-最終更新：2026-08-23（v273 キャラ選択を縦3分割に）　対象：`game/my_hero.html` ＝ **v273**（1,416,482B / 単一ファイル完結）
+最終更新：2026-08-23（v274 キャラ選択STEP①を1枚絵化）　対象：`game/my_hero.html` ＝ **v274**（1,416,482B / 単一ファイル完結）
 作業ルールは `/CLAUDE.md`。本書のどこにも行番号は書かない（すべて grep で引ける名前参照）。
 
 ---
@@ -84,7 +84,7 @@
 | 名前 | 役割 |
 |---|---|
 | `showTitleScreen` / `startFromTitle` | ホーム（JS注入側） |
-| `_showGenderStep` / `_cards` | ★v273 キャラ選択STEP①。画面を縦3分割し MEN/WOMEN/MY HERO を同格に並べる。列の中身は `_cards` 配列1本で決まる |
+| `_showGenderStep` / `.csArt` | ★v274 キャラ選択STEP①。1枚絵＋透明な当たり判定（ホームv267と同方式）。id/data-gender は旧実装と同じでハンドラ部は共通 |
 | `HOME_TINT` / `applyHomeTint` / `tintGrad` | 時間帯レイヤー。全部 `o:0` で無効化（ホーム+17fps） |
 | `HOMEFX_DELAY` / `homeGo` | 遷移ディレイ130ms |
 | `TAPFX_N/D/R` / `homeTapFx` | タップ星バースト（6粒/34px/18px） |
@@ -106,8 +106,9 @@
 | クリア画面の★条件表示 | `showStageClear` 内 `_row` / `_starHint` | v263。評価バー3本を撤去し条件1枚に集約。幅300px・1★につき2行 |
 | 星の条件 | `STAR_KILL2` / `STAR_KILL3` / `STAR_COIN`（0.50 / 0.70 / 0.70） | v258。★2=敵50%またはコイン70%／★3=敵70%かつ（コイン70%またはノーダメージ）。SPEC §9-7 |
 | 星ヒントの文言・見た目 | `showStageClear` 内 `_starHint` / `_tgtStar` | v237追加。幅220px・式には非干渉 |
-| キャラ選択3列の高さ・幅 | `_showGenderStep` の `height:clamp(236px,46vh,330px)` と `width:calc(100% + 36px)` | v273。負マージンで `#overlay` の左右余白24pxに食い込ませて列幅を稼いでいる |
-| キャラ選択のキャラの大きさ | `drawCharPreview(...,2.2,true)` と canvas の `width="120" height="150"` | v273。**2.2より上げると剣とオーラが横にはみ出す**（実測: 倍率2.4で canvas 幅いっぱいに達する） |
+| キャラ選択STEP①の当たり判定 | `.csArt` 内の `%` 指定（`_showGenderStep`）と `.csHitCard` の共通 top/height | v274。**背景画像にボタンが描かれている**（ホームv267と同方式）。画像を差し替えたら色帯実測で座標を測り直すこと |
+| キャラ選択STEP①の背景画像 | `.csArt` の base64 | v274。原画853×1844 → 760×1643 JPEG q82・232KB。原画は `docs/assets_src/charselect_step1_original.png` |
+| 選択中カードの金リング | `.csSelRing` の box-shadow | v274。選択状態だけ絵に無いのでCSSで重ねる。「カードの周り」に出る表示なので多少のズレは目立たない |
 | キャラ選択ボタンの固定 | `_showFaceStep` のボタン行 `position:sticky;bottom:-140px` | v238追加・v269で-140pxに（scrollableのpadding-bottomと同値必須）。剥がすと従来の流し込みに戻る |
 | 連続プレイのクリア画面 | `nextLevel` の `if(level<MAX_STAGE)` 分岐 / `_contAdvancePending` | v239追加。分岐ごと外せば従来の直行に戻る |
 | ワールド別まもの絵 | `ENEMY_SPR_W` / 敵の `sprS` | v240追加・v244でW2・v245でW3追加。空にすれば全ワールド従来絵に戻る。docs/MONSTERS.md 参照 |
@@ -168,6 +169,15 @@
 - **`cfg.shootInterval` は死にパラメータ**：消すか生成側と繋ぎ直すか要判断。
 
 ## 6. 未検証（実機チェックリスト）— 消化されるまで消さない
+
+### v274（キャラ選択STEP①を1枚絵＋透明ボタンに／3機種で実測）
+- [ ] **もらったイラスト通りの見た目になっているか**（今回の本題）
+- [ ] **5つのボタン（MENS/WOMENS/マイヒーローをつくる/次へ/ホームに戻る）が全部正しく押せるか**
+- [ ] **押した位置と絵のボタンがズレていないか**（赤枠可視化では全ボタン一致）
+- [ ] **選択中カードの金リングがちゃんと出るか・タップで移動するか**（選択状態だけは絵に無いのでCSSで重ねている）
+- [ ] **短い端末で下までスクロールできるか**（SE実測: スクロール量403px）
+- [ ] 絵の下端と暗い背景の継ぎ目が気にならないか（56pxのフェードを入れた）
+- [ ] 読み込みが重くなっていないか（+232KB、ファイル全体約1.65MB。iOSメモリはSPEC §4-11）
 
 ### v273（キャラ選択を縦3分割に／3機種で実測）
 - [ ] **左から MEN・WOMEN・MY HERO の3列になっているか**（今回の本題）
