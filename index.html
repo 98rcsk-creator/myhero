@@ -8536,12 +8536,10 @@ function showStageMap(){
     h+='</div></div>';
   }
   h+='</div>'   // ★v243 2列グリッドを閉じる
-    // ★v269 sticky の bottom は scrollable の padding-bottom:140px の分だけ内側に食い込むので
-    //   -140px で相殺して画面の本当の下端に張り付かせる（0のままだと140px浮いて画面中央に見える）。
-    //   140 は #overlay.scrollable の padding-bottom と必ず同じ値にすること。
-    //   最後までスクロールすると通常フローに戻り、140px余白の上＝IGツールバーの外に収まる。
-    +'<div style="position:sticky;bottom:-140px;width:100%;padding:12px 0 6px;background:linear-gradient(180deg,rgba(11,26,36,0) 0%,rgba(11,26,36,0.94) 34%);display:flex;flex-direction:column;align-items:center;gap:9px;z-index:5">'
-    +'<div id="mapStartBtn" class="menuBtnMain" style="margin-top:0;width:240px;opacity:0.4;pointer-events:none">▶ ステージを選んでね</div>'
+    // ★v271 sticky を廃止して通常フローに。常に画面下部に居座る必要は無く、
+    //   一番下までスクロールした時に出ればよい（実機フィードバック）。
+    //   ステージはセルをタップした時点で始まるので開始ボタンも不要。
+    +'<div style="width:100%;padding:20px 0 6px;display:flex;flex-direction:column;align-items:center;gap:9px">'
     +'<div id="mapBackBtn" class="menuBtnSub" style="width:160px">◀ ホームに戻る</div>'
     +'</div></div>';
   ov.innerHTML=h;
@@ -8550,26 +8548,12 @@ function showStageMap(){
   ov.scrollTop=0;
   setTimeout(function(){
     var cells=ov.querySelectorAll('.stageCell');
-    var _mapSel=0; // ★v199 ⑪: 選択中ステージ（スタートボタンで確定＝誤タップで即進行しない）
-    function _updateStageSel(){
-      for(var k=0;k<cells.length;k++){
-        var c=cells[k];
-        if(c.dataset.unlocked==='1' && parseInt(c.dataset.stage,10)===_mapSel){
-          c.style.boxShadow='0 0 0 3px #ffe44d,0 0 14px rgba(255,228,77,0.6)';
-          c.style.transform='scale(1.06)';
-        } else { c.style.boxShadow=''; c.style.transform=''; }
-      }
-      var sb=document.getElementById('mapStartBtn');
-      if(sb){
-        if(_mapSel){
-          var _w=Math.floor((_mapSel-1)/STAGES_PER_WORLD)+1;
-          sb.textContent='▶ ワールド'+_w+' であそぶ';   // ★v233 旧:'7-1 であそぶ'
-          sb.style.opacity='1'; sb.style.pointerEvents='auto';
-        } else {
-          sb.textContent='▶ ステージを選んでね';
-          sb.style.opacity='0.4'; sb.style.pointerEvents='none';
-        }
-      }
+    // ★v271 開始ボタンを廃止したので、セルのタップでそのまま開始する。
+    //   誤タップ対策は「指が8px以上動いたらスクロール扱いで無視」で担保（下の moved 判定）。
+    function _goStage(st){
+      var c=ov.querySelector('.stageCell[data-stage="'+st+'"]');
+      if(c){ c.style.boxShadow='0 0 0 3px #ffe44d,0 0 14px rgba(255,228,77,0.6)'; c.style.transform='scale(1.06)'; }
+      selectedStage=st; startStageFromMap(st);
     }
     for(var i=0;i<cells.length;i++){
       (function(cell){
@@ -8587,15 +8571,13 @@ function showStageMap(){
         },{passive:true});
         cell.addEventListener('touchend',function(e){
           if(moved) return;            // スクロール操作だったので無視
-          e.stopPropagation();
-          _mapSel=parseInt(cell.dataset.stage,10);  // ★v199 ⑪: タップは選択のみ
-          _updateStageSel();
+          e.stopPropagation(); if(e.cancelable)e.preventDefault();
+          _goStage(parseInt(cell.dataset.stage,10));
         });
         // デスクトップ用クリック
         cell.addEventListener('click',function(e){
           e.stopPropagation();
-          _mapSel=parseInt(cell.dataset.stage,10);
-          _updateStageSel();
+          _goStage(parseInt(cell.dataset.stage,10));
         });
       })(cells[i]);
     }
@@ -8604,14 +8586,6 @@ function showStageMap(){
       function back(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); ov.classList.remove('scrollable'); gs='title'; showTitleScreen(); }
       bb.addEventListener('touchstart',back,{passive:false});
       bb.addEventListener('click',back);
-    }
-    var msb=document.getElementById('mapStartBtn');
-    if(msb){
-      function goStartStage(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
-        if(!_mapSel) return;                       // ★v199 ⑪: 選択済みのときだけ進む
-        selectedStage=_mapSel; startStageFromMap(selectedStage); }
-      msb.addEventListener('touchstart',goStartStage,{passive:false});
-      msb.addEventListener('click',goStartStage);
     }
   },30);
 }
