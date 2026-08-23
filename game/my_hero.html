@@ -292,7 +292,12 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
   background:linear-gradient(165deg,rgba(13,34,62,0.95) 0%,rgba(11,26,36,0.95) 48%,rgba(11,32,22,0.95) 100%);
   display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:20px;
-  z-index:99;cursor:pointer;text-align:center;padding:40px 24px;min-height:100vh;
+  z-index:99;cursor:pointer;text-align:center;padding:40px 24px;
+  /* ⚠ min-height:100vh を付けないこと。position:fixed+inset:0 で高さは既に確定しており、
+     iOS Safari の 100vh は「ツールバーが隠れた時の高さ」＝実際の可視領域より大きい。
+     両方効くと器が可視領域より高くなり、スクロール可能量がその差だけ削られて
+     最下部（もどるボタン）が画面外に居座る。実測 390x674 で vh を111%に膨らませると
+     スクロール量 162px→88px、はみ出し74px。 */
   overflow-y:auto;-webkit-overflow-scrolling:touch;}
 #overlay.scrollable{justify-content:flex-start !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch !important;touch-action:pan-y !important;padding-top:16px !important;/* ★v242 下余白を140pxに拡大。IG内蔵ブラウザの下部ツールバー(約90〜110px)に 最下部のボタンが隠れて押せない実機報告への対応。PCでは末尾に余白が増えるだけ。 */padding-bottom:140px !important;gap:10px !important;}
 /* ★じぶんをつくる・クロップ中：写真の位置合わせ中はページ自体を一切動かさない（スクロール完全禁止）。
@@ -489,23 +494,30 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 /* ボタンの器。絵の上に重ねる */
 .home-btns{position:absolute !important;left:0;right:0;top:0;bottom:0;
   margin:0 !important;padding:0 !important;display:block !important;z-index:3;}
-.menuRow,.menuRow4{display:contents !important;}
+/* ⚠ .menuRow はマイヒーロー作成画面など**ホーム以外でも使われている**。
+   ホーム限定にスコープを絞ること（グローバルに display:contents を当てると
+   他画面のレイアウトが壊れ、実績画面のスクロールが効かなくなった）。 */
+.home-btns .menuRow,.home-btns .menuRow4{display:contents !important;}
 /* 透明な当たり判定。文字と装飾は絵側にあるので全部消す */
-#homeStartBtn,#stageMapBtn,#shopBtn,#achBtn,#rankBtn,#howtoBtn{
+/* ⚠ これらの id はホーム以外の画面には出ないが、念のため .home 配下に限定する */
+#overlay.home #homeStartBtn,#overlay.home #stageMapBtn,#overlay.home #shopBtn,
+#overlay.home #achBtn,#overlay.home #rankBtn,#overlay.home #howtoBtn{
   background:none !important;border:none !important;box-shadow:none !important;
   color:transparent !important;font-size:0 !important;text-shadow:none !important;
   padding:0 !important;margin:0 !important;border-radius:14px;
   -webkit-tap-highlight-color:transparent;transition:transform .09s ease, filter .09s ease;}
 /* 押した時の手応え（絵はそのまま、軽くへこませる） */
-#homeStartBtn:active,#stageMapBtn:active,#shopBtn:active,#achBtn:active,
-#rankBtn:active,#howtoBtn:active{transform:scale(0.965);filter:brightness(1.15);}
+#overlay.home #homeStartBtn:active,#overlay.home #stageMapBtn:active,
+#overlay.home #shopBtn:active,#overlay.home #achBtn:active,
+#overlay.home #rankBtn:active,#overlay.home #howtoBtn:active{
+  transform:scale(0.965);filter:brightness(1.15);}
 
-#homeStartBtn{position:absolute;left:17.0%;width:66.0%;top:calc(60% + -1.08vw);height:12.54vw;}
-#stageMapBtn{position:absolute;left:9.6%;width:19.4%;top:calc(60% + 16.65vw);height:21.62vw;}
-#shopBtn{position:absolute;left:30.5%;width:18.7%;top:calc(60% + 16.65vw);height:21.62vw;}
-#achBtn{position:absolute;left:50.8%;width:19.0%;top:calc(60% + 16.65vw);height:21.62vw;}
-#rankBtn{position:absolute;left:71.3%;width:19.3%;top:calc(60% + 16.65vw);height:21.62vw;}
-#howtoBtn{position:absolute;left:22.2%;width:55.5%;top:calc(60% + 43.67vw);height:10.59vw;}
+#overlay.home #homeStartBtn{position:absolute;left:17.0%;width:66.0%;top:calc(60% + -1.08vw);height:12.54vw;}
+#overlay.home #stageMapBtn{position:absolute;left:9.6%;width:19.4%;top:calc(60% + 16.65vw);height:21.62vw;}
+#overlay.home #shopBtn{position:absolute;left:30.5%;width:18.7%;top:calc(60% + 16.65vw);height:21.62vw;}
+#overlay.home #achBtn{position:absolute;left:50.8%;width:19.0%;top:calc(60% + 16.65vw);height:21.62vw;}
+#overlay.home #rankBtn{position:absolute;left:71.3%;width:19.3%;top:calc(60% + 16.65vw);height:21.62vw;}
+#overlay.home #howtoBtn{position:absolute;left:22.2%;width:55.5%;top:calc(60% + 43.67vw);height:10.59vw;}
 </style>
 </head>
 <body>
