@@ -300,6 +300,12 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
      スクロール量 162px→88px、はみ出し74px。 */
   overflow-y:auto;-webkit-overflow-scrolling:touch;}
 #overlay.scrollable{justify-content:flex-start !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch !important;touch-action:pan-y !important;padding-top:16px !important;/* ★v242 下余白を140pxに拡大。IG内蔵ブラウザの下部ツールバー(約90〜110px)に 最下部のボタンが隠れて押せない実機報告への対応。PCでは末尾に余白が増えるだけ。 */padding-bottom:140px !important;gap:10px !important;}
+/* ★v269 スクロール画面の子は押し潰さない。overflow:hidden を持つ子（.csCard 等）は
+   flexの「最小サイズ＝内容」保護が外れるため、内容が画面に収まらない時にその子だけが
+   圧縮される（実測: 性別選択のマイヒーロー枠が31pxまで潰れた）。しかも潰れて収まる分
+   ページがスクロール化せず、ユーザーからは「壊れてるのにスクロールもできない」に見える。
+   潰す代わりに素直にはみ出させてスクロールさせる。 */
+#overlay.scrollable>*{flex-shrink:0;}
 /* ★じぶんをつくる・クロップ中：写真の位置合わせ中はページ自体を一切動かさない（スクロール完全禁止）。
    背景も完全不透明にしてプレイ画面が透けて一緒に動いて見えるのを防ぐ。 */
 #overlay.cropmode{justify-content:flex-start !important;overflow:hidden !important;padding-top:16px !important;padding-bottom:16px !important;gap:10px !important;background:linear-gradient(165deg,#0d223e 0%,#0b1a24 48%,#0b2016 100%) !important;}
@@ -504,13 +510,34 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #overlay.home #achBtn,#overlay.home #rankBtn,#overlay.home #howtoBtn{
   background:none !important;border:none !important;box-shadow:none !important;
   color:transparent !important;font-size:0 !important;text-shadow:none !important;
-  padding:0 !important;margin:0 !important;border-radius:14px;
+  padding:0 !important;margin:0 !important;border-radius:18px;/* ★v270 シャインを絵の角丸内に収めるため14→18 */
   -webkit-tap-highlight-color:transparent;transition:transform .09s ease, filter .09s ease;}
 /* 押した時の手応え（絵はそのまま、軽くへこませる） */
 #overlay.home #homeStartBtn:active,#overlay.home #stageMapBtn:active,
 #overlay.home #shopBtn:active,#overlay.home #achBtn:active,
 #overlay.home #rankBtn:active,#overlay.home #howtoBtn:active{
   transform:scale(0.965);filter:brightness(1.15);}
+
+/* ★v270 ①「押せる質感」：絵のボタンの上を光の帯が定期的に走る（シャイン）。
+   絵そのものは触らず、透明ボタンの ::after を transform で動かすだけ（軽量・§2-4準拠）。
+   帯は各ボタンを約0.7秒で横断（>200px/s、§1-2の知覚下限クリア）し、周期3.2秒で繰り返す。
+   小ボタン4つは delay をずらして左から順に波打たせる。filter は使わない（§1-6）。 */
+@keyframes homeShine{0%{transform:translateX(-160%) skewX(-18deg)}
+  22%,100%{transform:translateX(420%) skewX(-18deg)}}
+#overlay.home #homeStartBtn,#overlay.home #stageMapBtn,#overlay.home #shopBtn,
+#overlay.home #achBtn,#overlay.home #rankBtn,#overlay.home #howtoBtn{overflow:hidden;}
+#overlay.home #homeStartBtn::after,#overlay.home #stageMapBtn::after,
+#overlay.home #shopBtn::after,#overlay.home #achBtn::after,
+#overlay.home #rankBtn::after,#overlay.home #howtoBtn::after{
+  content:'';position:absolute;top:-6%;bottom:-6%;left:0;width:34%;
+  background:linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.42) 50%,rgba(255,255,255,0) 100%);
+  will-change:transform;pointer-events:none;
+  animation:homeShine 3.2s ease-in-out infinite;}
+#overlay.home #stageMapBtn::after{animation-delay:0.35s;}
+#overlay.home #shopBtn::after{animation-delay:0.5s;}
+#overlay.home #achBtn::after{animation-delay:0.65s;}
+#overlay.home #rankBtn::after{animation-delay:0.8s;}
+#overlay.home #howtoBtn::after{animation-delay:1.1s;opacity:0.7;}
 
 #overlay.home #homeStartBtn{position:absolute;left:17.0%;width:66.0%;top:calc(60% + -1.08vw);height:12.54vw;}
 #overlay.home #stageMapBtn{position:absolute;left:9.6%;width:19.4%;top:calc(60% + 16.65vw);height:21.62vw;}
@@ -2776,7 +2803,9 @@ function _showFaceStep(){
       +'</div>';
   });
   html+='</div>'
-    +'<div style="display:flex;gap:14px;align-items:center;position:sticky;bottom:-16px;z-index:5;padding:8px 0 12px;margin-top:-2px;background:linear-gradient(180deg,rgba(13,13,26,0) 0%,rgba(13,13,26,0.92) 28%,rgba(13,13,26,0.98) 100%)">'
+    // ★v269 -16px は v238 当時の padding-bottom に合わせた値。v242 で 140px になったため
+    //   124px 浮いていた。scrollable の padding-bottom:140px と同値の -140px で下端に張り付かせる。
+    +'<div style="display:flex;gap:14px;align-items:center;position:sticky;bottom:-140px;z-index:5;padding:8px 0 12px;margin-top:-2px;background:linear-gradient(180deg,rgba(13,13,26,0) 0%,rgba(13,13,26,0.92) 28%,rgba(13,13,26,0.98) 100%)">'
     +'<div class="menuBtnSub" id="backBtn" style="width:110px;font-size:14px">◀ 戻る</div>'
     +'<div class="menuBtnMain" id="startBtn" style="margin-top:0;width:180px;padding:13px 0;font-size:18px">スタート <span style="display:inline-block;animation:csArrow 0.9s ease-in-out infinite">▶</span></div>'
     +'</div>';
@@ -8489,7 +8518,11 @@ function showStageMap(){
     h+='</div></div>';
   }
   h+='</div>'   // ★v243 2列グリッドを閉じる
-    +'<div style="position:sticky;bottom:0;width:100%;padding:12px 0 6px;background:linear-gradient(180deg,rgba(11,26,36,0) 0%,rgba(11,26,36,0.94) 34%);display:flex;flex-direction:column;align-items:center;gap:9px;z-index:5">'
+    // ★v269 sticky の bottom は scrollable の padding-bottom:140px の分だけ内側に食い込むので
+    //   -140px で相殺して画面の本当の下端に張り付かせる（0のままだと140px浮いて画面中央に見える）。
+    //   140 は #overlay.scrollable の padding-bottom と必ず同じ値にすること。
+    //   最後までスクロールすると通常フローに戻り、140px余白の上＝IGツールバーの外に収まる。
+    +'<div style="position:sticky;bottom:-140px;width:100%;padding:12px 0 6px;background:linear-gradient(180deg,rgba(11,26,36,0) 0%,rgba(11,26,36,0.94) 34%);display:flex;flex-direction:column;align-items:center;gap:9px;z-index:5">'
     +'<div id="mapStartBtn" class="menuBtnMain" style="margin-top:0;width:240px;opacity:0.4;pointer-events:none">▶ ステージを選んでね</div>'
     +'<div id="mapBackBtn" class="menuBtnSub" style="width:160px">◀ ホームに戻る</div>'
     +'</div></div>';
@@ -8898,7 +8931,9 @@ function showShop(tab){
   h+='<canvas id="shopPrevCv" width="150" height="150" style="background:linear-gradient(180deg,rgba(127,216,255,0.08),rgba(0,0,0,0.3));border:1px solid rgba(127,216,255,0.3);border-radius:12px;display:block;margin-bottom:4px"></canvas>'
     +'<div id="shopPrevLabel" style="color:#cfe0ee;font-size:11px;margin-bottom:6px;min-height:14px"></div>'
     +'<div style="color:#8fa8c0;font-size:10px;margin-bottom:8px">👆 アイテムをタップすると試着できるよ</div>';
-  h+='<div style="display:flex;flex-direction:column;gap:6px;width:100%;max-width:320px;margin-bottom:16px;max-height:36vh;overflow-y:auto">';
+  // ★v269 max-height:36vh の内側スクロール窓を廃止。窓は flex に潰されて実機で約90pxになり
+  //   「1行しか見えないのにスクロールもできない」状態だった。他の画面と同じページ全体スクロールに統一。
+  h+='<div style="display:flex;flex-direction:column;gap:6px;width:100%;max-width:320px;margin-bottom:16px">';
   for(var i=0;i<items.length;i++){
     var it=items[i];
     var owned=ownedItems.indexOf(it.id)>=0;
