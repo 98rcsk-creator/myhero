@@ -2686,6 +2686,29 @@ function showCharSelect(){
   }
 }
 
+// ★v276 タップ用ヘルパー。**touchstart で preventDefault してはいけない**（iOSはそれで
+//   スクロール操作そのものが死ぬ）。指の移動量が8px未満のときだけ touchend で発火する。
+//   touchend 側の preventDefault が iOS の合成clickを抑えるので二重発火しない。
+//   【根拠】v274でキャラ選択の当たり判定が画面のほぼ全面を覆った結果、指の置き場が無くなり
+//   「キャラ選択がスクロールできない」実機報告になった。showStageMap と同じ方式に統一。
+function _csTap(el,fn){
+  if(!el) return;
+  var sx=0, sy=0, moved=false;
+  el.addEventListener('touchstart',function(e){
+    var t=e.touches[0]; sx=t.clientX; sy=t.clientY; moved=false;
+  },{passive:true});
+  el.addEventListener('touchmove',function(e){
+    var t=e.touches[0];
+    if(Math.abs(t.clientX-sx)>8 || Math.abs(t.clientY-sy)>8) moved=true;
+  },{passive:true});
+  el.addEventListener('touchend',function(e){
+    if(moved) return;
+    e.stopPropagation(); if(e.cancelable)e.preventDefault();
+    fn(e);
+  },{passive:false});
+  el.addEventListener('click',function(e){ e.stopPropagation(); fn(e); });
+}
+
 var _pickedCustom=false; // 性別選択画面でマイヒーロー枠を選択中か（次へで分岐）
 function _showGenderStep(){
   if(typeof _pickedCustom==='undefined') _pickedCustom=false;
@@ -2707,39 +2730,21 @@ function _showGenderStep(){
   ov.scrollTop=0;
   setTimeout(function(){
     document.querySelectorAll('.charCard[data-gender]').forEach(function(el){
-      function pick(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
-        _pickedCustom=false;
-        selectedGender=el.dataset.gender; _showGenderStep(); }
-      el.addEventListener('touchstart',pick,{passive:false});
-      el.addEventListener('click',pick);
+      _csTap(el,function(){ _pickedCustom=false;
+        selectedGender=el.dataset.gender; _showGenderStep(); });
     });
-    var cs=document.getElementById('customSlot');
-    if(cs){
-      // ★タップは「選択」のみ。進むのは「次へ」ボタン（MEN/WOMENと同じ操作感）
-      function pickCustom(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
-        _pickedCustom=true; _showGenderStep(); }
-      cs.addEventListener('touchstart',pickCustom,{passive:false});
-      cs.addEventListener('click',pickCustom);
-    }
-    var nb=document.getElementById('nextBtn');
-    if(nb){
-      function goNext(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
-        if(_pickedCustom){
-          var l=loadCustomList();
-          if(l.length>0){ _showCustomList(); } else { _showCustomCrop(); }
-        } else {
-          SELECT_STEP=2; _showFaceStep();
-        } }
-      nb.addEventListener('touchstart',goNext,{passive:false});
-      nb.addEventListener('click',goNext);
-    }
-    var ghb=document.getElementById('genderHomeBtn');
-    if(ghb){
-      function goHome(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
-        gs='title'; showTitleScreen(); }
-      ghb.addEventListener('touchstart',goHome,{passive:false});
-      ghb.addEventListener('click',goHome);
-    }
+    // ★タップは「選択」のみ。進むのは「次へ」ボタン（MEN/WOMENと同じ操作感）
+    _csTap(document.getElementById('customSlot'),function(){
+      _pickedCustom=true; _showGenderStep(); });
+    _csTap(document.getElementById('nextBtn'),function(){
+      if(_pickedCustom){
+        var l=loadCustomList();
+        if(l.length>0){ _showCustomList(); } else { _showCustomCrop(); }
+      } else {
+        SELECT_STEP=2; _showFaceStep();
+      } });
+    _csTap(document.getElementById('genderHomeBtn'),function(){
+      gs='title'; showTitleScreen(); });
   },50);
 }
 
@@ -2805,29 +2810,18 @@ function _showFaceStep(){
       try{ drawCharPreview(cv2.getContext('2d'),36,82,cv2.dataset.cid,false,1.35,true); }catch(err){}
       requestAnimationFrame(function(){ drawNext(i+1); });
     })(0);
+    // ★v276 STEP①と同じく touchstart の preventDefault をやめる（iOSでスクロールが死ぬ）
     document.querySelectorAll('.charCard[data-face]').forEach(function(el){
-      function pick(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
+      _csTap(el,function(){
         selectedFace=parseInt(el.dataset.face);
         selectedChar=selectedGender+'_'+selectedFace; saveData();
-        _showFaceStep(); }
-      el.addEventListener('touchstart',pick,{passive:false});
-      el.addEventListener('click',pick);
+        _showFaceStep(); });
     });
-    var bb=document.getElementById('backBtn');
-    if(bb){
-      function goBack(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
-        SELECT_STEP=1; _showGenderStep(); }
-      bb.addEventListener('touchstart',goBack,{passive:false});
-      bb.addEventListener('click',goBack);
-    }
-    var sb=document.getElementById('startBtn');
-    if(sb){
-      function goStart(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault();
-        selectedChar=selectedGender+'_'+selectedFace; saveData();
-        doStart(); }
-      sb.addEventListener('touchstart',goStart,{passive:false});
-      sb.addEventListener('click',goStart);
-    }
+    _csTap(document.getElementById('backBtn'),function(){
+      SELECT_STEP=1; _showGenderStep(); });
+    _csTap(document.getElementById('startBtn'),function(){
+      selectedChar=selectedGender+'_'+selectedFace; saveData();
+      doStart(); });
   },50);
 }
 
