@@ -2085,12 +2085,13 @@ function buildWorld(lv){
     placed++;
 
     var spd=cfg.enemySpd;
-    // ★v247 敵サイズだけ W5相当(sEff=23)で頭打ち。数・HP・ボスHPの sEff はそのまま。
-    //   旧: W10で giant=190x197（画面幅390の49%）、ボス=381x394 で画面より大きかった。
-    //   単発ジャンプの到達高は110.9px（p.vy=-11 / GRAV=0.52）なので、
-    //   giant倍率1.4と併せて全ワールドで踏める（上限時 giant=87x92）。
-    var sSz=Math.min(sEff,23);
-    var baseW=16+sSz*2, baseH=20+sSz*2;
+    // ★v277 通常敵はワールドで大きくしない。全ワールド W1 相当の 22x26 に固定。
+    //   数・HP・速度・出現種類・ボスHP の sEff 依存はそのまま（サイズだけ切り離す）。
+    //   経緯: v231まで sEff 直結（W10で 112x116）→ v247で W5相当(23)頭打ち(62x66)
+    //   → v277で完全固定。「デカくなると難しすぎる」の実機フィードバックの最終形。
+    //   ⚠ sSz を戻せばワールド別サイズが復活する（他は何も変えていない）。
+    var sSz=3;                      // = W1 の sEff。3 以外にすると全ワールド一律で変わる
+    var baseW=16+sSz*2, baseH=20+sSz*2;   // = 22 x 26
 
     if(isFlying){
       var ftype=flyTypes[(fPtr++)%flyTypes.length];
@@ -2153,7 +2154,12 @@ function buildWorld(lv){
   // ===== ボス面（10ごと）：巨大ドラゴン（ゴール手前に配置）=====
   if(cfg.bossFight){ // ★v230 配置側
     bossDefeated=false; bossClearMsg=0; bossClearPending=false;
-    var bw2=baseW*3.4, bh2=baseH*3.4;
+    // ★v277 ボスは従来どおり W5相当(sEff=23) で頭打ち＝サイズ据え置き。
+    //   通常敵の baseW を固定したので、ボスが巻き添えで1/3になるのを防ぐためここで独立計算する。
+    //   （§2-9 ついでに解消: 従来の baseW は配置ループ内 var の巻き上げに依存していた）
+    //   ボスも小さくしたくなったら sBoss を 3 にすれば通常敵と同じ基準になる。
+    var sBoss=Math.min(sEff,23);
+    var bw2=(16+sBoss*2)*3.4, bh2=(20+sBoss*2)*3.4;
     var bossHpVal=(cfg&&cfg.bossHp)?cfg.bossHp:(5+Math.floor(sEff/10)*4); // ★v231 sEff（保険）
     var bx=GOAL_X-360;
     enms.push({
