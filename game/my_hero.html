@@ -308,6 +308,27 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #overlay.scrollable>*{flex-shrink:0;}
 /* ★じぶんをつくる・クロップ中：写真の位置合わせ中はページ自体を一切動かさない（スクロール完全禁止）。
    背景も完全不透明にしてプレイ画面が透けて一緒に動いて見えるのを防ぐ。 */
+/* ★v280 画面下部の共通ナビバー（もらったデザインに合わせて追加）。
+   ⚠ プレイ中の画面には出さない。コントローラーと重なって操作を殺すため。
+   ⚠ ホームは絵に同じ4つのボタンが描かれているので出さない（同じ意味の装飾の二重掛け＝§10-1）。
+   位置は viewport 下端に固定。中身が隠れないよう #overlay.hasnav で下余白を足す。 */
+.mhNav{position:fixed;left:0;right:0;bottom:0;z-index:60;
+  display:flex;align-items:stretch;
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(16,38,74,0.92),rgba(10,24,52,0.98));
+  border-top:1px solid rgba(120,180,255,0.28);
+  box-shadow:0 -4px 14px rgba(0,0,0,0.45);}
+.mhNav .mhNavBtn{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;padding:6px 2px 5px;border-radius:12px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:transform .09s ease;}
+.mhNav .mhNavBtn:active{transform:scale(0.94);}
+.mhNav .mhNavBtn .mhNavIco{font-size:21px;line-height:1;}
+.mhNav .mhNavBtn .mhNavTxt{font-size:10.5px;font-weight:bold;color:#cfe0f5;letter-spacing:0.5px;white-space:nowrap;}
+.mhNav .mhNavBtn.on{background:linear-gradient(180deg,#4a9bec,#2f6fc4);
+  box-shadow:0 2px 0 #24549b,0 3px 8px rgba(0,0,0,0.35);}
+.mhNav .mhNavBtn.on .mhNavTxt{color:#fff;}
+/* ナビの高さぶんだけ中身の下に余白を足す（scrollable の 140px と足し算にしない） */
+#overlay.hasnav{padding-bottom:150px !important;}
 #overlay.cropmode{justify-content:flex-start !important;overflow:hidden !important;padding-top:16px !important;padding-bottom:16px !important;gap:10px !important;background:linear-gradient(165deg,#0d223e 0%,#0b1a24 48%,#0b2016 100%) !important;}
 /* ★チュートリアル中：背景を半透明にして実際のプレイ画面（キャンバス＆コントローラー）を透かす */
 #overlay.tut{background:rgba(6,10,20,0.5) !important;justify-content:flex-start !important;padding-top:46px !important;}
@@ -2742,6 +2763,36 @@ function _csTap(el,fn){
 }
 
 var _pickedCustom=false; // 性別選択画面でマイヒーロー枠を選択中か（次へで分岐）
+// ★v280 共通ナビバー。active は 'home'|'char'|'world'|'shop'|''。
+//   画面のHTMLの末尾に navHTML(active) を足し、setTimeout の中で bindNav() を呼ぶ。
+//   タップは _csTap（touchstartでpreventDefaultしない）を使うのでスクロールを殺さない。
+var NAV_ITEMS=[
+  {k:'home', ico:'\ud83c\udfe0', txt:'\u30db\u30fc\u30e0'},
+  {k:'char', ico:'\ud83e\uddd2', txt:'\u30ad\u30e3\u30e9'},
+  {k:'world',ico:'\ud83d\uddfa\ufe0f', txt:'\u30ef\u30fc\u30eb\u30c9'},
+  {k:'shop', ico:'\ud83c\udfea', txt:'\u30b7\u30e7\u30c3\u30d7'}
+];
+function navHTML(active){
+  var h='<div class="mhNav">';
+  for(var i=0;i<NAV_ITEMS.length;i++){
+    var it=NAV_ITEMS[i];
+    h+='<div class="mhNavBtn'+(it.k===active?' on':'')+'" data-nav="'+it.k+'">'
+      +'<div class="mhNavIco">'+it.ico+'</div><div class="mhNavTxt">'+it.txt+'</div></div>';
+  }
+  return h+'</div>';
+}
+function navGo(k){
+  if(k==='home'){ gs='title'; showTitleScreen(); }
+  else if(k==='char'){ SELECT_STEP=1; showCharSelect(); }
+  else if(k==='world'){ showStageMap(); }
+  else if(k==='shop'){ showShop(); }
+}
+function bindNav(){
+  var els=ov.querySelectorAll('.mhNavBtn');
+  for(var i=0;i<els.length;i++){
+    (function(el){ _csTap(el,function(){ navGo(el.dataset.nav); }); })(els[i]);
+  }
+}
 function _showGenderStep(){
   if(typeof _pickedCustom==='undefined') _pickedCustom=false;
   // ★v274 ホームv267と同じ「1枚絵＋透明な当たり判定」方式。
@@ -2755,8 +2806,8 @@ function _showGenderStep(){
       +'<div class="charCard csHitCard'+(_pickedCustom?' csSelRing':'')+'" id="customSlot" style="left:65.30%"></div>'
       +'<div class="csHitPill" id="nextBtn" style="left:20.98%;top:73.37%;width:57.68%;height:7.75%"></div>'
       +'<div class="csHitPill" id="genderHomeBtn" style="left:21.57%;top:83.73%;width:56.51%;height:6.94%"></div>'
-    +'</div>';
-  ov.className='scrollable csfull';
+    +'</div>'+navHTML('char');
+  ov.className='scrollable csfull hasnav';
   ov.innerHTML=html;
   ov.style.display='flex';
   ov.scrollTop=0;
@@ -2775,6 +2826,7 @@ function _showGenderStep(){
       } else {
         SELECT_STEP=2; _showFaceStep();
       } });
+    bindNav();
     _csTap(document.getElementById('genderHomeBtn'),function(){
       gs='title'; showTitleScreen(); });
   },50);
@@ -2828,8 +2880,8 @@ function _showFaceStep(){
     +'<div style="display:flex;gap:14px;align-items:center;position:sticky;bottom:-140px;z-index:5;padding:8px 0 12px;margin-top:-2px;background:linear-gradient(180deg,rgba(13,13,26,0) 0%,rgba(13,13,26,0.92) 28%,rgba(13,13,26,0.98) 100%)">'
     +'<div class="menuBtnSub" id="backBtn" style="width:110px;font-size:14px">◀ 戻る</div>'
     +'<div class="menuBtnMain" id="startBtn" style="margin-top:0;width:180px;padding:13px 0;font-size:18px">スタート <span style="display:inline-block;animation:csArrow 0.9s ease-in-out infinite">▶</span></div>'
-    +'</div>';
-  ov.className='scrollable';
+    +'</div>'+navHTML('char');
+  ov.className='scrollable hasnav';
   ov.innerHTML=html;
   ov.style.display='flex';
   setTimeout(function(){
@@ -2849,6 +2901,7 @@ function _showFaceStep(){
         selectedChar=selectedGender+'_'+selectedFace; saveData();
         _showFaceStep(); });
     });
+    bindNav();
     _csTap(document.getElementById('backBtn'),function(){
       SELECT_STEP=1; _showGenderStep(); });
     _csTap(document.getElementById('startBtn'),function(){
@@ -8198,10 +8251,12 @@ function showRanking(){
     h+='</div>';
   }
   h+='<div style="color:#ffcc44;font-size:11px">BEST: '+bestScore+'</div>'
-    +'<div id="rankBackBtn" class="menuBtnSub" style="margin-top:16px;width:140px">◀ もどる</div>';
+    +'<div id="rankBackBtn" class="menuBtnSub" style="margin-top:16px;width:140px">◀ もどる</div>'+navHTML('');
+  ov.className='scrollable hasnav';   // ★v280 明示指定（前画面のクラス持ち越しを防ぐ）
   ov.innerHTML=h;
   ov.style.display='flex';
   setTimeout(function(){
+    bindNav();
     var bb=document.getElementById('rankBackBtn');
     if(bb){
       function back(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); showTitleScreen(); }
@@ -8462,10 +8517,12 @@ function showAchievements(){
       +'</div>';
   }
   h+='</div>'
-    +'<div id="achBackBtn" class="menuBtnSub" style="width:140px">◀ もどる</div>';
+    +'<div id="achBackBtn" class="menuBtnSub" style="width:140px">◀ もどる</div>'+navHTML('');
+  ov.className='scrollable hasnav';   // ★v280 明示指定（前画面のクラス持ち越しを防ぐ）
   ov.innerHTML=h;
   ov.style.display='flex';
   setTimeout(function(){
+    bindNav();
     var bb=document.getElementById('achBackBtn');
     if(bb){
       function back(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); showTitleScreen(); }
@@ -8532,9 +8589,10 @@ function showStageMap(){
     //   ステージはセルをタップした時点で始まるので開始ボタンも不要。
     +'<div style="width:100%;padding:20px 0 6px;display:flex;flex-direction:column;align-items:center;gap:9px">'
     +'<div id="mapBackBtn" class="menuBtnSub" style="width:160px">◀ ホームに戻る</div>'
-    +'</div></div>';
+    +'</div></div>'+navHTML('world');
   ov.innerHTML=h;
-  ov.classList.add('scrollable');
+  // ★v280 className を明示指定する（add だと前の画面の csfull 等が残る）
+  ov.className='scrollable hasnav';
   ov.style.display='flex';
   ov.scrollTop=0;
   setTimeout(function(){
@@ -8572,6 +8630,7 @@ function showStageMap(){
         });
       })(cells[i]);
     }
+    bindNav();
     var bb=document.getElementById('mapBackBtn');
     if(bb){
       function back(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); ov.classList.remove('scrollable'); gs='title'; showTitleScreen(); }
@@ -8670,6 +8729,7 @@ function showStageClear(star, scoreRate){
   ov.style.display='flex';
   setTimeout(function(){
     function tapEv(el,fn){ if(!el)return; el.addEventListener('touchstart',function(e){e.stopPropagation();if(e.cancelable)e.preventDefault();fn();},{passive:false}); el.addEventListener('click',function(e){e.stopPropagation();fn();}); }
+    bindNav();
     if(hasNext){
       tapEv(document.getElementById('scNext'),function(){
         // ★v239 連続プレイ：score とランを維持したまま次ステージへ（doStart は score=0 にするため通さない）
@@ -8875,6 +8935,7 @@ function showShop(tab){
     ov.style.display='flex';
     setTimeout(function(){
       function tapEv(el,fn){ if(!el)return; /* v199 ⑤: click専用にして行から始まる縦スクロールを殺さない */ el.addEventListener('click',function(e){e.stopPropagation();fn();}); }
+    bindNav();
       tapEv(document.getElementById('shopTabSK'),function(){ showShop('skill'); });
       tapEv(document.getElementById('shopTabSW'),function(){ showShop('sword'); });
       tapEv(document.getElementById('shopTabOF'),function(){ showShop('outfit'); });
@@ -8934,12 +8995,14 @@ function showShop(tab){
       +'</div>';
   }
   h+='</div>'
-    +'<div id="shopBackBtn" class="menuBtnSub" style="width:140px">◀ もどる</div>';
+    +'<div id="shopBackBtn" class="menuBtnSub" style="width:140px">◀ もどる</div>'+navHTML('shop');
+  ov.className='scrollable hasnav';   // ★v280 明示指定（前画面のクラス持ち越しを防ぐ）
   ov.innerHTML=h;
   ov.style.display='flex';
   setTimeout(function(){
     // タブ切り替え
     function tapEv(el,fn){ if(!el)return; /* v199 ⑤: click専用にして行から始まる縦スクロールを殺さない */ el.addEventListener('click',function(e){e.stopPropagation();fn();}); }
+    bindNav();
     tapEv(document.getElementById('shopTabSK'),function(){ showShop('skill'); });
     tapEv(document.getElementById('shopTabSW'),function(){ showShop('sword'); });
     tapEv(document.getElementById('shopTabOF'),function(){ showShop('outfit'); });
