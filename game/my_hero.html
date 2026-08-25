@@ -1069,6 +1069,10 @@ function slopeSpd(cx,dir){
 //   （雪山のまものがオレンジの火を吐いていたため）。
 //   描画は色の差し替えだけで図形は同じ＝描画コールは増えない。
 //   o=外側 / g=グロー / c=中心core。fire は従来と一字も変えていない。
+// ★v279 サイズ調整用の定数。通常敵は 22x26 固定（buildWorld の sSz）。
+//   GIANT_K : ミニドラゴン(ハートを落とす敵)だけに掛かる倍率。1.0で通常敵と同じ大きさ。
+//   BOSS_CAP: ボスの成長の頭打ち。**36より大きくすると画面からはみ出す**（実測: 40で頭がy=-5）。
+var GIANT_K=1.7, BOSS_CAP=36;
 var BELEM={
   fire :{o:'#ff6600', g:'#ff4400', c:'#ffcc00'},  // 火（既定）
   ice  :{o:'#7fdcff', g:'#37b6ff', c:'#ffffff'},  // 氷・雪
@@ -2140,12 +2144,14 @@ function buildWorld(lv){
       var isShooter=(gtype==='shooter');
       var isFire=(gtype==='fire');
       var isGhost=(gtype==='ghost');
-      // ★v248 敵の巨体化を廃止（1.7→1.4→1.0）。giantタイプ自体は残す。
-      //   giantの正体は「緑のミニドラゴ＝HP2・のっそり遅い・ハートを落とす」まもので、
-      //   デカさは後付けの倍率でしかない。倍率だけ外せば回復の付け替えは要らない。
+      // ★v279 ミニドラゴン(giant＝ハートを落とす唯一の敵)だけは通常敵より大きく保つ。
+      //   v248で倍率を1.0にした当時は base が大きかったので目立っていたが、
+      //   v277で base を 22x26 に固定した結果、通常敵と同じ大きさ＝「めっちゃ小さい」
+      //   になってしまった。元の倍率1.7を戻して 37x44（通常敵の面積2.9倍）にする。
+      //   ⚠ ワールドでは大きくならない。全ワールド同じ 37x44。
       //   残る差分: hp=2 / 速度0.45倍 / maybeDrop のハート / ワールド別の専用スプライト。
-      var gw=baseW;
-      var gh=baseH;
+      var gw=isGiant?Math.round(baseW*GIANT_K):baseW;
+      var gh=isGiant?Math.round(baseH*GIANT_K):baseH;
       var gspd=spd*(isGiant?0.45:isShooter?0.3:isFire?0.4:1);
       var ghp=isGiant?2:isGhost?999:cfg.enemyHp;
       var gyPos=getGroundY(ex);
@@ -2172,11 +2178,13 @@ function buildWorld(lv){
   // ===== ボス面（10ごと）：巨大ドラゴン（ゴール手前に配置）=====
   if(cfg.bossFight){ // ★v230 配置側
     bossDefeated=false; bossClearMsg=0; bossClearPending=false;
-    // ★v277 ボスは従来どおり W5相当(sEff=23) で頭打ち＝サイズ据え置き。
-    //   通常敵の baseW を固定したので、ボスが巻き添えで1/3になるのを防ぐためここで独立計算する。
-    //   （§2-9 ついでに解消: 従来の baseW は配置ループ内 var の巻き上げに依存していた）
-    //   ボスも小さくしたくなったら sBoss を 3 にすれば通常敵と同じ基準になる。
-    var sBoss=Math.min(sEff,23);
+    // ★v279 ボスはワールドが進むほど大きくなってよい（実機フィードバック）。
+    //   頭打ちを 23 → BOSS_CAP(36) に引き上げ。W1 75x88 → W5 211x224 → W7 279x292
+    //   → W8以降 299x313 と伸びる。
+    //   ⚠ 36 が画面に収まる上限。ボスは y=GROUND-bh2 に立つので、
+    //     cap40 だと高さ340で頭が y=-5 と画面外に出る（実測）。これ以上上げないこと。
+    //   通常敵と同じ基準まで小さくしたいなら sBoss を 3 にする。
+    var sBoss=Math.min(sEff,BOSS_CAP);
     var bw2=(16+sBoss*2)*3.4, bh2=(20+sBoss*2)*3.4;
     var bossHpVal=(cfg&&cfg.bossHp)?cfg.bossHp:(5+Math.floor(sEff/10)*4); // ★v231 sEff（保険）
     var bx=GOAL_X-360;
