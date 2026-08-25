@@ -1382,6 +1382,24 @@ var PERK_SHOP=[
   {id:'flight5',   name:'フライト',         icon:'🪽', price:6000, desc:'上下に6秒飛べる(1ステージ1回)'}
 ];
 function hasPerk(id){ return ownedItems.indexOf(id)>=0; }
+// ★v278 テストモードの付与。ゴールドとステージ解放だけでは後半の検証ができないので、
+//   スキルLv（開始時スキル）・剣/服/盾・固有スキルも最初から全部持たせる。
+//   ⚠ ここに置く理由: SWORD/OUTFIT/SHIELD_SKINS・SKILL_SHOP・PERK_SHOP の
+//     すべてが定義済みになる最初の位置（§2-9 宣言順）。前に動かすと undefined になる。
+//   ⚠ 保存先は接頭辞 tk_ のテスト領域だけ（本番セーブは汚れない）。
+if(TEST_MODE){
+  var _tMax=0;
+  for(var _i=0;_i<SKILL_SHOP.length;_i++){ if(SKILL_SHOP[_i].lv>_tMax) _tMax=SKILL_SHOP[_i].lv; }
+  if(savedSkillLv<_tMax){ savedSkillLv=_tMax; store.set('yk_skillLv',''+savedSkillLv); }
+  var _tAdd=0;
+  [SWORD_SKINS,OUTFIT_SKINS,SHIELD_SKINS,PERK_SHOP].forEach(function(list){
+    for(var _j=0;_j<list.length;_j++){
+      var _id=list[_j].id;
+      if(_id && ownedItems.indexOf(_id)<0){ ownedItems.push(_id); _tAdd++; }
+    }
+  });
+  if(_tAdd>0) store.set('yk_owned',JSON.stringify(ownedItems));
+}
 function buyPerk(id,price){
   if(ownedItems.indexOf(id)>=0) return 'owned';
   if(totalGold<price) return 'poor';
