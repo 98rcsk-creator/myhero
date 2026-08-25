@@ -308,6 +308,88 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #overlay.scrollable>*{flex-shrink:0;}
 /* ★じぶんをつくる・クロップ中：写真の位置合わせ中はページ自体を一切動かさない（スクロール完全禁止）。
    背景も完全不透明にしてプレイ画面が透けて一緒に動いて見えるのを防ぐ。 */
+/* ═══ ★v283 My HERO UI DESIGN SYSTEM ═══
+   ホーム／キャラ選択／ステージ選択の3画面で確立した「ゲームのボタン」の作法を、
+   共通クラスとして他の画面へ配るためのもの。**画像は1枚も足さない・CSSのみ**。
+   作法 = 上から光→下に向かって濃くなるグラデ ＋ 底の段差(0 Npx 0 濃色) ＋
+          内側上端のハイライト ＋ 押すと段差ぶん沈む。
+   色の役割（ユーザー指定）:
+     go=緑(決定/進む) / info=青(通常操作/戻る) / gold=黄(選択中/重要/報酬) /
+     warn=赤(注意/ボス) / done=達成済 / off=無効
+   ⚠ タップ領域は最低44px（.uiBtn の min-height）。スマホで押しやすい下限。 */
+.uiBtn{display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  min-height:44px;box-sizing:border-box;padding:6px 14px;border-radius:13px;
+  font-weight:800;font-size:13px;letter-spacing:0.5px;cursor:pointer;text-align:center;
+  -webkit-tap-highlight-color:transparent;white-space:nowrap;
+  transition:transform .05s ease,box-shadow .05s ease;}
+.uiBtn:active{transform:translateY(4px);}
+.uiBtn.go{color:#123f1e;
+  background:linear-gradient(180deg,rgba(255,255,255,0.62),rgba(255,255,255,0) 46%),
+             linear-gradient(180deg,#9dffb4,#4fd177 62%,#37b45f);
+  box-shadow:0 5px 0 #2f8f4c,0 7px 12px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.85);
+  text-shadow:0 1px 0 rgba(255,255,255,0.4);}
+.uiBtn.go:active{box-shadow:0 1px 0 #2f8f4c,0 2px 5px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.7);}
+.uiBtn.info{color:#fff;
+  background:linear-gradient(180deg,rgba(255,255,255,0.42),rgba(255,255,255,0) 46%),
+             linear-gradient(180deg,#6fc0f5,#3a8fd8 62%,#2a72b8);
+  box-shadow:0 5px 0 #1f5590,0 7px 12px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.55);
+  text-shadow:0 1px 2px rgba(0,0,0,0.35);}
+.uiBtn.info:active{box-shadow:0 1px 0 #1f5590,0 2px 5px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.45);}
+.uiBtn.gold{color:#4a3300;
+  background:linear-gradient(180deg,rgba(255,255,255,0.62),rgba(255,255,255,0) 46%),
+             linear-gradient(180deg,#ffe89a,#ffcf3f 62%,#f0b41c);
+  box-shadow:0 5px 0 #cf9a1e,0 7px 12px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.85);
+  text-shadow:0 1px 0 rgba(255,255,255,0.45);}
+.uiBtn.gold:active{box-shadow:0 1px 0 #cf9a1e,0 2px 5px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.7);}
+.uiBtn.warn{color:#fff;
+  background:linear-gradient(180deg,rgba(255,255,255,0.42),rgba(255,255,255,0) 46%),
+             linear-gradient(180deg,#ff9a86,#ef5b47 62%,#d33f2c);
+  box-shadow:0 5px 0 #a32c1d,0 7px 12px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.5);
+  text-shadow:0 1px 2px rgba(0,0,0,0.35);}
+.uiBtn.warn:active{box-shadow:0 1px 0 #a32c1d,0 2px 5px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.4);}
+.uiBtn.done{color:#eafff0;
+  background:linear-gradient(180deg,rgba(255,255,255,0.30),rgba(255,255,255,0) 46%),
+             linear-gradient(180deg,#5fbf72,#3c9a55 62%,#2f7f45);
+  box-shadow:0 4px 0 #256537,inset 0 1px 0 rgba(255,255,255,0.45);
+  text-shadow:0 1px 2px rgba(0,0,0,0.35);}
+.uiBtn.off{color:rgba(230,240,255,0.55);cursor:default;
+  background:linear-gradient(180deg,rgba(255,255,255,0.10),rgba(255,255,255,0) 46%),
+             linear-gradient(180deg,#5a6472,#434c58 62%,#39414c);
+  box-shadow:0 4px 0 #2b323b,inset 0 1px 0 rgba(255,255,255,0.18);}
+.uiBtn.off:active{transform:none;}
+/* リストの1行・情報パネル。角丸と縁と影を全画面で揃えるためのもの */
+.uiPanel{box-sizing:border-box;border-radius:14px;
+  background:linear-gradient(180deg,rgba(72,118,190,0.30),rgba(18,40,78,0.55));
+  border:1px solid rgba(140,200,255,0.30);
+  box-shadow:0 3px 8px rgba(0,0,0,0.38),inset 0 1px 0 rgba(255,255,255,0.14);}
+.uiPanel.on{background:linear-gradient(180deg,rgba(255,214,90,0.26),rgba(120,80,20,0.34));
+  border-color:rgba(255,214,90,0.75);
+  box-shadow:0 0 0 2px rgba(255,214,90,0.35),0 3px 10px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.2);}
+.uiPanel.dim{opacity:0.62;filter:saturate(0.5);}
+/* タブ */
+.uiTab{display:inline-flex;align-items:center;justify-content:center;gap:3px;
+  min-height:40px;box-sizing:border-box;padding:6px 12px;border-radius:12px;
+  font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;color:#dfe8f5;
+  background:linear-gradient(180deg,rgba(120,170,240,0.22),rgba(30,60,110,0.42));
+  border:1px solid rgba(140,200,255,0.28);
+  box-shadow:0 3px 0 rgba(20,44,84,0.9),inset 0 1px 0 rgba(255,255,255,0.16);
+  transition:transform .05s ease,box-shadow .05s ease;}
+.uiTab:active{transform:translateY(3px);box-shadow:0 0 0 rgba(20,44,84,0.9),inset 0 1px 0 rgba(255,255,255,0.16);}
+.uiTab.on{color:#4a3300;
+  background:linear-gradient(180deg,rgba(255,255,255,0.55),rgba(255,255,255,0) 46%),
+             linear-gradient(180deg,#ffe89a,#ffcf3f 62%,#f0b41c);
+  border-color:rgba(255,220,120,0.9);
+  box-shadow:0 3px 0 #cf9a1e,0 4px 8px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.85);
+  text-shadow:0 1px 0 rgba(255,255,255,0.4);}
+/* 画面タイトル（全画面で同じ見た目にする） */
+.uiTitle{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:7px 20px;border-radius:999px;margin-bottom:8px;
+  font-size:19px;font-weight:900;letter-spacing:1px;color:#fff2b8;
+  background:linear-gradient(180deg,rgba(96,150,230,0.42),rgba(20,44,92,0.72));
+  border:1.5px solid rgba(150,205,255,0.45);
+  box-shadow:0 3px 10px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.22);
+  text-shadow:0 2px 6px rgba(255,170,0,0.5);}
 /* ★v281 ステージ選択のワールド絵。10枚を1枚のスプライトシートにまとめて埋め込む
    （画像ファイルを10個増やすより、デコード1回・リクエスト1回で軽い＝§10-1）。
    シートは 256x1330（1コマ 256x133）。コマは background-position の Y% で選ぶ。
@@ -2856,7 +2938,7 @@ function _showFaceStep(){
       +'<span class="csSpark" style="left:68%;bottom:6%;animation-delay:2.6s">✦</span>'
       +'<span class="csSpark" style="left:46%;bottom:74%;animation-delay:1.4s;font-size:11px">⭐</span>'
     +'</div>'
-    +'<div class="title-logo" style="font-size:22px;color:#ffe44d;animation:csLogoGlow 2.4s ease-in-out infinite">勇者の表情を選べ</div>'
+    +'<div class="uiTitle" style="animation:csLogoGlow 2.4s ease-in-out infinite">⚔️ 勇者を選べ</div>'
     +'<div style="color:#0e1420;font-size:12px;font-weight:800;margin:6px 0 10px;'
       +'background:linear-gradient(180deg,#9fe4ff,#57b4e6);padding:5px 16px;border-radius:999px;'
       +'box-shadow:0 2px 6px rgba(0,0,0,0.35)">STEP ②　表情を選択（'+(selectedGender==='men'?'♂ MEN':'♀ WOMEN')+'）</div>'
@@ -8246,7 +8328,7 @@ function showRanking(){
   gs='ranking';
   ov.classList.remove('home');
   var names={men_0:'ルーベルト',men_1:'バルト',men_2:'ジルヴェスター',men_3:'ユリアン',women_0:'クララ',women_1:'エルザ',women_2:'メルティ',women_3:'ブリギッタ'};
-  var h='<div class="title-logo" style="font-size:22px">🏆 RANKING</div>'
+  var h='<div class="uiTitle">🏆 ランキング</div>'
     +'<div style="color:#ffcc88;font-size:11px;letter-spacing:2px;margin-bottom:16px">― ベストスコア TOP5 ―</div>';
   if(rankings.length===0){
     h+='<div style="color:#aaa;font-size:13px;margin:20px 0">まだ記録がないよ！<br>プレイしてランキングに挑戦しよう🔥</div>';
@@ -8514,14 +8596,14 @@ function showAchievements(){
   ov.classList.remove('home');
   ov.classList.add('scrollable'); // ★これが無いとtouchmoveがpreventDefaultされ縦スクロール不可だった
   var unlocked=unlockedAch.length, total=ACHIEVEMENTS.length;
-  var h='<div class="title-logo" style="font-size:20px">🎖️ ACHIEVEMENTS</div>'
+  var h='<div class="uiTitle">🎖️ じっせき</div>'
     +'<div style="color:#9fe4ff;font-size:12px;margin-bottom:4px">達成 '+unlocked+' / '+total+'</div>'
     +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:12px">💰 所持ゴールド: '+totalGold+'G</div>'
     +'<div style="display:flex;flex-direction:column;gap:5px;width:100%;max-width:320px;margin-bottom:16px">';
   for(var i=0;i<ACHIEVEMENTS.length;i++){
     var a=ACHIEVEMENTS[i];
     var done=unlockedAch.indexOf(a.id)>=0;
-    h+='<div style="display:flex;align-items:center;gap:9px;background:'+(done?'rgba(255,210,74,0.16)':'rgba(255,255,255,0.04)')+';border:1px solid '+(done?'rgba(255,210,74,0.5)':'rgba(255,255,255,0.1)')+';border-radius:9px;padding:7px 11px;text-align:left">'
+    h+='<div class="uiPanel'+(done?' on':' dim')+'" style="display:flex;align-items:center;gap:9px;padding:8px 11px;text-align:left">'
       +'<span style="font-size:22px;'+(done?'':'filter:grayscale(1) opacity(0.4)')+'">'+a.icon+'</span>'
       +'<div style="flex:1">'
         +'<div style="color:'+(done?'#ffe88a':'#888')+';font-size:12px;font-weight:bold">'+a.name+(done?' ✓':'')+'</div>'
@@ -8560,7 +8642,7 @@ function showStageMap(){
   gs='ranking'; // タップでゲーム開始しないよう流用
   ov.classList.remove('home');
   var h='<div style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;padding-bottom:20px">'
-    +'<div class="title-logo" style="font-size:22px;margin-bottom:4px">🗺️ ステージ選択</div>'
+    +'<div class="uiTitle">🗺️ ステージ選択</div>'
     +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:16px">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
     // ★v243 ワールドを 2列に。1ワールド=1ステージなので縦1列だと全長1711px（2.5画面分）あった。
     +'<div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">';
@@ -8900,17 +8982,17 @@ function showShop(tab){
   ov.classList.remove('home');
   ov.classList.add('scrollable'); // 内容が縦に長くなってもページ全体でスクロール可能に
   tab=tab||'sword';
-  function tabStyle(t){ return tab===t
-    ? 'color:#4a3300;background:linear-gradient(180deg,#ffe89a,#ffcf3f);font-size:12px;font-weight:800;padding:7px 13px;border-radius:11px;cursor:pointer;box-shadow:0 3px 0 #cf9a1e,0 4px 7px rgba(0,0,0,0.25);text-shadow:0 1px 0 rgba(255,255,255,0.4)'
-    : 'color:#dfe8f5;background:rgba(255,255,255,0.09);font-size:12px;font-weight:700;padding:7px 13px;border-radius:11px;cursor:pointer;border:1px solid rgba(255,255,255,0.18)'; }
-  var h='<div class="title-logo" style="font-size:20px">🛍️ SHOP</div>'
+  // ★v283 共通デザイン(.uiTab)に統一。色・角丸・押し込みが全画面で揃う。
+  function tabStyle(t){ return ''; }
+  function tabCls(t){ return 'uiTab'+(tab===t?' on':''); }
+  var h='<div class="uiTitle">🛍️ ショップ</div>'
     +'<div style="color:#ffd24a;font-size:14px;font-weight:bold;margin-bottom:10px">💰 '+totalGold+'G</div>'
     // タブ
     +'<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">'
-      +'<div id="shopTabSK" style="'+tabStyle('skill')+'">🦘 スキル</div>'
-      +'<div id="shopTabOF" style="'+tabStyle('outfit')+'">👕 服</div>'
-      +'<div id="shopTabSW" style="'+tabStyle('sword')+'">⚔️ 剣</div>'
-      +'<div id="shopTabSH" style="'+tabStyle('shield')+'">🛡️ 盾</div>'
+      +'<div id="shopTabSK" class="'+tabCls('skill')+'">🦘 スキル</div>'
+      +'<div id="shopTabOF" class="'+tabCls('outfit')+'">👕 服</div>'
+      +'<div id="shopTabSW" class="'+tabCls('sword')+'">⚔️ 剣</div>'
+      +'<div id="shopTabSH" class="'+tabCls('shield')+'">🛡️ 盾</div>'
     +'</div>';
   if(tab==='skill'){
     // スキル購入タブ：開始スキルLvの底上げ（ゲームオーバー対策）
@@ -8920,15 +9002,15 @@ function showShop(tab){
       var sk=SKILL_SHOP[i];
       var have=(savedSkillLv>=sk.lv);
       var nextBuy=(savedSkillLv===sk.lv-1);
-      var btnLabel, btnColor;
-      if(have){ btnLabel='取得済'; btnColor='#4caf50'; }
-      else if(!nextBuy){ btnLabel='🔒'; btnColor='#555'; }
-      else if(totalGold>=sk.price){ btnLabel=sk.price+'G'; btnColor='#ffaa22'; }
-      else { btnLabel=sk.price+'G'; btnColor='#777'; }
-      h+='<div style="display:flex;align-items:center;gap:10px;background:'+(have?'rgba(76,175,80,0.16)':'rgba(255,255,255,0.05)')+';border:1px solid '+(have?'rgba(76,175,80,0.5)':'rgba(255,255,255,0.12)')+';border-radius:9px;padding:8px 11px">'
-        +'<span style="font-size:22px">'+sk.icon+'</span>'
-        +'<span style="flex:1;text-align:left;color:#fff;font-size:12px;font-weight:bold">Lv'+sk.lv+'スタート<br><span style="font-size:10px;color:#bbb;font-weight:normal">'+sk.name+'</span></span>'
-        +'<span id="shopSk_'+sk.lv+'" data-lv="'+sk.lv+'" data-price="'+sk.price+'" style="color:#fff;background:'+btnColor+';font-size:11px;font-weight:bold;padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap">'+btnLabel+'</span>'
+      var btnLabel, btnCls;   // ★v283 共通クラス(.uiBtn)の役割色に統一
+      if(have){ btnLabel='取得済'; btnCls='done'; }
+      else if(!nextBuy){ btnLabel='🔒'; btnCls='off'; }
+      else if(totalGold>=sk.price){ btnLabel=sk.price+'G'; btnCls='gold'; }
+      else { btnLabel=sk.price+'G'; btnCls='off'; }
+      h+='<div class="uiPanel'+(have?' on':'')+'" style="display:flex;align-items:center;gap:10px;padding:9px 11px">'
+        +'<span style="font-size:22px;flex:0 0 auto">'+sk.icon+'</span>'
+        +'<span style="flex:1 1 auto;min-width:0;text-align:left;color:#fff;font-size:12px;font-weight:bold">Lv'+sk.lv+'スタート<br><span style="font-size:10.5px;color:#9fe4ff;font-weight:normal">'+sk.name+'</span></span>'
+        +'<span id="shopSk_'+sk.lv+'" class="uiBtn '+btnCls+'" data-lv="'+sk.lv+'" data-price="'+sk.price+'" style="flex:0 0 auto;font-size:11.5px;padding:6px 11px">'+btnLabel+'</span>'
         +'</div>';
     }
     h+='</div>'
@@ -8938,14 +9020,14 @@ function showShop(tab){
     for(var pi=0;pi<PERK_SHOP.length;pi++){
       var pk=PERK_SHOP[pi];
       var pHave=hasPerk(pk.id);
-      var pLabel, pColor;
-      if(pHave){ pLabel='取得済'; pColor='#4caf50'; }
-      else if(totalGold>=pk.price){ pLabel=pk.price+'G'; pColor='#ffaa22'; }
-      else { pLabel=pk.price+'G'; pColor='#777'; }
-      h+='<div style="display:flex;align-items:center;gap:10px;background:'+(pHave?'rgba(76,175,80,0.16)':'rgba(255,255,255,0.05)')+';border:1px solid '+(pHave?'rgba(76,175,80,0.5)':'rgba(255,255,255,0.12)')+';border-radius:9px;padding:8px 11px">'
+      var pLabel, pCls;   // ★v283 共通クラスへ
+      if(pHave){ pLabel='取得済'; pCls='done'; }
+      else if(totalGold>=pk.price){ pLabel=pk.price+'G'; pCls='gold'; }
+      else { pLabel=pk.price+'G'; pCls='off'; }
+      h+='<div class="uiPanel'+(pHave?' on':'')+'" style="display:flex;align-items:center;gap:10px;padding:9px 11px">'
         +'<canvas class="perkDemo" data-perk="'+pk.id+'" width="30" height="30" style="width:30px;height:30px;flex-shrink:0"></canvas>'
-        +'<span style="flex:1;text-align:left;color:#fff;font-size:12px;font-weight:bold">'+pk.name+'<br><span style="font-size:10px;color:#bbb;font-weight:normal">'+pk.desc+'</span></span>'
-        +'<span id="shopPerk_'+pk.id+'" data-id="'+pk.id+'" data-price="'+pk.price+'" style="color:#fff;background:'+pColor+';font-size:11px;font-weight:bold;padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap">'+pLabel+'</span>'
+        +'<span style="flex:1 1 auto;min-width:0;text-align:left;color:#fff;font-size:12px;font-weight:bold">'+pk.name+'<br><span style="font-size:10.5px;color:#9fe4ff;font-weight:normal">'+pk.desc+'</span></span>'
+        +'<span id="shopPerk_'+pk.id+'" class="uiBtn '+pCls+'" data-id="'+pk.id+'" data-price="'+pk.price+'" style="flex:0 0 auto;font-size:11.5px;padding:6px 11px">'+pLabel+'</span>'
         +'</div>';
     }
     h+='</div>'
@@ -9002,15 +9084,18 @@ function showShop(tab){
     var owned=ownedItems.indexOf(it.id)>=0;
     var isEq=(equipped===it.id);
     var btnLabel, btnColor, btnId='shopAct_'+it.id;
-    if(isEq){ btnLabel='装備中'; btnColor='#4caf50'; }
-    else if(owned){ btnLabel='装備する'; btnColor='#2a9fd8'; }
-    else if(totalGold>=it.price){ btnLabel=it.price+'G'; btnColor='#ffaa22'; }
-    else { btnLabel=it.price+'G'; btnColor='#777'; }
-    var heroBadge=it.hero?'<span style="color:#ffd966;font-size:9px;font-weight:bold;background:rgba(255,217,102,0.15);border:1px solid rgba(255,217,102,0.5);border-radius:4px;padding:1px 5px;margin-left:4px">⭐マイヒーロー専用</span>':'';
-    h+='<div id="shopRow_'+it.id+'" style="display:flex;align-items:center;gap:10px;cursor:pointer;background:'+(isEq?'rgba(76,175,80,0.16)':'rgba(255,255,255,0.05)')+';border:1px solid '+(isEq?'rgba(76,175,80,0.5)':(it.hero?'rgba(255,217,102,0.4)':'rgba(255,255,255,0.12)'))+';border-radius:9px;padding:8px 11px">'
-      +'<span style="font-size:24px">'+it.icon+'</span>'
-      +'<span style="flex:1;text-align:left;color:#fff;font-size:13px;font-weight:bold">'+it.name+heroBadge+'<br><span style="font-size:10px;color:#9fe4ff;font-weight:normal">'+(it.desc||'')+'</span></span>'
-      +'<span id="'+btnId+'" data-id="'+it.id+'" data-price="'+it.price+'" data-owned="'+(owned?1:0)+'" data-eq="'+(isEq?1:0)+'" style="color:#fff;background:'+btnColor+';font-size:11px;font-weight:bold;padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap">'+btnLabel+'</span>'
+    // ★v283 色を直接指定するのをやめ、共通クラス(.uiBtn)の役割色に割り当てる。
+    var btnCls;
+    if(isEq){ btnLabel='装備中'; btnCls='done'; }
+    else if(owned){ btnLabel='装備する'; btnCls='info'; }
+    else if(totalGold>=it.price){ btnLabel=it.price+'G'; btnCls='gold'; }
+    else { btnLabel=it.price+'G'; btnCls='off'; }
+    btnColor='';
+    var heroBadge=it.hero?'<span style="display:inline-block;white-space:nowrap;color:#ffd966;font-size:9px;font-weight:bold;background:rgba(255,217,102,0.15);border:1px solid rgba(255,217,102,0.5);border-radius:5px;padding:1px 5px;margin-left:4px">⭐専用</span>':'';
+    h+='<div id="shopRow_'+it.id+'" class="uiPanel'+(isEq?' on':'')+'" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 11px">'
+      +'<span style="font-size:24px;flex:0 0 auto">'+it.icon+'</span>'
+      +'<span style="flex:1 1 auto;min-width:0;text-align:left;color:#fff;font-size:13px;font-weight:bold">'+it.name+heroBadge+'<br><span style="font-size:10.5px;color:#9fe4ff;font-weight:normal">'+(it.desc||'')+'</span></span>'
+      +'<span id="'+btnId+'" class="uiBtn '+btnCls+'" data-id="'+it.id+'" data-price="'+it.price+'" data-owned="'+(owned?1:0)+'" data-eq="'+(isEq?1:0)+'" style="flex:0 0 auto;font-size:11.5px;padding:6px 11px">'+btnLabel+'</span>'
       +'</div>';
   }
   h+='</div>'
