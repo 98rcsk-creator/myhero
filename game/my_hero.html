@@ -480,7 +480,11 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 .mhNav .mhNavBtn.on .mhNavTxt{color:#fff;}
 /* ナビの高さぶんだけ中身の下に余白を足す（scrollable の 140px と足し算にしない） */
 #overlay.hasnav{padding-bottom:150px !important;}
-#overlay.cropmode{justify-content:flex-start !important;overflow:hidden !important;padding-top:16px !important;padding-bottom:16px !important;gap:10px !important;background:linear-gradient(165deg,#0d223e 0%,#0b1a24 48%,#0b2016 100%) !important;}
+/* ★v287 マイヒーロー作成の流れで色を揃える。
+   ⚠ この画面だけは帯の絵を敷かない。overflow:hidden で切り抜きUIの余白が
+      iPhone SE では実測23pxしかなく、帯(206px)を入れると操作部が画面外に出るため。
+      色だけ v285 の夜空〜草地に合わせる。 */
+#overlay.cropmode{justify-content:flex-start !important;overflow:hidden !important;padding-top:16px !important;padding-bottom:16px !important;gap:10px !important;background:linear-gradient(180deg,#032450 0%,#03244a 55%,#0a3a30 100%) !important;}
 /* ★チュートリアル中：背景を半透明にして実際のプレイ画面（キャンバス＆コントローラー）を透かす */
 #overlay.tut{background:rgba(6,10,20,0.5) !important;justify-content:flex-start !important;padding-top:46px !important;}
 #overlay h2{color:#ffe44d;font-size:22px;margin-bottom:10px;letter-spacing:3px;}
@@ -3306,7 +3310,9 @@ function _copyFallback(text){
   }catch(err){ return false; }
 }
 function _showAiGuide(){
-  var html='<div style="max-width:340px;width:92%;background:linear-gradient(165deg,#132a44,#0e1e2c);border:2px solid rgba(255,217,102,0.5);border-radius:16px;padding:20px 18px;box-shadow:0 10px 40px rgba(0,0,0,0.5);margin:10px auto">'
+  // ★v287 v285の帯（夜空＋草地）を使い回す
+  var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
+    +'<div style="max-width:340px;width:92%;background:linear-gradient(165deg,#132a44,#0e1e2c);border:2px solid rgba(255,217,102,0.5);border-radius:16px;padding:20px 18px;box-shadow:0 10px 40px rgba(0,0,0,0.5);margin:10px auto">'
     +'<div style="color:#ffd966;font-size:19px;font-weight:bold;text-align:center;margin-bottom:6px">✨ AIでキャラ化する</div>'
     +'<div style="color:#cfe0ee;font-size:12px;text-align:center;line-height:1.5;margin-bottom:16px">ChatGPTやGeminiに写真を渡すと、<br>もっとキャラっぽい顔が作れるよ！</div>'
     +'<div style="color:#dfeef7;font-size:13px;line-height:1.7;margin-bottom:14px">'
@@ -3333,9 +3339,9 @@ function _showAiGuide(){
   });
   html+='<div style="color:#8fa8c0;font-size:11px;line-height:1.55;margin-top:4px">💡 一度で完璧じゃなくてOK。できた画像に追加で注文すればどんどん良くなるよ！</div>'
     +'</div>'
-    +'<div class="menuBtnSub" id="aiCloseBtn" style="margin-top:14px;width:100%;font-size:14px;box-sizing:border-box">閉じる</div>'
+    +'<div class="uiBtn info" id="aiCloseBtn" style="margin-top:14px;width:100%;font-size:14px;box-sizing:border-box">閉じる</div>'
     +'</div>';
-  ov.className='scrollable';
+  ov.className='scrollable mhbg';   // ★v287 作成の流れで背景を揃える
   ov.innerHTML=html;
   ov.style.display='flex';
   setTimeout(function(){
@@ -3375,7 +3381,7 @@ function _showCustomCrop(){
     +'<input type="file" id="ccFileInput" accept="image/png,image/jpeg,image/heic,image/webp" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer">'
     +'</label>'
     +'<div style="color:#c8d6e4;font-size:12px;margin-top:14px;line-height:1.6;max-width:290px;text-align:center">メニューが出たら<br><span style="display:inline-block;margin-top:6px;background:#2a7fff;color:#fff;font-weight:bold;font-size:14px;padding:7px 16px;border-radius:20px;box-shadow:0 2px 8px rgba(42,127,255,0.5)">📷 写真ライブラリ</span><br><span style="font-size:11px;color:#8fa8c0">↑ これをえらんでね！</span></div>'
-    +'<div id="ccAiGuideBtn" class="btnInfo" style="margin-top:16px">✨ もっとキャラっぽくするには？</div>'
+    +'<div id="ccAiGuideBtn" class="uiBtn gold" style="margin-top:16px;font-size:13px">✨ もっとキャラっぽくするには？</div>'
     +'</div>'
     +'<div id="ccCropWrap" style="display:none;flex-direction:column;align-items:center">'
     +'<canvas id="ccStage" width="'+_ccW+'" height="'+_ccH+'" style="display:block;border-radius:14px;background:#060a14;touch-action:none;width:230px;height:230px"></canvas>'
@@ -3386,11 +3392,11 @@ function _showCustomCrop(){
     +'<span style="color:#9fe4ff;font-size:17px">＋</span>'
     +'</div>'
     +'<div style="display:flex;gap:12px">'
-    +'<div class="menuBtnSub" id="ccResetBtn" style="width:90px;font-size:14px">リセット</div>'
-    +'<div class="menuBtnMain" id="ccConfirmBtn" style="margin-top:0;width:150px;padding:12px 0;font-size:16px">これでOK</div>'
+    +'<div class="uiBtn info" id="ccResetBtn" style="width:104px;font-size:14px">リセット</div>'
+    +'<div class="uiBtn go" id="ccConfirmBtn" style="width:150px;font-size:16px">これでOK</div>'
     +'</div>'
     +'</div>'
-    +'<div class="menuBtnSub" id="customCropHomeBtn" style="margin-top:18px;width:140px;font-size:14px">◀ もどる</div>';
+    +'<div class="uiBtn info" id="customCropHomeBtn" style="margin-top:18px;width:160px">◀ もどる</div>';
   ov.className='cropmode';
   ov.innerHTML=html;
   ov.style.display='flex';
@@ -3736,7 +3742,9 @@ function _showCustomConfirm(isNew, editHero){
   var defaultName='マイヒーロー'+(list.length+1);
   var _showName=isNew||editHero;                       // 新規 or 既存編集時に名前欄を出す
   var _nameVal=isNew?defaultName:(editHero?editHero.name:'');
-  var html='<div class="title-logo" style="font-size:24px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6)">マイヒーローをつくる</div>'
+  // ★v287 v285の帯（夜空＋草地）を使い回す＝画像は増えない
+  var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
+    +'<div class="title-logo" style="font-size:24px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6)">マイヒーローをつくる</div>'
     +'<div style="color:#ffcc88;font-size:13px;letter-spacing:2px;margin-bottom:14px">― この顔でいい？ ―</div>'
     +'<canvas id="ccConfirmPreview" width="110" height="138" style="display:block;margin-bottom:10px"></canvas>';
   if(_showName){
@@ -3747,11 +3755,11 @@ function _showCustomConfirm(isNew, editHero){
     +'<div class="menuBtnMain" id="ccUseBtn" style="margin-top:0;font-size:18px">▶ この顔でスタート</div>'
     +'<div class="menuRow">'
     +(isNew
-      ?'<div class="menuBtnSub" id="ccRedoBtn" style="font-size:14px">🖼️ 選び直す</div>'
-      :'<div class="menuBtnSub" id="ccListBtn" style="font-size:14px">📋 リストに戻る</div>')
-    +'<div class="menuBtnSub" id="ccBackBtn2" style="font-size:14px">◀ もどる</div>'
+      ?'<div class="uiBtn info" id="ccRedoBtn" style="font-size:14px">🖼️ 選び直す</div>'
+      :'<div class="uiBtn info" id="ccListBtn" style="font-size:14px">📋 リストに戻る</div>')
+    +'<div class="uiBtn info" id="ccBackBtn2" style="font-size:14px">◀ もどる</div>'
     +'</div>';
-  ov.className='scrollable';
+  ov.className='scrollable mhbg';   // ★v287 作成の流れで背景を揃える
   ov.innerHTML=html;
   ov.style.display='flex';
   setTimeout(function(){
