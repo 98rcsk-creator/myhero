@@ -3369,7 +3369,8 @@ function _showAiGuide(){
       });
     });
     var closeBtn=document.getElementById('aiCloseBtn');
-    if(closeBtn) tap(closeBtn,function(){ _showCustomCrop(); });
+    // ★v290 AIガイドの入口はメニューの「カスタマイズ」だけになったので、戻り先もメニュー
+    if(closeBtn) tap(closeBtn,function(){ _showCustomMenu(); });
   },50);
 }
 
@@ -3390,7 +3391,6 @@ function _showCustomCrop(){
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-top:1px solid rgba(0,0,0,0.09);color:#9aa0aa;font-size:13px">ファイルを選択<span style="font-size:14px;opacity:0.45">📁</span></div>'
     +'</div>'
     +'<div style="color:#8fa8c0;font-size:11px;margin-top:6px">↑ これは見本だよ</div>'
-    +'<div id="ccAiGuideBtn" class="uiBtn gold" style="margin-top:16px;font-size:13px">✨ もっとキャラっぽくするには？</div>'
     +'</div>'
     +'<div id="ccCropWrap" style="display:none;flex-direction:column;align-items:center">'
     +'<canvas id="ccStage" width="'+_ccW+'" height="'+_ccH+'" style="display:block;border-radius:14px;background:#060a14;touch-action:none;width:230px;height:230px"></canvas>'
@@ -3421,7 +3421,6 @@ function _showCustomCrop(){
     var resetBtn=document.getElementById('ccResetBtn');
     var confirmBtn=document.getElementById('ccConfirmBtn');
     var backBtn=document.getElementById('customCropHomeBtn');
-    var aiGuideBtn=document.getElementById('ccAiGuideBtn');
     var mask=_ccBuildMask();
 
     function tap(el,fn){
@@ -3429,7 +3428,6 @@ function _showCustomCrop(){
       el.addEventListener('touchstart',h,{passive:false});
       el.addEventListener('click',h);
     }
-    if(aiGuideBtn) tap(aiGuideBtn,function(){ _showAiGuide(); });
 
     function initLayout(){
       var iw=_ccImg.naturalWidth, ih=_ccImg.naturalHeight;
