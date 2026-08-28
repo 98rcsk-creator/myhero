@@ -3381,7 +3381,15 @@ function _showCustomCrop(){
     +'<label for="ccFileInput" class="menuBtnMain" id="ccPickBtn" style="margin-top:0;width:250px;font-size:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden">🖼️ アルバムから選ぶ'
     +'<input type="file" id="ccFileInput" accept="image/png,image/jpeg,image/heic,image/webp" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer">'
     +'</label>'
-    +'<div style="color:#c8d6e4;font-size:12px;margin-top:14px;line-height:1.6;max-width:290px;text-align:center">メニューが出たら<br><span style="display:inline-block;margin-top:6px;background:#2a7fff;color:#fff;font-weight:bold;font-size:14px;padding:7px 16px;border-radius:20px;box-shadow:0 2px 8px rgba(42,127,255,0.5)">📷 写真ライブラリ</span><br><span style="font-size:11px;color:#8fa8c0">↑ これをえらんでね！</span></div>'
+    // ★v289 「写真ライブラリ」はiOSのメニューの見本。押せるボタンと誤認されないよう
+    //        3行のシート風カードにして pointer-events:none で完全に非対話にする。
+    +'<div style="color:#c8d6e4;font-size:12px;margin-top:14px;line-height:1.6;text-align:center">メニューが出たら いちばん上をえらんでね</div>'
+    +'<div style="pointer-events:none;width:216px;margin-top:8px;background:#f2f3f7;border-radius:13px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.45);text-align:left">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:#e0eafb;color:#0a7cff;font-weight:bold;font-size:13px">写真ライブラリ<span style="font-size:14px">🖼️</span></div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-top:1px solid rgba(0,0,0,0.09);color:#9aa0aa;font-size:13px">写真またはビデオを撮る<span style="font-size:14px;opacity:0.45">📷</span></div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-top:1px solid rgba(0,0,0,0.09);color:#9aa0aa;font-size:13px">ファイルを選択<span style="font-size:14px;opacity:0.45">📁</span></div>'
+    +'</div>'
+    +'<div style="color:#8fa8c0;font-size:11px;margin-top:6px">↑ これは見本だよ</div>'
     +'<div id="ccAiGuideBtn" class="uiBtn gold" style="margin-top:16px;font-size:13px">✨ もっとキャラっぽくするには？</div>'
     +'</div>'
     +'<div id="ccCropWrap" style="display:none;flex-direction:column;align-items:center">'
