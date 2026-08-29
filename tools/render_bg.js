@@ -73,11 +73,15 @@ function makeMock(counter, nanLog, fnName) {
 }
 
 // ---- 実行 ----
-const helpers = ['ctxEllipse'];
+// ★v293 グラデーションのキャッシュ経由になったので、ヘルパーも取り込む
+const helpers = ['ctxEllipse', '_gcOf', 'gradL', 'gradR', 'fillSky'];
 const srcAll = [...helpers, BASELINE_FN, ...active.filter(n => n !== BASELINE_FN)]
   .filter((v, i, a) => a.indexOf(v) === i)
   .map(grabFn).join('\n');
 
+const PRELUDE = 'var GRAD_CACHE_MAX=240,SKY_CACHE_MAX=2,CV_K=1.25,_skyCv=[];'
+  // fillSky はオフスクリーンcanvasを使うので、Node側では空グラデの塗り1回として数える
+  + 'var document={createElement:function(){return {getContext:function(){return ctx;},width:0,height:0};}};';
 const CONDS = [[0, 0], [37, 271], [240, 2400], [601, 6013]]; // [fr, cam]
 const W = 390, Hh = 390, GROUND = 335;
 let fail = 0;
@@ -90,7 +94,7 @@ for (const name of [BASELINE_FN, ...active.filter(n => n !== BASELINE_FN)]) {
   for (const [fr, cam] of CONDS) {
     const counter = { n: 0 };
     try {
-      new Function('ctx', 'W', 'H', 'GROUND', 'cam', 'fr', srcAll + '\n' + name + '();')(
+      new Function('ctx', 'W', 'H', 'GROUND', 'cam', 'fr', PRELUDE + '\n' + srcAll + '\n' + name + '();')(
         makeMock(counter, nanLog, name), W, Hh, GROUND, cam, fr);
     } catch (e) { err = e.message; break; }
     tot += counter.n; if (counter.n > mx) mx = counter.n;
@@ -125,7 +129,7 @@ try {
     c.fillStyle = '#101014'; c.fillRect(0, 0, cv.width, cv.height);
     CONDS.forEach(([fr, cam], k) => {
       const s = createCanvas(W, Hh);
-      new Function('ctx', 'W', 'H', 'GROUND', 'cam', 'fr', srcAll + '\n' + name + '();')(
+      new Function('ctx', 'W', 'H', 'GROUND', 'cam', 'fr', PRELUDE + '\n' + srcAll + '\n' + name + '();')(
         s.getContext('2d'), W, Hh, GROUND, cam, fr);
       c.drawImage(s, 6 + k * (W + 6), 5);
     });

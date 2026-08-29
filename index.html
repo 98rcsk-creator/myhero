@@ -2746,29 +2746,68 @@ function shadeCol(hex,f){
   return 'rgb('+r+','+g+','+b+')';
 }
 // 円柱グラデ（クレイ風：強いハイライト→深い陰）
-function cylGrad(c2,x0,x1,col){
-  var g=c2.createLinearGradient(x0,0,x1,0);
-  g.addColorStop(0,shadeCol(col,1.32));
-  g.addColorStop(0.35,col);
-  g.addColorStop(0.8,shadeCol(col,0.78));
-  g.addColorStop(1,shadeCol(col,0.62));
+// ★v293 グラデーションのキャッシュ。
+//   実測で1フレームあたり グラデ32個・addColorStop 86個 を毎回作り直していた。
+//   createLinearGradient を潰すと fps が +65% になったので、ここが最大のボトルネック。
+//   draw() は時刻を見ない純粋関数なので、同じ引数なら同じグラデを使い回してよい。
+//   キャッシュはコンテキストごとに持つ（プレビュー用の別canvasと混ざらないように）。
+//   canvasのグラデは「塗る時点の座標系」で解釈されるので、transform をまたいでも使い回せる。
+var GRAD_CACHE_MAX=240;   // 種類が増えすぎたら丸ごと捨てる（実測の種類数は最大64）
+function _gcOf(c2){
+  var c=c2._gc;
+  if(!c || c.n>GRAD_CACHE_MAX){ c=c2._gc={n:0,m:{}}; }
+  return c;
+}
+// st は [offset,color, offset,color, ...] の平坦な配列（そのままキーの一部にする）
+function gradL(c2,x0,y0,x1,y1,st){
+  var c=_gcOf(c2), k='L'+x0+','+y0+','+x1+','+y1+';'+st, g=c.m[k];
+  if(g) return g;
+  g=c2.createLinearGradient(x0,y0,x1,y1);
+  for(var i=0;i<st.length;i+=2) g.addColorStop(st[i],st[i+1]);
+  c.m[k]=g; c.n++;
   return g;
+}
+function gradR(c2,x0,y0,r0,x1,y1,r1,st){
+  var c=_gcOf(c2), k='R'+x0+','+y0+','+r0+','+x1+','+y1+','+r1+';'+st, g=c.m[k];
+  if(g) return g;
+  g=c2.createRadialGradient(x0,y0,r0,x1,y1,r1);
+  for(var i=0;i<st.length;i+=2) g.addColorStop(st[i],st[i+1]);
+  c.m[k]=g; c.n++;
+  return g;
+}
+// ★v293 空（全画面グラデ）のオフスクリーン化。
+//   実測でプレイ中の一番の重さは「グラデでの塗り」だった（グラデ塗りを単色にすると+92%）。
+//   なかでも毎フレーム全画面をグラデで塗る空が最重量。1回だけ内部解像度で焼いて
+//   以降は drawImage で貼る。ピクセルは同一（実測: 空の平均色差 0.017/255）。
+//   実測: fps 21.8 → 26.9（+23%）。
+//   キャッシュは2枚まで（1枚 488x488x4 ≒ 0.9MB。iOSメモリ制約 SPEC §4-11）。
+var SKY_CACHE_MAX=2;
+var _skyCv=[];
+function fillSky(c2,st){
+  var k=''+st, e=null, i;
+  for(i=0;i<_skyCv.length;i++) if(_skyCv[i].k===k) e=_skyCv[i];
+  if(!e){
+    var cv2=document.createElement('canvas');
+    cv2.width=Math.round(W*CV_K); cv2.height=Math.round(H*CV_K);
+    var g2=cv2.getContext('2d');
+    var gr=g2.createLinearGradient(0,0,0,cv2.height);
+    for(var j=0;j<st.length;j+=2) gr.addColorStop(st[j],st[j+1]);
+    g2.fillStyle=gr; g2.fillRect(0,0,cv2.width,cv2.height);
+    e={k:k,cv:cv2}; _skyCv.push(e);
+    if(_skyCv.length>SKY_CACHE_MAX) _skyCv.shift();
+  }
+  c2.drawImage(e.cv,0,0,W,H);
+}
+function cylGrad(c2,x0,x1,col){
+  return gradL(c2,x0,0,x1,0,[0,shadeCol(col,1.32),0.35,col,0.8,shadeCol(col,0.78),1,shadeCol(col,0.62)]);
 }
 // 球面グラデ（頭・関節用）
 function sphGrad(c2,cx,cy,r,col){
-  var g=c2.createRadialGradient(cx-r*0.38,cy-r*0.42,r*0.12,cx,cy,r*1.22);
-  g.addColorStop(0,shadeCol(col,1.32));
-  g.addColorStop(0.5,col);
-  g.addColorStop(1,shadeCol(col,0.7));
-  return g;
+  return gradR(c2,cx-r*0.38,cy-r*0.42,r*0.12,cx,cy,r*1.22,[0,shadeCol(col,1.32),0.5,col,1,shadeCol(col,0.7)]);
 }
 // 髪の縦グラデ（艶感）
 function hairGrad(c2,cy,HR,col){
-  var g=c2.createLinearGradient(0,cy-HR*1.7,0,cy+HR*0.95);
-  g.addColorStop(0,shadeCol(col,1.5));
-  g.addColorStop(0.42,col);
-  g.addColorStop(1,shadeCol(col,0.55));
-  return g;
+  return gradL(c2,0,cy-HR*1.7,0,cy+HR*0.95,[0,shadeCol(col,1.5),0.42,col,1,shadeCol(col,0.55)]);
 }
 // フィギュア風の目（黒い大きな瞳＋光）
 function figEyes(c2,HR,cy){
@@ -3856,10 +3895,7 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic){
     ctx2.translate(cx,cy);
     if(heroic){
       // ★v208: 勇者オーラ（金色スポットライト）
-      var aurI=ctx2.createRadialGradient(0,-26,2,0,-26,30);
-      aurI.addColorStop(0,'rgba(255,225,110,0.30)');
-      aurI.addColorStop(0.6,'rgba(255,200,80,0.12)');
-      aurI.addColorStop(1,'rgba(255,200,80,0)');
+      var aurI=gradR(ctx2,0,-26,2,0,-26,30,[0,'rgba(255,225,110,0.30)',0.6,'rgba(255,200,80,0.12)',1,'rgba(255,200,80,0)']);
       ctx2.fillStyle=aurI;ctx2.beginPath();ctx2.arc(0,-26,30,0,Math.PI*2);ctx2.fill();
     }
     ctx2.globalAlpha=0.22; ctx2.fillStyle='#000';
@@ -3892,10 +3928,7 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic){
   }
   // ★v208: 勇者スポットライト（金色オーラ＋足元の光輪）
   if(heroic){
-    var aur=ctx2.createRadialGradient(0,shouldY+4,2,0,shouldY+4,30);
-    aur.addColorStop(0,'rgba(255,225,110,0.30)');
-    aur.addColorStop(0.6,'rgba(255,200,80,0.12)');
-    aur.addColorStop(1,'rgba(255,200,80,0)');
+    var aur=gradR(ctx2,0,shouldY+4,2,0,shouldY+4,30,[0,'rgba(255,225,110,0.30)',0.6,'rgba(255,200,80,0.12)',1,'rgba(255,200,80,0)']);
     ctx2.fillStyle=aur;
     ctx2.beginPath();ctx2.arc(0,shouldY+4,30,0,Math.PI*2);ctx2.fill();
     ctx2.save();ctx2.strokeStyle='rgba(255,220,100,0.5)';ctx2.lineWidth=1.4;
@@ -3908,8 +3941,7 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic){
   ctx2.restore();
   // ★v208: ヒーローマント（体の背面・赤くひらり）
   if(heroic){
-    var capeG=ctx2.createLinearGradient(0,shouldY,0,waistY+LH*0.8);
-    capeG.addColorStop(0,'#e04848');capeG.addColorStop(1,'#8a1d1d');
+    var capeG=gradL(ctx2,0,shouldY,0,waistY+LH*0.8,[0,'#e04848',1,'#8a1d1d']);
     ctx2.save();ctx2.lineJoin='round';
     ctx2.strokeStyle='rgba(35,22,28,0.35)';ctx2.lineWidth=1.1;
     ctx2.beginPath();
@@ -3946,8 +3978,7 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic){
   rr2(-BW,shouldY,BW*2,TH,5);ctx2.clip();
   ctx2.fillStyle='rgba(255,255,255,0.2)';
   ctx2.fillRect(-BW,shouldY,BW*2,3);
-  var ao2=ctx2.createRadialGradient(0,shouldY,1,0,shouldY,BW);
-  ao2.addColorStop(0,'rgba(0,0,0,0.26)');ao2.addColorStop(1,'rgba(0,0,0,0)');
+  var ao2=gradR(ctx2,0,shouldY,1,0,shouldY,BW,[0,'rgba(0,0,0,0.26)',1,'rgba(0,0,0,0)']);
   ctx2.fillStyle=ao2;ctx2.fillRect(-BW,shouldY,BW*2,7);
   ctx2.restore();
   // ★v208: 右手に銀の剣（刃は上向き・体より前面）
@@ -3962,8 +3993,7 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic){
     ctx2.fillStyle='#c9992e';ctx2.fillRect(-4.4,-0.6,8.8,2.4);
     // 刀身（ひし形・銀グラデ）
     var bl=20;
-    var bg3=ctx2.createLinearGradient(-2.6,0,2.6,0);
-    bg3.addColorStop(0,'#9a9a8a');bg3.addColorStop(0.5,'#f4f0dd');bg3.addColorStop(1,'#9a9a8a');
+    var bg3=gradL(ctx2,-2.6,0,2.6,0,[0,'#9a9a8a',0.5,'#f4f0dd',1,'#9a9a8a']);
     ctx2.lineJoin='round';ctx2.strokeStyle='rgba(35,22,28,0.4)';ctx2.lineWidth=1;
     ctx2.beginPath();
     ctx2.moveTo(-2.4,-0.6);ctx2.lineTo(-3.1,-bl*0.5);ctx2.lineTo(0,-bl);
@@ -5496,8 +5526,7 @@ function drawOniHead(ctx, HR, cy, skinCol, hairCol, skillLv, ifrm, fillOL, shade
   // ── 2本の角（額の左右・先が尖る）──
   function horn(sx){
     ctx.save();
-    var hg=ctx.createLinearGradient(sx*HR*0.55-3, cy-HR*1.9, sx*HR*0.55+3, cy-HR*0.9);
-    hg.addColorStop(0, hornCol); hg.addColorStop(1, hornSh);
+    var hg=gradL(ctx,sx*HR*0.55-3, cy-HR*1.9, sx*HR*0.55+3, cy-HR*0.9,[0,hornCol,1,hornSh]);
     ctx.fillStyle=hg;
     ctx.strokeStyle='rgba(60,40,20,0.4)'; ctx.lineWidth=1; ctx.lineJoin='round';
     ctx.beginPath();
@@ -5760,19 +5789,13 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
       ctx.rotate(swing);
       // 太もも〜すね（ぷっくりカプセル）
       var lw=LD.hipW; // 脚の幅
-      var lg=ctx.createLinearGradient(-lw/2,0,lw/2,0);
-      lg.addColorStop(0,shadeCol(LD.leg,1.18));
-      lg.addColorStop(0.5,LD.leg);
-      lg.addColorStop(1,shadeCol(LD.leg,0.72));
+      var lg=gradL(ctx,-lw/2,0,lw/2,0,[0,shadeCol(LD.leg,1.18),0.5,LD.leg,1,shadeCol(LD.leg,0.72)]);
       ctx.fillStyle=lg;
       ctx.strokeStyle=shadeCol(LD.leg,0.5); ctx.lineWidth=1;
       rr(-lw/2,0,lw,legLen*0.72,lw*0.45); ctx.fill(); ctx.stroke();
       // 靴（丸いつま先）
       var bw2=lw*1.15;
-      var bg3=ctx.createLinearGradient(-bw2/2,0,bw2/2,0);
-      bg3.addColorStop(0,shadeCol(LD.boot,1.2));
-      bg3.addColorStop(0.5,LD.boot);
-      bg3.addColorStop(1,shadeCol(LD.boot,0.7));
+      var bg3=gradL(ctx,-bw2/2,0,bw2/2,0,[0,shadeCol(LD.boot,1.2),0.5,LD.boot,1,shadeCol(LD.boot,0.7)]);
       ctx.fillStyle=bg3;
       rr(-bw2/2,legLen*0.62,bw2,legLen*0.4,bw2*0.42); ctx.fill(); ctx.stroke();
       // 靴のつま先ハイライト
@@ -5876,10 +5899,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
       ctx.restore();
       if(slashA!==null){
         ctx.save();
-        var sg=ctx.createRadialGradient(shx,shy,8,shx,shy,32);
-        sg.addColorStop(0,'rgba(255,255,255,0)');
-        sg.addColorStop(0.72,'rgba(255,255,255,'+(0.8*slashAlpha)+')');
-        sg.addColorStop(1,'rgba(200,240,255,0)');
+        var sg=gradR(ctx,shx,shy,8,shx,shy,32,[0,'rgba(255,255,255,0)',0.72,'rgba(255,255,255,'+(0.8*slashAlpha)+')',1,'rgba(200,240,255,0)']);
         ctx.strokeStyle=sg; ctx.lineWidth=7; ctx.lineCap='round';
         ctx.beginPath();
         ctx.arc(shx,shy,27,slashA-0.95,slashA+0.5);
@@ -5906,16 +5926,11 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
       }
       // 外周の発光オーラ
       ctx.save();ctx.globalCompositeOperation='lighter';
-      var aura=ctx.createRadialGradient(0,0,4,0,0,SW2*1.5);
-      aura.addColorStop(0,'rgba(150,210,255,0.5)');
-      aura.addColorStop(1,'rgba(120,180,255,0)');
+      var aura=gradR(ctx,0,0,4,0,0,SW2*1.5,[0,'rgba(150,210,255,0.5)',1,'rgba(120,180,255,0)']);
       ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,SW2*1.5,0,Math.PI*2);ctx.fill();
       ctx.restore();
       // 盾の金属ベース（銀のグラデ）
-      var sg2=ctx.createLinearGradient(-SW2,-SH2*0.5,SW2,SH2*0.5);
-      sg2.addColorStop(0,'#e8eef5');
-      sg2.addColorStop(0.5,'#aab8cc');
-      sg2.addColorStop(1,'#6b7d96');
+      var sg2=gradL(ctx,-SW2,-SH2*0.5,SW2,SH2*0.5,[0,'#e8eef5',0.5,'#aab8cc',1,'#6b7d96']);
       ctx.lineJoin='round';
       ctx.strokeStyle='#3a4761'; ctx.lineWidth=2;
       shieldPath(); ctx.stroke();
@@ -6025,8 +6040,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     }
     // メタリックなグラデ塗り（hero/normalは縦グラデで金属感）
     if(shKind==='hero'){
-      var _hg=ctx.createLinearGradient(0,-13,0,18);
-      _hg.addColorStop(0,'#eaf3ff'); _hg.addColorStop(0.45,'#9fc0ee'); _hg.addColorStop(1,'#4a6aa8');
+      var _hg=gradL(ctx,0,-13,0,18,[0,'#eaf3ff',0.45,'#9fc0ee',1,'#4a6aa8']);
       fillOL(shieldPath,_hg);
       ctx.shadowBlur=0;
     } else {
@@ -6076,8 +6090,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     ctx.save();
     var _cw=Math.sin(fr*0.18)*2.2 + (Math.abs(p&&p.vx||0)>1?2.5:0);  // なびき(走ると大きく)
     var _cTop=shouldY+bobY+1.5, _cBot=shouldY+bobY+TH+7;
-    var _cg=ctx.createLinearGradient(0,_cTop,0,_cBot);
-    _cg.addColorStop(0,'#e8433a'); _cg.addColorStop(1,'#8e1616');
+    var _cg=gradL(ctx,0,_cTop,0,_cBot,[0,'#e8433a',1,'#8e1616']);
     ctx.fillStyle=_cg;
     ctx.beginPath();
     ctx.moveTo(-2,_cTop);
@@ -6100,9 +6113,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
   ctx.beginPath();rr(-BW,shouldY+bobY,BW*2,TH,5);ctx.clip();
   ctx.fillStyle='rgba(255,255,255,0.2)';
   ctx.fillRect(-BW,shouldY+bobY,BW*2,3.5);
-  var ao=ctx.createRadialGradient(0,shouldY+bobY,1,0,shouldY+bobY,BW*1.1);
-  ao.addColorStop(0,'rgba(0,0,0,0.28)');
-  ao.addColorStop(1,'rgba(0,0,0,0)');
+  var ao=gradR(ctx,0,shouldY+bobY,1,0,shouldY+bobY,BW*1.1,[0,'rgba(0,0,0,0.28)',1,'rgba(0,0,0,0)']);
   ctx.fillStyle=ao;
   ctx.fillRect(-BW,shouldY+bobY,BW*2,8);
   ctx.fillStyle='rgba(0,0,0,0.14)';
@@ -6123,8 +6134,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     var _pdk =_ofId==='gold'?'#b8860b':'#24242a';
     [-1,1].forEach(function(sg){
       // 肩アーマー（パルドロン）＝重量感
-      var pg=ctx.createLinearGradient(0,shouldY+bobY-3,0,shouldY+bobY+7);
-      pg.addColorStop(0,_pcol); pg.addColorStop(1,_pdk);
+      var pg=gradL(ctx,0,shouldY+bobY-3,0,shouldY+bobY+7,[0,_pcol,1,_pdk]);
       fillOL(function(){
         ctx.beginPath();
         ctx.moveTo(sg*BW*0.55,shouldY+bobY-1);
@@ -6156,8 +6166,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     if(_ofId==='dark'){
       // ★v199(shop①): 漆黒の鎧が「ノーマルと変わらない」との声を受け、大型胸プレート＋縦リブで
       //   重厚な装甲シルエットを明確化（肩アーマー/トゲだけだと差が伝わりにくかったため）。
-      var _dg=ctx.createLinearGradient(0,shouldY+bobY+2,0,shouldY+bobY+TH*0.75);
-      _dg.addColorStop(0,'#3a3a44'); _dg.addColorStop(0.5,'#1c1c22'); _dg.addColorStop(1,'#0c0c10');
+      var _dg=gradL(ctx,0,shouldY+bobY+2,0,shouldY+bobY+TH*0.75,[0,'#3a3a44',0.5,'#1c1c22',1,'#0c0c10']);
       ctx.fillStyle=_dg;
       ctx.beginPath();
       ctx.moveTo(-BW*0.62,shouldY+bobY+2);
@@ -6176,8 +6185,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     }
   } else if(_ofId==='royal'){
     // 王者のローブ：裾のドレープ＋金の縦トリム＋肩の宝石
-    var rgd=ctx.createLinearGradient(0,waistY-3+bobY,0,waistY+9+bobY);
-    rgd.addColorStop(0,'#9a54cc'); rgd.addColorStop(1,'#4a1880');
+    var rgd=gradL(ctx,0,waistY-3+bobY,0,waistY+9+bobY,[0,'#9a54cc',1,'#4a1880']);
     ctx.fillStyle=rgd;
     ctx.beginPath();
     ctx.moveTo(-BW,waistY-2+bobY);
@@ -6243,10 +6251,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     ctx.save();
     ctx.translate(BW*0.55,shouldY+5+bobY);
     var slR=AH+(hasSk(2)?44:30)-4;
-    var sg=ctx.createRadialGradient(0,0,slR*0.3,0,0,slR);
-    sg.addColorStop(0,'rgba(255,255,255,0)');
-    sg.addColorStop(0.72,'rgba(255,255,255,'+(0.30*slashAlpha).toFixed(3)+')');
-    sg.addColorStop(1,'rgba(190,235,255,'+(0.55*slashAlpha).toFixed(3)+')');
+    var sg=gradR(ctx,0,0,slR*0.3,0,0,slR,[0,'rgba(255,255,255,0)',0.72,'rgba(255,255,255,'+(0.30*slashAlpha).toFixed(3)+')',1,'rgba(190,235,255,'+(0.55*slashAlpha).toFixed(3)+')']);
     ctx.fillStyle=sg;
     ctx.beginPath();
     ctx.moveTo(0,0);
@@ -6433,13 +6438,10 @@ ENEMY_SPR_W[w][t]=L;}}})();
 function bgGrass(){   // ★v234 旧bgPat1 昼の草原（本文は機械的に切り出し・一字不変）
     // LV1：昼の草原・多層パララックスで立体的な奥行き
     // ① 空（柔らかな上→下グラデ＋上空のほのかな光）
-    var skyG=ctx.createLinearGradient(0,0,0,H);
-    skyG.addColorStop(0,'#4aa8ee');skyG.addColorStop(0.55,'#7fc8f5');skyG.addColorStop(1,'#d6f0ff');
-    ctx.fillStyle=skyG;ctx.fillRect(0,0,W,H);
+    fillSky(ctx,[0,'#4aa8ee',0.55,'#7fc8f5',1,'#d6f0ff']);
     // ② 太陽（やわらかい光輪）
     var sunX=64,sunY=52;
-    var sunG=ctx.createRadialGradient(sunX,sunY,6,sunX,sunY,60);
-    sunG.addColorStop(0,'rgba(255,248,200,0.9)');sunG.addColorStop(0.3,'rgba(255,228,120,0.5)');sunG.addColorStop(1,'rgba(255,228,120,0)');
+    var sunG=gradR(ctx,sunX,sunY,6,sunX,sunY,60,[0,'rgba(255,248,200,0.9)',0.3,'rgba(255,228,120,0.5)',1,'rgba(255,228,120,0)']);
     ctx.fillStyle=sunG;ctx.beginPath();ctx.arc(sunX,sunY,60,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#fff3b0';ctx.beginPath();ctx.arc(sunX,sunY,20,0,Math.PI*2);ctx.fill();
     // ③ 最遠景：青く霞む山脈（パララックス最小 cam*0.04）
@@ -6470,8 +6472,7 @@ function bgGrass(){   // ★v234 旧bgPat1 昼の草原（本文は機械的に�
       var hx=((hi*230-cam*0.13)%(W+460)+W+460)%(W+460)-230;
       var hr=110+(hi*37%50);
       // 丘本体
-      var hg=ctx.createLinearGradient(hx,GROUND-hr,hx,GROUND+20);
-      hg.addColorStop(0,'#8fd06a');hg.addColorStop(1,'#5aa83e');
+      var hg=gradL(ctx,hx,GROUND-hr,hx,GROUND+20,[0,'#8fd06a',1,'#5aa83e']);
       ctx.fillStyle=hg;
       ctx.beginPath();ctx.arc(hx,GROUND+20,hr,Math.PI,0);ctx.fill();
       // 丘の右側に陰（立体感）
@@ -6490,8 +6491,7 @@ function bgGrass(){   // ★v234 旧bgPat1 昼の草原（本文は機械的に�
       ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fillRect(tx2+1,ty2-trH,3,trH);
       // 樹冠（3つの円で雲状＋陰影）
       var crownY=ty2-trH-10;
-      var cg=ctx.createRadialGradient(tx2-6,crownY-6,4,tx2,crownY,30);
-      cg.addColorStop(0,'#6fc04a');cg.addColorStop(1,'#3a8a2a');
+      var cg=gradR(ctx,tx2-6,crownY-6,4,tx2,crownY,30,[0,'#6fc04a',1,'#3a8a2a']);
       ctx.fillStyle=cg;
       ctx.beginPath();ctx.arc(tx2-14,crownY+4,16,0,Math.PI*2);
       ctx.arc(tx2+14,crownY+4,16,0,Math.PI*2);
@@ -6503,8 +6503,7 @@ function bgGrass(){   // ★v234 旧bgPat1 昼の草原（本文は機械的に�
     // ⑦ 前景の茂み（地面手前で速く流れる cam*0.55）
     for(var bi=0;bi<7;bi++){
       var bx=((bi*180+40-cam*0.55)%(W+360)+W+360)%(W+360)-180;
-      var bg3=ctx.createLinearGradient(bx,GROUND-14,bx,GROUND+6);
-      bg3.addColorStop(0,'#4fa83a');bg3.addColorStop(1,'#2d7a22');
+      var bg3=gradL(ctx,bx,GROUND-14,bx,GROUND+6,[0,'#4fa83a',1,'#2d7a22']);
       ctx.fillStyle=bg3;
       ctx.beginPath();
       ctx.arc(bx-10,GROUND+2,11,Math.PI,0);
@@ -6516,9 +6515,7 @@ function bgGrass(){   // ★v234 旧bgPat1 昼の草原（本文は機械的に�
 
 function bgSunset(){   // ★v234 旧bgPat2 夕暮れ（本文は機械的に切り出し・一字不変）
     // LV2：夕暮れ・オレンジ空・少し緊張感
-    var skyG2=ctx.createLinearGradient(0,0,0,H);
-    skyG2.addColorStop(0,'#1a1a3e');skyG2.addColorStop(0.5,'#c84b11');skyG2.addColorStop(1,'#ff9a3c');
-    ctx.fillStyle=skyG2;ctx.fillRect(0,0,W,H);
+    fillSky(ctx,[0,'#1a1a3e',0.5,'#c84b11',1,'#ff9a3c']);
     // 星（少し見える）
     for(var si=0;si<20;si++){
       var sx2=(Math.sin(si*137.5)*.5+.5)*W;
@@ -6542,9 +6539,7 @@ function bgSunset(){   // ★v234 旧bgPat2 夕暮れ（本文は機械的に切
 
 function bgNightMtn(){   // ★v234 旧bgPat3 夜の山岳（本文は機械的に切り出し・一字不変）
     // LV3：夜の山岳・暗め・緊張感高まる
-    var skyG3=ctx.createLinearGradient(0,0,0,H);
-    skyG3.addColorStop(0,'#050510');skyG3.addColorStop(1,'#1a1040');
-    ctx.fillStyle=skyG3;ctx.fillRect(0,0,W,H);
+    fillSky(ctx,[0,'#050510',1,'#1a1040']);
     // 星（たくさん）
     for(var si3=0;si3<50;si3++){
       var sx3=(Math.sin(si3*137.5)*.5+.5)*W;
@@ -6571,13 +6566,9 @@ function bgLava(){   // ★v234 旧bgPat4 溶岩洞窟（本文は機械的に�
     // ★v236 W3はbgCave・W5はbgVolcanoに分離したため、この関数は現在どのワールドからも呼ばれない。
     //   復帰用に残置。削除する場合は bgDraw() の参照が無いことを確認すること。
     // LV4：溶岩・地下洞窟・赤黒い危険な雰囲気
-    var skyG4=ctx.createLinearGradient(0,0,0,H);
-    skyG4.addColorStop(0,'#0a0000');skyG4.addColorStop(0.7,'#1a0500');skyG4.addColorStop(1,'#3a0800');
-    ctx.fillStyle=skyG4;ctx.fillRect(0,0,W,H);
+    fillSky(ctx,[0,'#0a0000',0.7,'#1a0500',1,'#3a0800']);
     // 溶岩の光（下から揺らめく赤い光）
-    var lavaGlow=ctx.createRadialGradient(W/2,H,0,W/2,H,200);
-    lavaGlow.addColorStop(0,'rgba(255,60,0,0.35)');
-    lavaGlow.addColorStop(1,'rgba(0,0,0,0)');
+    var lavaGlow=gradR(ctx,W/2,H,0,W/2,H,200,[0,'rgba(255,60,0,0.35)',1,'rgba(0,0,0,0)']);
     ctx.fillStyle=lavaGlow;ctx.fillRect(0,0,W,H);
     // 飛び散る火の粉
     for(var fi2=0;fi2<18;fi2++){
@@ -6601,9 +6592,7 @@ function bgLava(){   // ★v234 旧bgPat4 溶岩洞窟（本文は機械的に�
 
 function bgSpace(){   // ★v234 旧bgPat5 深宇宙（本文は機械的に切り出し・一字不変）
     // LV5：深宇宙・最終決戦・黒紫・威圧感MAX
-    var skyG5=ctx.createLinearGradient(0,0,0,H);
-    skyG5.addColorStop(0,'#000000');skyG5.addColorStop(0.5,'#0d0020');skyG5.addColorStop(1,'#1a0035');
-    ctx.fillStyle=skyG5;ctx.fillRect(0,0,W,H);
+    fillSky(ctx,[0,'#000000',0.5,'#0d0020',1,'#1a0035']);
     // 星雲（大きな光の塊）
     ctx.fillStyle='rgba(80,0,120,0.12)';
     ctx.beginPath();ctxEllipse(ctx,W*0.3,H*0.3,100,60,0.5,0,Math.PI*2);ctx.fill();
@@ -6637,13 +6626,10 @@ function bgSnow(){   // ★v234 W4雪山（新規）
   // ▶ 描画コスト対策：同色の図形は 1つの beginPath にサブパスとしてまとめている。
   //   （ベタに描くと579コール＝bgGrassの2.3倍になったため）
   // ① 空：冷たい群青→白い地平
-  var skyS=ctx.createLinearGradient(0,0,0,H);
-  skyS.addColorStop(0,'#3f6aa6');skyS.addColorStop(0.5,'#8fb6da');skyS.addColorStop(1,'#e6f0f8');
-  ctx.fillStyle=skyS;ctx.fillRect(0,0,W,H);
+  fillSky(ctx,[0,'#3f6aa6',0.5,'#8fb6da',1,'#e6f0f8']);
   // ② 冬の弱い太陽（白くにじむ・右上）
   var ssX=W-72,ssY=48;
-  var ssG=ctx.createRadialGradient(ssX,ssY,4,ssX,ssY,54);
-  ssG.addColorStop(0,'rgba(255,255,255,0.85)');ssG.addColorStop(0.35,'rgba(214,236,255,0.42)');ssG.addColorStop(1,'rgba(214,236,255,0)');
+  var ssG=gradR(ctx,ssX,ssY,4,ssX,ssY,54,[0,'rgba(255,255,255,0.85)',0.35,'rgba(214,236,255,0.42)',1,'rgba(214,236,255,0)']);
   ctx.fillStyle=ssG;ctx.beginPath();ctx.arc(ssX,ssY,54,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='rgba(255,255,255,0.9)';ctx.beginPath();ctx.arc(ssX,ssY,16,0,Math.PI*2);ctx.fill();
   // ③ 最遠景：雪の連峰（鋭い三角＋雪冕・cam*0.04）
@@ -6686,8 +6672,7 @@ function bgSnow(){   // ★v234 W4雪山（新規）
     hx5.push(((h5*230-cam*0.13)%(W+460)+W+460)%(W+460)-230);
     hr5.push(105+(h5*41%55));
   }
-  var hgs=ctx.createLinearGradient(0,GROUND-160,0,GROUND+20);
-  hgs.addColorStop(0,'#ffffff');hgs.addColorStop(1,'#b9cee2');
+  var hgs=gradL(ctx,0,GROUND-160,0,GROUND+20,[0,'#ffffff',1,'#b9cee2']);
   ctx.fillStyle=hgs;ctx.beginPath();
   for(var h5b=0;h5b<5;h5b++){ ctx.moveTo(hx5[h5b]-hr5[h5b],GROUND+20);ctx.arc(hx5[h5b],GROUND+20,hr5[h5b],Math.PI,0); }
   ctx.fill();
@@ -6729,8 +6714,7 @@ function bgSnow(){   // ★v234 W4雪山（新規）
   }
   ctx.fill();
   // ⑦ 前景：雪の吹きだまり（cam*0.55・1パスに集約）
-  var dgs=ctx.createLinearGradient(0,GROUND-16,0,GROUND+6);
-  dgs.addColorStop(0,'#ffffff');dgs.addColorStop(1,'#cfe0ee');
+  var dgs=gradL(ctx,0,GROUND-16,0,GROUND+6,[0,'#ffffff',1,'#cfe0ee']);
   ctx.fillStyle=dgs;ctx.beginPath();
   for(var ds=0;ds<6;ds++){
     var dxs=((ds*180+40-cam*0.55)%(W+360)+W+360)%(W+360)-180;
@@ -6761,9 +6745,7 @@ function bgCave(){   // ★v236 W3洞窟（新規）
   // ▶ 差別化：光源なし（結晶の自発光のみ）／青紫×岩黒／天井のある屋内／舞う粒子は水滴
   // ▶ 描画コスト対策：同色の図形は1つの beginPath にサブパスとしてまとめる（bgSnow と同じ方針）
   // ① 岩盤の闇：上下とも暗く、中央帯だけがわずかに明るい
-  var skyC=ctx.createLinearGradient(0,0,0,H);
-  skyC.addColorStop(0,'#0b0a16');skyC.addColorStop(0.45,'#1d1b33');skyC.addColorStop(1,'#0d0b18');
-  ctx.fillStyle=skyC;ctx.fillRect(0,0,W,H);
+  fillSky(ctx,[0,'#0b0a16',0.45,'#1d1b33',1,'#0d0b18']);
   // ② 奥の岩壁：ギザギザの層を2枚（cam*0.05 / 0.09）
   for(var Lc=0;Lc<2;Lc++){
     var parC=0.05+Lc*0.04, offC=Lc*130, baseC=GROUND-16-Lc*26;
@@ -6788,9 +6770,7 @@ function bgCave(){   // ★v236 W3洞窟（新規）
   }
   var pul=0.72+Math.sin(fr*0.04)*0.16;   // ゆっくり明滅
   for(var gi=0;gi<6;gi++){
-    var gg=ctx.createRadialGradient(cxs[gi],cys[gi]-chs[gi]*0.4,2,cxs[gi],cys[gi]-chs[gi]*0.4,chs[gi]*1.7);
-    gg.addColorStop(0,'rgba(150,210,255,'+(0.30*pul).toFixed(3)+')');
-    gg.addColorStop(1,'rgba(110,150,255,0)');
+    var gg=gradR(ctx,cxs[gi],cys[gi]-chs[gi]*0.4,2,cxs[gi],cys[gi]-chs[gi]*0.4,chs[gi]*1.7,[0,'rgba(150,210,255,'+(0.30*pul).toFixed(3)+')',1,'rgba(110,150,255,0)']);
     ctx.fillStyle=gg;ctx.fillRect(cxs[gi]-chs[gi]*1.7,cys[gi]-chs[gi]*2.1,chs[gi]*3.4,chs[gi]*3.4);
   }
   ctx.fillStyle='rgba(126,178,242,0.85)';
@@ -6843,12 +6823,9 @@ function bgCave(){   // ★v236 W3洞窟（新規）
 function bgVolcano(){   // ★v236 W5火山（新規）
   // ▶ 差別化：下からの赤い逆光／赤×黒／屋外／円錐の火山＋噴煙／舞う粒子は火の粉と降灰
   // ① 空：火山灰で濁った暗赤 → 地平の橙
-  var skyV=ctx.createLinearGradient(0,0,0,H);
-  skyV.addColorStop(0,'#1a0b10');skyV.addColorStop(0.55,'#3d1410');skyV.addColorStop(1,'#5e2109');
-  ctx.fillStyle=skyV;ctx.fillRect(0,0,W,H);
+  fillSky(ctx,[0,'#1a0b10',0.55,'#3d1410',1,'#5e2109']);
   // 火山灰の霞：この明るい帯があることで、暗い山体のシルエットが背景から分離する
-  var hazeV=ctx.createLinearGradient(0,GROUND-190,0,GROUND+10);
-  hazeV.addColorStop(0,'rgba(150,64,30,0)');hazeV.addColorStop(0.55,'rgba(178,80,34,0.42)');hazeV.addColorStop(1,'rgba(120,48,20,0.15)');
+  var hazeV=gradL(ctx,0,GROUND-190,0,GROUND+10,[0,'rgba(150,64,30,0)',0.55,'rgba(178,80,34,0.42)',1,'rgba(120,48,20,0.15)']);
   ctx.fillStyle=hazeV;ctx.fillRect(0,GROUND-190,W,200);
   // ▼ 山体の位置。cam*0.04 で流れるので必ずラップさせる。
   //   ラップを忘れると、山だけが左へ消えて火口グローと噴煙が取り残される（実際にそうなった）。
@@ -6861,10 +6838,7 @@ function bgVolcano(){   // ★v236 W5火山（新規）
   var vBase=GROUND-14, vTop=vBase-138;
   // ② 火口のグロー（山頂の奥・明滅）
   var vpul=0.80+Math.sin(fr*0.05)*0.20;
-  var vg=ctx.createRadialGradient(vx,vTop,4,vx,vTop,120);
-  vg.addColorStop(0,'rgba(255,168,40,'+(0.52*vpul).toFixed(3)+')');
-  vg.addColorStop(0.45,'rgba(255,72,0,'+(0.22*vpul).toFixed(3)+')');
-  vg.addColorStop(1,'rgba(255,40,0,0)');
+  var vg=gradR(ctx,vx,vTop,4,vx,vTop,120,[0,'rgba(255,168,40,'+(0.52*vpul).toFixed(3)+')',0.45,'rgba(255,72,0,'+(0.22*vpul).toFixed(3)+')',1,'rgba(255,40,0,0)']);
   ctx.fillStyle=vg;ctx.fillRect(vx-120,vTop-120,240,240);
   // ③ 噴煙の柱：火口から立ちのぼる灰（1パスに集約・上ほど薄く広がる）
   //   ※ 1パスに集約するときは各図形の前に moveTo を置くこと。
@@ -6889,8 +6863,7 @@ function bgVolcano(){   // ★v236 W5火山（新規）
     ctx.moveTo(mvx-104,vBase);ctx.lineTo(mvx,vBase-72-(mv%2)*18);ctx.lineTo(mvx+104,vBase);
   }
   ctx.fill();
-  var vBody=ctx.createLinearGradient(0,vTop,0,vBase);
-  vBody.addColorStop(0,'#5d2415');vBody.addColorStop(0.5,'#331410');vBody.addColorStop(1,'#1c0c0a');
+  var vBody=gradL(ctx,0,vTop,0,vBase,[0,'#5d2415',0.5,'#331410',1,'#1c0c0a']);
   ctx.fillStyle=vBody;
   ctx.beginPath();
   ctx.moveTo(vx-152,vBase);ctx.lineTo(vx-26,vTop+4);ctx.lineTo(vx+26,vTop+4);ctx.lineTo(vx+152,vBase);
@@ -6922,8 +6895,7 @@ function bgVolcano(){   // ★v236 W5火山（新規）
   }
   ctx.fill();
   // 山肌の照り返し（火口下だけ暖色がのる）
-  var vlit=ctx.createRadialGradient(vx,vTop+18,6,vx,vTop+18,96);
-  vlit.addColorStop(0,'rgba(255,120,20,0.28)');vlit.addColorStop(1,'rgba(255,80,0,0)');
+  var vlit=gradR(ctx,vx,vTop+18,6,vx,vTop+18,96,[0,'rgba(255,120,20,0.28)',1,'rgba(255,80,0,0)']);
   ctx.fillStyle=vlit;ctx.fillRect(vx-96,vTop-40,192,150);
   // ⑥ 手前の溶岩台地：黒いシルエット＋割れ目から漏れる赤（cam*0.13）
   ctx.fillStyle='#0d0605';
@@ -6966,16 +6938,11 @@ function bgSky(){   // ★v250 W7空中（新規）
   // ▶ 差別化：高高度で見下ろす／地平線が無い／下端は一面の雲海／浮遊島＋鳥。
   //   W1草原との違いは「地面と山が無い」「下が雲」「全ワールドで最も明るい」。
   // ① 空：天頂の濃い青 → 下へいくほど白く霞む（高度感）
-  var skyA=ctx.createLinearGradient(0,0,0,GROUND+40);
-  skyA.addColorStop(0,'#2f6fc4');skyA.addColorStop(0.42,'#79b6e8');
-  skyA.addColorStop(0.80,'#c5e3f5');skyA.addColorStop(1,'#eef6fb');
+  var skyA=gradL(ctx,0,0,0,GROUND+40,[0,'#2f6fc4',0.42,'#79b6e8',0.80,'#c5e3f5',1,'#eef6fb']);
   ctx.fillStyle=skyA;ctx.fillRect(0,0,W,GROUND+40);
   // ② 太陽：無限遠なので視差なし。固定位置。
   var sux=W*0.78, suy=52;
-  var sug=ctx.createRadialGradient(sux,suy,6,sux,suy,130);
-  sug.addColorStop(0,'rgba(255,252,232,0.95)');
-  sug.addColorStop(0.30,'rgba(255,240,192,0.40)');
-  sug.addColorStop(1,'rgba(255,236,170,0)');
+  var sug=gradR(ctx,sux,suy,6,sux,suy,130,[0,'rgba(255,252,232,0.95)',0.30,'rgba(255,240,192,0.40)',1,'rgba(255,236,170,0)']);
   ctx.fillStyle=sug;ctx.fillRect(sux-130,suy-130,260,260);
   // ③ 巻雲：細い水平の筋。高いところほど薄い（1パスに集約）
   ctx.fillStyle='rgba(255,255,255,0.34)';
@@ -7031,10 +6998,7 @@ function bgSky(){   // ★v250 W7空中（新規）
   ctx.fill();
   // ⑥ 雲海：下端をびっしり埋める。地面ではなく雲であることがこのワールドの肝。
   var seaTop=GROUND-96;
-  var seaG=ctx.createLinearGradient(0,seaTop,0,GROUND+30);
-  seaG.addColorStop(0,'rgba(255,255,255,0)');
-  seaG.addColorStop(0.42,'rgba(250,253,255,0.82)');
-  seaG.addColorStop(1,'rgba(226,240,250,0.98)');
+  var seaG=gradL(ctx,0,seaTop,0,GROUND+30,[0,'rgba(255,255,255,0)',0.42,'rgba(250,253,255,0.82)',1,'rgba(226,240,250,0.98)']);
   ctx.fillStyle=seaG;ctx.fillRect(0,seaTop,W,GROUND-seaTop+30);
   // 雲海のふくらみ（1パス・moveTo を各 arc の前に置く）
   ctx.fillStyle='rgba(255,255,255,0.90)';
@@ -7067,13 +7031,10 @@ function bgSea(){   // ★v251 W8海底（新規）
   // ▶ 差別化：水中／上から差す光の柱／青緑／珊瑚と海藻のシルエット／舞う粒子は気泡と マリンスノー
   //   bgSpace（黒紫＋星）との違いは「明るい上・暗い下」「光の柱」「揺れる海藻」。
   // ① 水：浅い水面の明るい青緑 → 深い藍
-  var seaG=ctx.createLinearGradient(0,0,0,GROUND+40);
-  seaG.addColorStop(0,'#2ea3b8');seaG.addColorStop(0.34,'#166a8e');
-  seaG.addColorStop(0.72,'#0c3c63');seaG.addColorStop(1,'#07223f');
+  var seaG=gradL(ctx,0,0,0,GROUND+40,[0,'#2ea3b8',0.34,'#166a8e',0.72,'#0c3c63',1,'#07223f']);
   ctx.fillStyle=seaG;ctx.fillRect(0,0,W,GROUND+40);
   // ② 水面のゆらぎ：上端の明るい帯
-  var surG=ctx.createLinearGradient(0,0,0,46);
-  surG.addColorStop(0,'rgba(180,244,255,0.55)');surG.addColorStop(1,'rgba(140,220,240,0)');
+  var surG=gradL(ctx,0,0,0,46,[0,'rgba(180,244,255,0.55)',1,'rgba(140,220,240,0)']);
   ctx.fillStyle=surG;ctx.fillRect(0,0,W,46);
   // ③ 光の柱：水面から斜めに差す。視差は浅く(0.03)＝光源は遠い。
   ctx.fillStyle='rgba(180,238,255,0.10)';
@@ -7153,17 +7114,14 @@ function bgHell(){   // ★v252 W9魔界（新規）
   //   bgVolcano（赤×黒・円錐の山）との違いは「紫が主」「鋭く細い尖塔」「巨大な月」。
   //   bgSpace との違いは「地平線がある」「星ではなく火の粉」。
   // ① 空：天頂の黒紫 → 地平の深紅
-  var hG=ctx.createLinearGradient(0,0,0,GROUND+40);
-  hG.addColorStop(0,'#150a22');hG.addColorStop(0.46,'#301038');
-  hG.addColorStop(0.82,'#5c1330');hG.addColorStop(1,'#7d1a2b');
+  var hG=gradL(ctx,0,0,0,GROUND+40,[0,'#150a22',0.46,'#301038',0.82,'#5c1330',1,'#7d1a2b']);
   ctx.fillStyle=hG;ctx.fillRect(0,0,W,GROUND+40);
   // ② 血の月：視差はごく浅く(0.010)、画面内にクランプする（CLAUDE.md §1-9）
   var mx3=W*0.70-cam*0.010;
   if(mx3<W*0.26) mx3=W*0.26;
   if(mx3>W*0.80) mx3=W*0.80;
   var my3=76, mr3=40;
-  var mgl=ctx.createRadialGradient(mx3,my3,mr3*0.5,mx3,my3,mr3*3.1);
-  mgl.addColorStop(0,'rgba(214,52,52,0.34)');mgl.addColorStop(1,'rgba(180,30,60,0)');
+  var mgl=gradR(ctx,mx3,my3,mr3*0.5,mx3,my3,mr3*3.1,[0,'rgba(214,52,52,0.34)',1,'rgba(180,30,60,0)']);
   ctx.fillStyle=mgl;ctx.fillRect(mx3-mr3*3.1,my3-mr3*3.1,mr3*6.2,mr3*6.2);
   ctx.fillStyle='#c9424a';
   ctx.beginPath();ctx.moveTo(mx3+mr3,my3);ctx.arc(mx3,my3,mr3,0,Math.PI*2);ctx.fill();
@@ -7174,9 +7132,7 @@ function bgHell(){   // ★v252 W9魔界（新規）
   ctx.arc(mx3+mr3*0.42,my3-mr3*0.16,mr3*0.86,0,Math.PI*2);
   ctx.fill();
   // ③ 地平の溶けた光：尖塔のシルエットを背景から分離させる帯
-  var hzG=ctx.createLinearGradient(0,GROUND-150,0,GROUND+10);
-  hzG.addColorStop(0,'rgba(190,40,70,0)');hzG.addColorStop(0.6,'rgba(214,58,66,0.34)');
-  hzG.addColorStop(1,'rgba(120,20,40,0.16)');
+  var hzG=gradL(ctx,0,GROUND-150,0,GROUND+10,[0,'rgba(190,40,70,0)',0.6,'rgba(214,58,66,0.34)',1,'rgba(120,20,40,0.16)']);
   ctx.fillStyle=hzG;ctx.fillRect(0,GROUND-150,W,160);
   // ④ 遠景の尖塔：黒曜石。細く鋭い＝火山の円錐とは別シルエット（0.018）
   ctx.fillStyle='#1b0d20';
@@ -7231,16 +7187,11 @@ function bgTemple(){   // ★v253 W10天空神殿（新規・最終ワールド�
   //   W7空中（青空＋雲海＋浮遊島）との違いは「金基調」「人工物の柱」「垂直の光条」。
   //   最終ワールドなので、他のどれよりも荘厳で明るい側に振る。
   // ① 空：天頂の澄んだ藍 → 地平の金
-  var tG=ctx.createLinearGradient(0,0,0,GROUND+40);
-  tG.addColorStop(0,'#2a4d86');tG.addColorStop(0.38,'#6d84b8');
-  tG.addColorStop(0.72,'#d3b483');tG.addColorStop(1,'#f2dcae');
+  var tG=gradL(ctx,0,0,0,GROUND+40,[0,'#2a4d86',0.38,'#6d84b8',0.72,'#d3b483',1,'#f2dcae']);
   ctx.fillStyle=tG;ctx.fillRect(0,0,W,GROUND+40);
   // ② 後光：画面上部中央の光源。視差なし＝無限遠。
   var hx=W*0.50, hy=64;
-  var hg2=ctx.createRadialGradient(hx,hy,8,hx,hy,190);
-  hg2.addColorStop(0,'rgba(255,250,224,0.88)');
-  hg2.addColorStop(0.34,'rgba(255,236,178,0.34)');
-  hg2.addColorStop(1,'rgba(255,228,160,0)');
+  var hg2=gradR(ctx,hx,hy,8,hx,hy,190,[0,'rgba(255,250,224,0.88)',0.34,'rgba(255,236,178,0.34)',1,'rgba(255,228,160,0)']);
   ctx.fillStyle=hg2;ctx.fillRect(hx-190,hy-190,380,380);
   // ③ 聖なる光条：上から降りる。ゆっくり明滅する。
   var tpul=0.72+Math.sin(fr*0.026)*0.28;
@@ -7321,19 +7272,14 @@ function bgForest(){   // ★v254 W2夕暮れの森（新規・bgSunsetの「森
   //   W1草原（昼・なだらかな丘）との違いは「橙の空」「幹と樹冠のシルエット」「蛍」。
   //   まものの視認性を落とさないよう、樹冠は地平の明るい帯より上に出しすぎない。
   // ① 空：天頂の紫紺 → 地平の橙（bgSunset の配色を踏襲）
-  var fG=ctx.createLinearGradient(0,0,0,GROUND+40);
-  fG.addColorStop(0,'#2b1b46');fG.addColorStop(0.40,'#7b3560');
-  fG.addColorStop(0.74,'#d1642f');fG.addColorStop(1,'#f0a44e');
+  var fG=gradL(ctx,0,0,0,GROUND+40,[0,'#2b1b46',0.40,'#7b3560',0.74,'#d1642f',1,'#f0a44e']);
   ctx.fillStyle=fG;ctx.fillRect(0,0,W,GROUND+40);
   // ② 夕日：視差はごく浅く＋クランプ（ラップだと後半で消えたまま戻らない・§1-9）
   var sx4=W*0.30-cam*0.010;
   if(sx4<W*0.14) sx4=W*0.14;
   if(sx4>W*0.52) sx4=W*0.52;
   var sy4=GROUND-104;
-  var sg2=ctx.createRadialGradient(sx4,sy4,10,sx4,sy4,150);
-  sg2.addColorStop(0,'rgba(255,232,150,0.86)');
-  sg2.addColorStop(0.30,'rgba(255,160,70,0.34)');
-  sg2.addColorStop(1,'rgba(255,130,50,0)');
+  var sg2=gradR(ctx,sx4,sy4,10,sx4,sy4,150,[0,'rgba(255,232,150,0.86)',0.30,'rgba(255,160,70,0.34)',1,'rgba(255,130,50,0)']);
   ctx.fillStyle=sg2;ctx.fillRect(sx4-150,sy4-150,300,300);
   ctx.fillStyle='rgba(255,238,178,0.90)';
   ctx.beginPath();ctx.moveTo(sx4+26,sy4);ctx.arc(sx4,sy4,26,0,Math.PI*2);ctx.fill();
@@ -7381,10 +7327,7 @@ function bgForest(){   // ★v254 W2夕暮れの森（新規・bgSunsetの「森
   // ⑥ 森の陰：地面付近を沈める。夕暮れの森で足元が翳るのは自然で、
   //   同時に「まものが背景から見えるか」を成立させている層（CLAUDE.md §1-14/§1-15）。
   //   これが無いと帯の輝度が0.168まで上がり、ウッドゴーレムの外周比が1.35＝基準割れになる。
-  var shG=ctx.createLinearGradient(0,GROUND-132,0,GROUND+20);
-  shG.addColorStop(0,'rgba(26,10,32,0)');
-  shG.addColorStop(0.50,'rgba(26,10,32,0.40)');
-  shG.addColorStop(1,'rgba(18,7,24,0.70)');
+  var shG=gradL(ctx,0,GROUND-132,0,GROUND+20,[0,'rgba(26,10,32,0)',0.50,'rgba(26,10,32,0.40)',1,'rgba(18,7,24,0.70)']);
   ctx.fillStyle=shG;ctx.fillRect(0,GROUND-132,W,152);
   // ⑦ 蛍：夕暮れの森の目印。ゆっくり明滅しながら漂う。
   for(var hi=0;hi<9;hi++){
@@ -7401,9 +7344,7 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
   //   W9魔界（紫×深紅・血の月・尖塔）との違いは「青い夜」「白い月」「四角い建造物」。
   //   W3洞窟（閉じた岩）との違いは「空がある」「窓の灯りが点在する」。
   // ① 空：天頂の濃紺 → 地平のわずかな藍。夜だが真っ黒にはしない。
-  var cG=ctx.createLinearGradient(0,0,0,GROUND+40);
-  cG.addColorStop(0,'#0a1030');cG.addColorStop(0.48,'#152048');
-  cG.addColorStop(0.84,'#243560');cG.addColorStop(1,'#33487a');
+  var cG=gradL(ctx,0,0,0,GROUND+40,[0,'#0a1030',0.48,'#152048',0.84,'#243560',1,'#33487a']);
   ctx.fillStyle=cG;ctx.fillRect(0,0,W,GROUND+40);
   // ② 星：城壁より上だけ。W9の火の粉と違い動かない。
   ctx.fillStyle='rgba(224,236,255,0.62)';
@@ -7420,8 +7361,7 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
   if(lx<W*0.10) lx=W*0.10;
   if(lx>W*0.40) lx=W*0.40;
   var ly=62, lr=27;
-  var lgl=ctx.createRadialGradient(lx,ly,lr*0.6,lx,ly,lr*3.4);
-  lgl.addColorStop(0,'rgba(190,214,255,0.30)');lgl.addColorStop(1,'rgba(150,180,255,0)');
+  var lgl=gradR(ctx,lx,ly,lr*0.6,lx,ly,lr*3.4,[0,'rgba(190,214,255,0.30)',1,'rgba(150,180,255,0)']);
   ctx.fillStyle=lgl;ctx.fillRect(lx-lr*3.4,ly-lr*3.4,lr*6.8,lr*6.8);
   ctx.fillStyle='#e6edff';
   ctx.beginPath();ctx.moveTo(lx+lr,ly);ctx.arc(lx,ly,lr,0,Math.PI*2);ctx.fill();
@@ -7469,10 +7409,7 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
   }
   ctx.fill();
   // ⑦ 夜霧：城壁の根元をやわらげ、まものが立つ帯の輝度を下げる（§1-14/§1-15）
-  var mgG=ctx.createLinearGradient(0,GROUND-92,0,GROUND+20);
-  mgG.addColorStop(0,'rgba(18,26,56,0)');
-  mgG.addColorStop(0.55,'rgba(18,26,56,0.42)');
-  mgG.addColorStop(1,'rgba(12,18,42,0.66)');
+  var mgG=gradL(ctx,0,GROUND-92,0,GROUND+20,[0,'rgba(18,26,56,0)',0.55,'rgba(18,26,56,0.42)',1,'rgba(12,18,42,0.66)']);
   ctx.fillStyle=mgG;ctx.fillRect(0,GROUND-92,W,112);
   // ⑧ コウモリ：夜の城の目印。月の側を横切る。
   ctx.fillStyle='rgba(14,18,40,0.72)';
@@ -7521,10 +7458,7 @@ function draw(){
   if(equippedBG!=='grass'){
     var th=getBGTheme();
     // 空エリア（地面より上）にテーマグラデを重ねて雰囲気を変える
-    var tg=ctx.createLinearGradient(0,0,0,GROUND);
-    tg.addColorStop(0,'rgba('+hexToRgb(th.sky[0])+',0.78)');
-    tg.addColorStop(0.55,'rgba('+hexToRgb(th.sky[1])+',0.62)');
-    tg.addColorStop(1,'rgba('+hexToRgb(th.sky[2])+',0.30)');
+    var tg=gradL(ctx,0,0,0,GROUND,[0,'rgba('+hexToRgb(th.sky[0])+',0.78)',0.55,'rgba('+hexToRgb(th.sky[1])+',0.62)',1,'rgba('+hexToRgb(th.sky[2])+',0.30)']);
     ctx.fillStyle=tg; ctx.fillRect(0,0,W,GROUND);
     // 夜は星を散らす
     if(equippedBG==='night'){
@@ -8059,9 +7993,7 @@ function draw(){
   if(dmgFlash>0){
     dmgFlash--;
     var fa=(dmgFlash/16)*0.4;
-    var vg=ctx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.75);
-    vg.addColorStop(0,'rgba(255,0,0,0)');
-    vg.addColorStop(1,'rgba(255,30,30,'+fa.toFixed(3)+')');
+    var vg=gradR(ctx,W/2,H/2,H*0.35,W/2,H/2,H*0.75,[0,'rgba(255,0,0,0)',1,'rgba(255,30,30,'+fa.toFixed(3)+')']);
     ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   }
   // ★ボス撃破の白フラッシュ（パッと光ってフェード）
@@ -9021,8 +8953,7 @@ function showStageClear(star, scoreRate){
 var _shopPrevSel={sword:null,outfit:null,shield:null}; // タブごとの試着中アイテム(null=装備中のもの)
 // ═══ v199 ⑥ 固有スキルの「強さ」を小さなアニメで見せる（30x30ループ描画）═══
 function _coinDot(c,x,y,r){
-  var g=c.createRadialGradient(x-r*0.3,y-r*0.3,r*0.2,x,y,r);
-  g.addColorStop(0,'#fff6c0'); g.addColorStop(0.5,'#ffd24a'); g.addColorStop(1,'#e0a020');
+  var g=gradR(c,x-r*0.3,y-r*0.3,r*0.2,x,y,r,[0,'#fff6c0',0.5,'#ffd24a',1,'#e0a020']);
   c.fillStyle=g; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
   c.strokeStyle='rgba(180,120,20,0.7)'; c.lineWidth=0.6; c.stroke();
 }
