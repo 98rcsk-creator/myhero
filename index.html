@@ -489,7 +489,13 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #overlay.tut{background:rgba(6,10,20,0.5) !important;justify-content:flex-start !important;padding-top:46px !important;}
 #overlay h2{color:#ffe44d;font-size:22px;margin-bottom:10px;letter-spacing:3px;}
 #overlay .sub{color:#aaa;font-size:11px;line-height:2.4;margin-bottom:6px;}
-#overlay .go{color:#ffe44d;font-size:12px;animation:bl 1s step-end infinite;margin-top:14px;}
+/* ⚠ この .go は「タップでホームに戻る」等の点滅ヒント専用。
+   デザインシステムの緑ボタン `.uiBtn.go` と名前がぶつかり、#overlay の特異度で勝つため
+   ボタンごと点滅して消えていた（v287の「これでOK」が実際に消えていた）。:not(.uiBtn) で除外する。 */
+#overlay .go:not(.uiBtn){color:#ffe44d;font-size:12px;animation:bl 1s step-end infinite;margin-top:14px;}
+/* ★v292 リザルト系（クリア／ゲームオーバー）は不透明にする。
+   0.95だとHUDの白文字が透けて読めてしまい、報酬の表示が散らかる。 */
+#overlay.opaque{background:linear-gradient(165deg,#0d223e 0%,#0b1a24 48%,#0b2016 100%);}
 /* タイトル専用 */
 /* ホーム画面（ロゴ主役・ポップ） */
 #overlay.home{background:linear-gradient(180deg,#1a6cc8 0%,#3a9ae0 35%,#7ec850 100%) !important;
@@ -1805,17 +1811,24 @@ function showGameOver(){
   checkAchievements();  // 実績チェック
   saveData();
   setTimeout(function(){
+    // ★v292 className を明示代入（直前の画面の csbg / hasnav が残っていた）＋ uiTitle / uiPanel に統一
+    ov.className='scrollable opaque';
     ov.style.display='flex';
-    ov.innerHTML='<h2 style="color:#ff4444">GAME OVER</h2>'
-      +'<div class="sub">LEVEL: <b style="color:#ffe44d">'+level+'</b>　'
-      +'SCORE: <b style="color:#ffe44d;font-size:16px">'+finalScore+'</b>'
-      +(finalScore>=bestScore&&finalScore>0?' <span style="color:#ff66cc">🎉自己ベスト!</span>':'')
+    // 前後の伸縮スペーサで「短ければ中央・長ければ上詰めしてスクロール」を両立（v285と同じ手）
+    ov.innerHTML='<div style="flex:1 1 0;min-height:0"></div>'
+      +'<div class="uiTitle" style="color:#ffb3b3;font-size:21px;text-shadow:0 2px 8px rgba(255,60,60,0.55)">GAME OVER</div>'
+      +'<div class="uiPanel" style="width:324px;max-width:94%;margin:10px auto 0;padding:11px 13px">'
+        +'<div style="color:#cfe3f2;font-size:12px">LEVEL <b style="color:#ffe44d;font-size:15px">'+level+'</b>　'
+        +'SCORE <b style="color:#ffe44d;font-size:20px">'+finalScore+'</b>'
+        +(finalScore>=bestScore&&finalScore>0?' <span style="color:#ff66cc;font-size:12px">🎉自己ベスト!</span>':'')
+        +'</div>'
+        +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,210,74,0.16);border:1.5px solid rgba(255,210,74,0.5);border-radius:10px;padding:5px 13px;margin:7px 0 3px"><span style="font-size:16px">💰</span><span style="color:#ffd24a;font-size:16px;font-weight:bold">+'+lastEarnedGold+'G</span><span style="color:#cda84a;font-size:10px">ゲット！</span></div>'
+        +'<div style="color:#bda86a;font-size:11px">しょじ '+totalGold+'G（ショップでつかえる）</div>'
       +'</div>'
-      +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,210,74,0.16);border:1.5px solid rgba(255,210,74,0.5);border-radius:10px;padding:5px 13px;margin:8px 0 2px"><span style="font-size:16px">💰</span><span style="color:#ffd24a;font-size:16px;font-weight:bold">+'+lastEarnedGold+'G</span><span style="color:#cda84a;font-size:10px">ゲット！</span></div>'
-      +'<div style="color:#bda86a;font-size:11px;margin-bottom:4px">しょじ '+totalGold+'G（ショップでつかえる）</div>'
       +achToastHTML()
       +rankingHTML(finalScore)
-      +'<div class="go">タップでホームに戻る</div>';
+      +'<div class="go" style="font-size:13px;margin-top:18px">タップでホームに戻る</div>'
+      +'<div style="flex:1 1 0;min-height:0"></div>';
   },500);
 }
 // 新規解除した実績のトーストHTML（クリア/GameOver画面に表示）
@@ -8900,8 +8913,9 @@ function startStageFromMap(s){
 // ===== ステージクリア画面（星評価表示）=====
 function showStageClear(star, scoreRate){
   gs='stageclear';  // ★ボタン専用state（全画面タップでホームに飛ばない＝誤タップ防止）
-  ov.classList.add('scrollable');
-  ov.classList.remove('home');
+  // ★v292 className を明示代入する（add/remove だと直前の画面の csbg / hasnav が残り、
+  //   上に77px・下に150pxの余白が付いたまま出ていた）
+  ov.className='scrollable opaque';
   var _w=stageWorld(level);   // ★v263 評価バー撤去に伴い killRate/coinRate/hpRate は _kPct等に一本化
   // 星表示（獲得分は金＋発光・大きめ。アニメで順番に光る感じ）
   var starHTML='<div style="display:flex;gap:14px;justify-content:center;margin:6px 0 18px">';
@@ -8934,13 +8948,13 @@ function showStageClear(star, scoreRate){
     +'</div>';
   }
   var _pK2=Math.round(STAR_KILL2*100), _pK3=Math.round(STAR_KILL3*100), _pC=Math.round(STAR_COIN*100);
-  var _starHint='<div style="width:300px;max-width:94%;margin:10px auto 0;padding:9px 12px;box-sizing:border-box;'
-    +'background:rgba(159,228,255,0.10);border:1px solid rgba(159,228,255,0.34);border-radius:11px">'
+  // ★v292 uiPanel（§UIデザインシステム）に統一。幅を300→324pxにして★3の条件が折り返さないようにした
+  var _starHint='<div class="uiPanel" style="width:324px;max-width:94%;margin:10px auto 0;padding:9px 13px">'
     +'<div style="color:#9fe4ff;font-size:11.5px;font-weight:bold;text-align:left;margin-bottom:2px">★のじょうけん</div>'
     +_row(true,1,'クリアする','')
     +_row(_kOK2||_cOK,2,'てき '+_pK2+'% か コイン '+_pC+'%',
           'いま　てき '+_kPct+'% ・ コイン '+_cPct+'%')
-    +_row(_kOK3&&(_cOK||_dOK),3,'てき '+_pK3+'% ＋（コイン '+_pC+'% か ノーダメ）',
+    +_row(_kOK3&&(_cOK||_dOK),3,'てき '+_pK3+'% ＋ コイン '+_pC+'% かノーダメ',
           _dOK?'いま　てき '+_kPct+'% ・ ノーダメージ！':'いま　てき '+_kPct+'% ・ たいりょく '+_hPct+'%');
   if(star<3){
     var _tgt=(star<2)?2:3;
@@ -8957,29 +8971,35 @@ function showStageClear(star, scoreRate){
   _starHint+='</div>';
   var nextStage=level+1;
   var hasNext=(nextStage<=MAX_STAGE);
+  // ★v292 見出し・パネル・ボタンを uiTitle / uiPanel / uiBtn に統一（画像は増やしていない・CSSのみ）
   var h='<div style="font-size:30px;margin-bottom:2px">🎉</div>'
-    +'<h2 style="color:#ffe44d;font-size:24px;margin-bottom:2px">クリア！</h2>'
+    +'<div class="uiTitle" style="font-size:22px">クリア！</div>'
     +'<div style="color:#9fe4ff;font-size:13px;font-weight:bold;margin-bottom:4px">WORLD '+_w+'</div>'
     +starHTML
     +_starHint
-    +'<div style="color:#ffe44d;font-size:14px;margin:12px 0 4px">スコア <b style="font-size:22px">'+Math.floor(score)+'</b></div>'
-    +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,210,74,0.16);border:1.5px solid rgba(255,210,74,0.5);border-radius:10px;padding:6px 14px;margin:2px 0 4px"><span style="font-size:18px">💰</span><span style="color:#ffd24a;font-size:17px;font-weight:bold">+'+lastEarnedGold+'G</span><span style="color:#cda84a;font-size:11px">ゲット！</span></div>'
-    +'<div style="color:#bda86a;font-size:11px;margin-bottom:2px">しょじ '+totalGold+'G（ショップでつかえる）</div>';
+    // スコアと報酬を1枚のパネルにまとめる（「報酬が見える」のがこの画面の主役）
+    +'<div class="uiPanel" style="width:324px;max-width:94%;margin:12px auto 0;padding:11px 13px">'
+      +'<div style="color:#ffe44d;font-size:13px">スコア <b style="font-size:24px">'+Math.floor(score)+'</b></div>'
+      +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,210,74,0.16);border:1.5px solid rgba(255,210,74,0.5);border-radius:10px;padding:6px 14px;margin:6px 0 3px"><span style="font-size:18px">💰</span><span style="color:#ffd24a;font-size:17px;font-weight:bold">+'+lastEarnedGold+'G</span><span style="color:#cda84a;font-size:11px">ゲット！</span></div>'
+      +'<div style="color:#bda86a;font-size:11px">しょじ '+totalGold+'G（ショップでつかえる）</div>'
+    +'</div>';
   if(star>=3){
-    h+='<div style="color:#ffd24a;font-size:14px;margin-bottom:6px;font-weight:bold">⭐ パーフェクト！ ⭐</div>';
+    h+='<div style="color:#ffd24a;font-size:14px;margin-top:8px;font-weight:bold">⭐ パーフェクト！ ⭐</div>';
   }
-  h+='<div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:14px;width:100%">';
+  h+='<div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:16px;width:100%">';
   if(hasNext){
-    h+='<div id="scNext" class="menuBtnMain" style="margin-top:0;width:220px">▶ つぎへ すすむ</div>';
+    h+='<div id="scNext" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px">▶ つぎへ すすむ</div>';
   }
-  h+='<div id="scMap" class="menuBtnSub" style="width:220px">🗺️ ステージをえらぶ</div>'
-    +'<div id="scHome" class="menuBtnSub" style="width:180px">🏠 ホームにもどる</div>'
+  h+='<div id="scMap" class="uiBtn info" style="width:236px">🗺️ ステージをえらぶ</div>'
+    +'<div id="scHome" class="uiBtn info" style="width:190px">🏠 ホームにもどる</div>'
     +'</div>';
   ov.innerHTML=h;
   ov.style.display='flex';
   setTimeout(function(){
-    function tapEv(el,fn){ if(!el)return; el.addEventListener('touchstart',function(e){e.stopPropagation();if(e.cancelable)e.preventDefault();fn();},{passive:false}); el.addEventListener('click',function(e){e.stopPropagation();fn();}); }
-    bindNav();
+    // ★v292 touchstart+preventDefault をやめて _csTap に統一（CLAUDE.md §2-12）。
+    //   旧実装はボタンの上に指を置いてドラッグすると、スクロールせずにその場で画面が飛んでいた。
+    //   実測: IG/SE とも scrollTop が最大値→0 になり誤遷移。パネルの上から引けば動いていたので露見しにくかった。
+    var tapEv=_csTap;
     if(hasNext){
       tapEv(document.getElementById('scNext'),function(){
         // ★v239 連続プレイ：score とランを維持したまま次ステージへ（doStart は score=0 にするため通さない）
@@ -9317,10 +9337,12 @@ function togglePause(){
 }
 // ポーズメニュー（再開＋ホームに戻る）
 function showPauseMenu(){
-  ov.innerHTML='<div style="font-size:30px;font-weight:bold;color:#fff;letter-spacing:2px;margin-bottom:24px">⏸ PAUSED</div>'
-    +'<div id="pauseResume" class="menuBtnMain" style="margin-top:0;width:230px;margin-bottom:14px">▶ 再開する</div>'
-    +'<div id="pauseHowto" class="btnInfo" style="width:180px;margin-bottom:22px">📖 あそびかた</div>'
-    +'<div id="pauseHome" class="btnDanger" style="width:180px">🏠 ホームに戻る</div>';
+  // ★v292 uiTitle / uiBtn に統一。この画面は短いのでスクロールしない（touchstart方式のままで問題なし）
+  ov.className='';
+  ov.innerHTML='<div class="uiTitle" style="font-size:22px;margin-bottom:22px">⏸ PAUSED</div>'
+    +'<div id="pauseResume" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px;margin-bottom:14px">▶ 再開する</div>'
+    +'<div id="pauseHowto" class="uiBtn info" style="width:190px;margin-bottom:22px">📖 あそびかた</div>'
+    +'<div id="pauseHome" class="uiBtn warn" style="width:190px">🏠 ホームに戻る</div>';
   ov.style.display='flex';
   setTimeout(function(){
     var rb=document.getElementById('pauseResume');
@@ -9346,11 +9368,13 @@ function showPauseMenu(){
 function hidePauseMenu(){ ov.style.display='none'; ov.innerHTML=''; }
 // ホームに戻る確認ダイアログ
 function confirmHome(){
-  ov.innerHTML='<div style="font-size:34px;margin-bottom:14px">🏠</div>'
-    +'<div style="color:#fff;font-size:16px;font-weight:bold;line-height:1.6;margin-bottom:8px">ホームに戻りますか？</div>'
-    +'<div style="color:#ff9999;font-size:12px;margin-bottom:24px;max-width:280px;line-height:1.5">いまのプレイは終了します。<br>スコアやコインは記録されません。</div>'
-    +'<div id="homeNo" class="menuBtnMain" style="margin-top:0;width:230px;margin-bottom:14px">▶ つづける</div>'
-    +'<div id="homeYes" class="btnDanger" style="width:180px">🏠 ホームに戻る</div>';
+  // ★v292 一時停止メニューと同じ見た目に揃える
+  ov.className='';
+  ov.innerHTML='<div style="font-size:34px;margin-bottom:12px">🏠</div>'
+    +'<div class="uiTitle" style="font-size:17px">ホームに戻りますか？</div>'
+    +'<div class="uiPanel" style="width:300px;max-width:92%;margin:6px auto 22px;padding:10px 13px;color:#ffb3b3;font-size:12px;line-height:1.6">いまのプレイは終了します。<br>スコアやコインは記録されません。</div>'
+    +'<div id="homeNo" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px;margin-bottom:14px">▶ つづける</div>'
+    +'<div id="homeYes" class="uiBtn warn" style="width:190px">🏠 ホームに戻る</div>';
   ov.style.display='flex';
   setTimeout(function(){
     var yes=document.getElementById('homeYes');
