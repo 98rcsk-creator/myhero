@@ -2798,6 +2798,52 @@ function fillSky(c2,st){
   }
   c2.drawImage(e.cv,0,0,W,H);
 }
+// ★v294 スキャンライン（1px線 × 98本）を内部解像度で1枚に焼く。
+//   同じ transform で描いてから 1:1 で貼るのでピクセルは同一。
+var _scanCv=null;
+function scanCv(){
+  if(_scanCv) return _scanCv;
+  var cv2=document.createElement('canvas');
+  cv2.width=Math.round(W*CV_K); cv2.height=Math.round(H*CV_K);
+  var g2=cv2.getContext('2d');
+  g2.setTransform(CV_K,0,0,CV_K,0,0);
+  g2.fillStyle='rgba(0,0,0,.03)';
+  for(var y=0;y<H;y+=4) g2.fillRect(0,y,W,1);
+  _scanCv=cv2;
+  return cv2;
+}
+// ★v294 W1の丘レイヤーを1周期ぶん焼いておくストリップ。
+//   丘は screen x = ((hi*230 - cam*0.13) mod 850) - 230 で横にループするだけの層なので、
+//   周期(850)＋画面幅(390) の帯に描いておけば、毎フレームは drawImage 1回で済む。
+//   帯の中身・座標は元のループと一字一句同じ式で描いている（見た目は同一）。
+var HILL_P=850;          // 周期 = W+460
+var HILL_PARA=0.13;      // 視差
+var HILL_Y=180, HILL_H=180;   // 帯が担当する縦の範囲（丘の上端196〜下端355を含む）
+var HILL_SW=Math.round(W*CV_K), HILL_SH=Math.round(HILL_H*CV_K);  // 転送は内部ピクセル等倍
+var _hillCv=null;
+function hillStrip(){
+  if(_hillCv) return _hillCv;
+  var sw=HILL_P+W;
+  var cv2=document.createElement('canvas');
+  cv2.width=Math.round(sw*CV_K); cv2.height=Math.round(HILL_H*CV_K);
+  var g2=cv2.getContext('2d');
+  g2.setTransform(CV_K,0,0,CV_K,0,-HILL_Y*CV_K);   // 帯ローカル → ワールドのy
+  for(var k=-1;k<=2;k++){
+    for(var hi=0;hi<6;hi++){
+      var hx=((hi*230)%HILL_P+HILL_P)%HILL_P-230+k*HILL_P;
+      var hr=110+(hi*37%50);
+      var hg=gradL(g2,hx,GROUND-hr,hx,GROUND+20,[0,'#8fd06a',1,'#5aa83e']);
+      g2.fillStyle=hg;
+      g2.beginPath();g2.arc(hx,GROUND+20,hr,Math.PI,0);g2.fill();
+      g2.fillStyle='rgba(40,110,40,0.25)';
+      g2.beginPath();g2.arc(hx,GROUND+20,hr,Math.PI*1.6,0);g2.fill();
+      g2.fillStyle='rgba(200,255,180,0.4)';
+      g2.beginPath();g2.arc(hx-hr*0.3,GROUND+20,hr*0.92,Math.PI*1.15,Math.PI*1.45);g2.fill();
+    }
+  }
+  _hillCv=cv2;
+  return cv2;
+}
 function cylGrad(c2,x0,x1,col){
   return gradL(c2,x0,0,x1,0,[0,shadeCol(col,1.32),0.35,col,0.8,shadeCol(col,0.78),1,shadeCol(col,0.62)]);
 }
@@ -6468,20 +6514,15 @@ function bgGrass(){   // ★v234 旧bgPat1 昼の草原（本文は機械的に�
       ctx.beginPath();ctxEllipse(ctx,cxa+20,cya-6,20,9,0,0,Math.PI*2);ctx.fill();
     }
     // ⑤ 中景：なだらかな緑の丘（陰影付き・立体 cam*0.13）
-    for(var hi=0;hi<6;hi++){
-      var hx=((hi*230-cam*0.13)%(W+460)+W+460)%(W+460)-230;
-      var hr=110+(hi*37%50);
-      // 丘本体
-      var hg=gradL(ctx,hx,GROUND-hr,hx,GROUND+20,[0,'#8fd06a',1,'#5aa83e']);
-      ctx.fillStyle=hg;
-      ctx.beginPath();ctx.arc(hx,GROUND+20,hr,Math.PI,0);ctx.fill();
-      // 丘の右側に陰（立体感）
-      ctx.fillStyle='rgba(40,110,40,0.25)';
-      ctx.beginPath();ctx.arc(hx,GROUND+20,hr,Math.PI*1.6,0);ctx.fill();
-      // 丘のてっぺんハイライト
-      ctx.fillStyle='rgba(200,255,180,0.4)';
-      ctx.beginPath();ctx.arc(hx-hr*0.3,GROUND+20,hr*0.92,Math.PI*1.15,Math.PI*1.45);ctx.fill();
-    }
+    //   ★v294 6つの丘×3塗り＝18回の大面積塗りを毎フレームやっていた（実測で丘だけで fps の18〜25%）。
+    //   視差でループする層なので、1周期ぶんを1枚に焼いて横にずらして貼る（描画1回）。
+    //   ⚠ 転送は「内部ピクセルで1:1」になるようにする。source幅を整数(HILL_SW)にして
+    //     dest幅を HILL_SW/CV_K にすると等倍コピーになり、リサンプリングのボケが出ない。
+    //     source x は丸めない（丸めると層の位置が量子化されてカクつく）。横方向だけ
+    //     サブピクセルの再サンプルが入るが、影響は丘の輪郭のみ（実測 差>4 は最大0.7%）。
+    ctx.drawImage(hillStrip(),
+      (((cam*HILL_PARA)%HILL_P+HILL_P)%HILL_P)*CV_K, 0, HILL_SW, HILL_SH,
+      0, HILL_Y, HILL_SW/CV_K, HILL_SH/CV_K);
     // ⑥ 近景：立体的な木立（丸い樹冠＋幹＋陰 cam*0.28）
     for(var ti2=0;ti2<5;ti2++){
       var tx2=((ti2*320+90-cam*0.28)%(W+640)+W+640)%(W+640)-320;
@@ -7530,14 +7571,16 @@ function draw(){
       }
       // 草の毛先（W1-2のみ）。坂では表面の傾きに沿わせる。
       if(stageWorld(level)<=2){
+        // ★v294 同色なので1タイル1パスにまとめる（fill 70回/frame → 14回/frame）。
+        //   図形ごとに moveTo を置くこと（省くと三角同士が直線で繋がる＝CLAUDE.md §1-7）
         ctx.fillStyle=topCol;
+        ctx.beginPath();
         for(var gr=0;gr<t.w;gr+=8){
           var gh2=3+((tx+gr)%3);
           var _gy=_yL+(_yR-_yL)*(gr/t.w);
-          ctx.beginPath();
           ctx.moveTo(tx+gr,_gy);ctx.lineTo(tx+gr+2,_gy-gh2);ctx.lineTo(tx+gr+4,_gy);
-          ctx.fill();
         }
+        ctx.fill();
       }
     } else if(t.side){
       // 段差崖面（ワールド色に合わせる）
@@ -8029,9 +8072,8 @@ function draw(){
 
   // ポーズ画面はHTMLメニュー(showPauseMenu)で表示
 
-  // スキャンライン
-  ctx.fillStyle='rgba(0,0,0,.03)';
-  for(var y=0;y<H;y+=4)ctx.fillRect(0,y,W,1);
+  // スキャンライン ★v294 毎フレーム98本の fillRect を打っていたので1枚に焼いて貼る（見た目は同一）
+  ctx.drawImage(scanCv(),0,0,W,H);
 
   ctx.restore(); // カメラシェイク終了
 }

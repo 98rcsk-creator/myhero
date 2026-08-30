@@ -74,12 +74,13 @@ function makeMock(counter, nanLog, fnName) {
 
 // ---- 実行 ----
 // ★v293 グラデーションのキャッシュ経由になったので、ヘルパーも取り込む
-const helpers = ['ctxEllipse', '_gcOf', 'gradL', 'gradR', 'fillSky'];
+const helpers = ['ctxEllipse', '_gcOf', 'gradL', 'gradR', 'fillSky', 'hillStrip'];
 const srcAll = [...helpers, BASELINE_FN, ...active.filter(n => n !== BASELINE_FN)]
   .filter((v, i, a) => a.indexOf(v) === i)
   .map(grabFn).join('\n');
 
-const PRELUDE = 'var GRAD_CACHE_MAX=240,SKY_CACHE_MAX=2,CV_K=1.25,_skyCv=[];'
+const PRELUDE = 'var GRAD_CACHE_MAX=240,SKY_CACHE_MAX=2,CV_K=1.25,_skyCv=[],_hillCv=null,_scanCv=null;'
+  + 'var HILL_P=850,HILL_PARA=0.13,HILL_Y=180,HILL_H=180,HILL_SW=488,HILL_SH=225;'
   // fillSky はオフスクリーンcanvasを使うので、Node側では空グラデの塗り1回として数える
   + 'var document={createElement:function(){return {getContext:function(){return ctx;},width:0,height:0};}};';
 const CONDS = [[0, 0], [37, 271], [240, 2400], [601, 6013]]; // [fr, cam]
@@ -94,8 +95,11 @@ for (const name of [BASELINE_FN, ...active.filter(n => n !== BASELINE_FN)]) {
   for (const [fr, cam] of CONDS) {
     const counter = { n: 0 };
     try {
-      new Function('ctx', 'W', 'H', 'GROUND', 'cam', 'fr', PRELUDE + '\n' + srcAll + '\n' + name + '();')(
-        makeMock(counter, nanLog, name), W, Hh, GROUND, cam, fr);
+      // ★v294 1回ウォームアップしてから数える（オフスクリーンの帯を焼くコールを
+      //   毎フレームのコール数に混ぜないため）。定常状態の値を測る。
+      new Function('ctx', 'W', 'H', 'GROUND', 'cam', 'fr', 'counter',
+        PRELUDE + '\n' + srcAll + '\n' + name + '();counter.n=0;' + name + '();')(
+        makeMock(counter, nanLog, name), W, Hh, GROUND, cam, fr, counter);
     } catch (e) { err = e.message; break; }
     tot += counter.n; if (counter.n > mx) mx = counter.n;
   }
