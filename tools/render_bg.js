@@ -74,13 +74,15 @@ function makeMock(counter, nanLog, fnName) {
 
 // ---- 実行 ----
 // ★v293 グラデーションのキャッシュ経由になったので、ヘルパーも取り込む
-const helpers = ['ctxEllipse', '_gcOf', 'gradL', 'gradR', 'fillSky', 'hillStrip'];
+const helpers = ['ctxEllipse', '_gcOf', 'gradL', 'gradR', 'fillSky', 'hillStrip', 'treeStrip', 'bushStrip'];
 const srcAll = [...helpers, BASELINE_FN, ...active.filter(n => n !== BASELINE_FN)]
   .filter((v, i, a) => a.indexOf(v) === i)
   .map(grabFn).join('\n');
 
 const PRELUDE = 'var GRAD_CACHE_MAX=240,SKY_CACHE_MAX=2,CV_K=1.25,_skyCv=[],_hillCv=null,_scanCv=null;'
   + 'var HILL_P=850,HILL_PARA=0.13,HILL_Y=180,HILL_H=180,HILL_SW=488,HILL_SH=225;'
+  + 'var _treeCv=null,TREE_P=1030,TREE_PARA=0.28,TREE_Y=260,TREE_H=75,TREE_SW=488,TREE_SH=94;'
+  + 'var _bushCv=null,BUSH_P=750,BUSH_PARA=0.55,BUSH_Y=318,BUSH_H=24,BUSH_SW=488,BUSH_SH=30;'
   // fillSky はオフスクリーンcanvasを使うので、Node側では空グラデの塗り1回として数える
   + 'var document={createElement:function(){return {getContext:function(){return ctx;},width:0,height:0};}};';
 const CONDS = [[0, 0], [37, 271], [240, 2400], [601, 6013]]; // [fr, cam]
@@ -106,16 +108,20 @@ for (const name of [BASELINE_FN, ...active.filter(n => n !== BASELINE_FN)]) {
   results.push({ name, avg: Math.round(tot / CONDS.length), max: mx, nanLog, err });
 }
 
-const budget = (results.find(r => r.name === BASELINE_FN) || { max: 256 }).max || 256;
+// ★v295 予算は固定値。以前は「bgGrass の実測値」を基準にしていたが、
+//   bgGrass を最適化する（121→44）と基準が下がり、触っていない bgSnow が
+//   いきなり『予算超過』になった。基準は歴史的な最重量（v234 の bgSnow=254 を
+//   パス統合で削った後の水準）に固定する。
+const BUDGET = 121;
 console.log('== My HERO 背景ハーネス ==');
 console.log('file   : ' + file);
-console.log('budget : ' + budget + ' コール/frame（' + BASELINE_FN + ' 実測）\n');
+console.log('budget : ' + BUDGET + ' コール/frame（固定値。v294時点の bgGrass 実測）\n');
 console.log('関数           平均   最大   判定');
 for (const r of results) {
   let verdict = 'OK';
   if (r.err) { verdict = 'ERROR ' + r.err; fail++; }
   else if (r.nanLog.length) { verdict = 'NaN検出'; fail++; }
-  else if (r.max > budget) { verdict = '予算超過'; fail++; }
+  else if (r.max > BUDGET) { verdict = '予算超過'; fail++; }
   console.log(
     r.name.padEnd(13) + String(r.avg).padStart(5) + String(r.max).padStart(7) + '   ' + verdict);
   for (const l of r.nanLog.slice(0, 5)) console.log('    ! ' + l);

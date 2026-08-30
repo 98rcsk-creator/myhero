@@ -2844,6 +2844,61 @@ function hillStrip(){
   _hillCv=cv2;
   return cv2;
 }
+// ★v295 木立と茂みも丘と同じストリップ方式に（実測 木+8%・茂み+4%）。
+//   帯の中身は元のループと同じ式。担当する縦の範囲だけ切り出すのでメモリは小さい
+//   （木 1420x75 ≒ 0.67MB／茂み 1140x20 ≒ 0.14MB）。
+var TREE_P=1030, TREE_PARA=0.28, TREE_Y=260, TREE_H=75;
+var TREE_SW=Math.round(W*CV_K), TREE_SH=Math.round(TREE_H*CV_K);
+var _treeCv=null;
+function treeStrip(){
+  if(_treeCv) return _treeCv;
+  var cv2=document.createElement('canvas');
+  cv2.width=Math.round((TREE_P+W)*CV_K); cv2.height=Math.round(TREE_H*CV_K);
+  var g2=cv2.getContext('2d');
+  g2.setTransform(CV_K,0,0,CV_K,0,-TREE_Y*CV_K);
+  for(var k=-1;k<=2;k++){
+    for(var ti2=0;ti2<5;ti2++){
+      var tx2=((ti2*320+90)%TREE_P+TREE_P)%TREE_P-320+k*TREE_P;
+      var ty2=GROUND-6, trH=26;
+      g2.fillStyle='#7a4a28';g2.fillRect(tx2-4,ty2-trH,8,trH);
+      g2.fillStyle='rgba(0,0,0,0.18)';g2.fillRect(tx2+1,ty2-trH,3,trH);
+      var crownY=ty2-trH-10;
+      var cg=gradR(g2,tx2-6,crownY-6,4,tx2,crownY,30,[0,'#6fc04a',1,'#3a8a2a']);
+      g2.fillStyle=cg;
+      g2.beginPath();g2.arc(tx2-14,crownY+4,16,0,Math.PI*2);
+      g2.arc(tx2+14,crownY+4,16,0,Math.PI*2);
+      g2.arc(tx2,crownY-8,19,0,Math.PI*2);g2.fill();
+      g2.fillStyle='rgba(190,240,150,0.45)';
+      g2.beginPath();g2.arc(tx2-6,crownY-12,7,0,Math.PI*2);g2.fill();
+    }
+  }
+  _treeCv=cv2;
+  return cv2;
+}
+var BUSH_P=750, BUSH_PARA=0.55, BUSH_Y=318, BUSH_H=24;
+var BUSH_SW=Math.round(W*CV_K), BUSH_SH=Math.round(BUSH_H*CV_K);
+var _bushCv=null;
+function bushStrip(){
+  if(_bushCv) return _bushCv;
+  var cv2=document.createElement('canvas');
+  cv2.width=Math.round((BUSH_P+W)*CV_K); cv2.height=Math.round(BUSH_H*CV_K);
+  var g2=cv2.getContext('2d');
+  g2.setTransform(CV_K,0,0,CV_K,0,-BUSH_Y*CV_K);
+  for(var k=-1;k<=2;k++){
+    for(var bi=0;bi<7;bi++){
+      var bx=((bi*180+40)%BUSH_P+BUSH_P)%BUSH_P-180+k*BUSH_P;
+      var bg3=gradL(g2,bx,GROUND-14,bx,GROUND+6,[0,'#4fa83a',1,'#2d7a22']);
+      g2.fillStyle=bg3;
+      g2.beginPath();
+      g2.arc(bx-10,GROUND+2,11,Math.PI,0);
+      g2.arc(bx+2,GROUND+2,14,Math.PI,0);
+      g2.arc(bx+14,GROUND+2,10,Math.PI,0);
+      g2.fill();
+    }
+  }
+  _bushCv=cv2;
+  return cv2;
+}
 function cylGrad(c2,x0,x1,col){
   return gradL(c2,x0,0,x1,0,[0,shadeCol(col,1.32),0.35,col,0.8,shadeCol(col,0.78),1,shadeCol(col,0.62)]);
 }
@@ -6523,35 +6578,14 @@ function bgGrass(){   // ★v234 旧bgPat1 昼の草原（本文は機械的に�
     ctx.drawImage(hillStrip(),
       (((cam*HILL_PARA)%HILL_P+HILL_P)%HILL_P)*CV_K, 0, HILL_SW, HILL_SH,
       0, HILL_Y, HILL_SW/CV_K, HILL_SH/CV_K);
-    // ⑥ 近景：立体的な木立（丸い樹冠＋幹＋陰 cam*0.28）
-    for(var ti2=0;ti2<5;ti2++){
-      var tx2=((ti2*320+90-cam*0.28)%(W+640)+W+640)%(W+640)-320;
-      var ty2=GROUND-6, trH=26;
-      // 幹
-      ctx.fillStyle='#7a4a28';ctx.fillRect(tx2-4,ty2-trH,8,trH);
-      ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fillRect(tx2+1,ty2-trH,3,trH);
-      // 樹冠（3つの円で雲状＋陰影）
-      var crownY=ty2-trH-10;
-      var cg=gradR(ctx,tx2-6,crownY-6,4,tx2,crownY,30,[0,'#6fc04a',1,'#3a8a2a']);
-      ctx.fillStyle=cg;
-      ctx.beginPath();ctx.arc(tx2-14,crownY+4,16,0,Math.PI*2);
-      ctx.arc(tx2+14,crownY+4,16,0,Math.PI*2);
-      ctx.arc(tx2,crownY-8,19,0,Math.PI*2);ctx.fill();
-      // 樹冠ハイライト
-      ctx.fillStyle='rgba(190,240,150,0.45)';
-      ctx.beginPath();ctx.arc(tx2-6,crownY-12,7,0,Math.PI*2);ctx.fill();
-    }
-    // ⑦ 前景の茂み（地面手前で速く流れる cam*0.55）
-    for(var bi=0;bi<7;bi++){
-      var bx=((bi*180+40-cam*0.55)%(W+360)+W+360)%(W+360)-180;
-      var bg3=gradL(ctx,bx,GROUND-14,bx,GROUND+6,[0,'#4fa83a',1,'#2d7a22']);
-      ctx.fillStyle=bg3;
-      ctx.beginPath();
-      ctx.arc(bx-10,GROUND+2,11,Math.PI,0);
-      ctx.arc(bx+2,GROUND+2,14,Math.PI,0);
-      ctx.arc(bx+14,GROUND+2,10,Math.PI,0);
-      ctx.fill();
-    }
+    // ⑥ 近景：立体的な木立（★v295 丘と同じくストリップ化。cam*0.28）
+    ctx.drawImage(treeStrip(),
+      (((cam*TREE_PARA)%TREE_P+TREE_P)%TREE_P)*CV_K, 0, TREE_SW, TREE_SH,
+      0, TREE_Y, TREE_SW/CV_K, TREE_SH/CV_K);
+    // ⑦ 前景の茂み（★v295 ストリップ化。cam*0.55）
+    ctx.drawImage(bushStrip(),
+      (((cam*BUSH_PARA)%BUSH_P+BUSH_P)%BUSH_P)*CV_K, 0, BUSH_SW, BUSH_SH,
+      0, BUSH_Y, BUSH_SW/CV_K, BUSH_SH/CV_K);
 }
 
 function bgSunset(){   // ★v234 旧bgPat2 夕暮れ（本文は機械的に切り出し・一字不変）
