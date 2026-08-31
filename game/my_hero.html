@@ -2781,23 +2781,29 @@ function gradR(c2,x0,y0,r0,x1,y1,r1,st){
 //   以降は drawImage で貼る。ピクセルは同一（実測: 空の平均色差 0.017/255）。
 //   実測: fps 21.8 → 26.9（+23%）。
 //   キャッシュは2枚まで（1枚 488x488x4 ≒ 0.9MB。iOSメモリ制約 SPEC §4-11）。
-var SKY_CACHE_MAX=2;
+// ★v296 全幅の縦グラデ塗りは空だけではなく、地平の光や海面など全部で12箇所あった。
+//   どれも「幅W・縦グラデ・毎フレーム塗り直し」で同じ形なので汎用化する。
+//   y..y+h の帯を内部解像度で1枚に焼き、以降は等倍 drawImage で貼る。
+var SKY_CACHE_MAX=3;   // 1ワールドが使う帯はたいてい2枚（空＋地平）
 var _skyCv=[];
-function fillSky(c2,st){
-  var k=''+st, e=null, i;
+function fillVBand(c2,y,h,gy0,gy1,st){
+  var k=y+','+h+','+gy0+','+gy1+';'+st, e=null, i;
   for(i=0;i<_skyCv.length;i++) if(_skyCv[i].k===k) e=_skyCv[i];
   if(!e){
     var cv2=document.createElement('canvas');
-    cv2.width=Math.round(W*CV_K); cv2.height=Math.round(H*CV_K);
+    cv2.width=Math.round(W*CV_K); cv2.height=Math.round(h*CV_K);
     var g2=cv2.getContext('2d');
-    var gr=g2.createLinearGradient(0,0,0,cv2.height);
+    g2.setTransform(CV_K,0,0,CV_K,0,-y*CV_K);
+    var gr=g2.createLinearGradient(0,gy0,0,gy1);
     for(var j=0;j<st.length;j+=2) gr.addColorStop(st[j],st[j+1]);
-    g2.fillStyle=gr; g2.fillRect(0,0,cv2.width,cv2.height);
+    g2.fillStyle=gr; g2.fillRect(0,y,W,h);
     e={k:k,cv:cv2}; _skyCv.push(e);
     if(_skyCv.length>SKY_CACHE_MAX) _skyCv.shift();
   }
-  c2.drawImage(e.cv,0,0,W,H);
+  c2.drawImage(e.cv,0,0,e.cv.width,e.cv.height,0,y,e.cv.width/CV_K,e.cv.height/CV_K);
 }
+// 全画面の空（0..H）。v293からの呼び出しをそのまま活かす薄いラッパ。
+function fillSky(c2,st){ fillVBand(c2,0,H,0,H,st); }
 // ★v294 スキャンライン（1px線 × 98本）を内部解像度で1枚に焼く。
 //   同じ transform で描いてから 1:1 で貼るのでピクセルは同一。
 var _scanCv=null;
@@ -6900,8 +6906,7 @@ function bgVolcano(){   // ★v236 W5火山（新規）
   // ① 空：火山灰で濁った暗赤 → 地平の橙
   fillSky(ctx,[0,'#1a0b10',0.55,'#3d1410',1,'#5e2109']);
   // 火山灰の霞：この明るい帯があることで、暗い山体のシルエットが背景から分離する
-  var hazeV=gradL(ctx,0,GROUND-190,0,GROUND+10,[0,'rgba(150,64,30,0)',0.55,'rgba(178,80,34,0.42)',1,'rgba(120,48,20,0.15)']);
-  ctx.fillStyle=hazeV;ctx.fillRect(0,GROUND-190,W,200);
+  fillVBand(ctx,GROUND-190,200,GROUND-190,GROUND+10,[0,'rgba(150,64,30,0)',0.55,'rgba(178,80,34,0.42)',1,'rgba(120,48,20,0.15)']);
   // ▼ 山体の位置。cam*0.04 で流れるので必ずラップさせる。
   //   ラップを忘れると、山だけが左へ消えて火口グローと噴煙が取り残される（実際にそうなった）。
   //   グロー・噴煙・溶岩流はすべてこの vx を基準にすること。
@@ -7013,8 +7018,7 @@ function bgSky(){   // ★v250 W7空中（新規）
   // ▶ 差別化：高高度で見下ろす／地平線が無い／下端は一面の雲海／浮遊島＋鳥。
   //   W1草原との違いは「地面と山が無い」「下が雲」「全ワールドで最も明るい」。
   // ① 空：天頂の濃い青 → 下へいくほど白く霞む（高度感）
-  var skyA=gradL(ctx,0,0,0,GROUND+40,[0,'#2f6fc4',0.42,'#79b6e8',0.80,'#c5e3f5',1,'#eef6fb']);
-  ctx.fillStyle=skyA;ctx.fillRect(0,0,W,GROUND+40);
+  fillVBand(ctx,0,GROUND+40,0,GROUND+40,[0,'#2f6fc4',0.42,'#79b6e8',0.80,'#c5e3f5',1,'#eef6fb']);
   // ② 太陽：無限遠なので視差なし。固定位置。
   var sux=W*0.78, suy=52;
   var sug=gradR(ctx,sux,suy,6,sux,suy,130,[0,'rgba(255,252,232,0.95)',0.30,'rgba(255,240,192,0.40)',1,'rgba(255,236,170,0)']);
@@ -7073,8 +7077,7 @@ function bgSky(){   // ★v250 W7空中（新規）
   ctx.fill();
   // ⑥ 雲海：下端をびっしり埋める。地面ではなく雲であることがこのワールドの肝。
   var seaTop=GROUND-96;
-  var seaG=gradL(ctx,0,seaTop,0,GROUND+30,[0,'rgba(255,255,255,0)',0.42,'rgba(250,253,255,0.82)',1,'rgba(226,240,250,0.98)']);
-  ctx.fillStyle=seaG;ctx.fillRect(0,seaTop,W,GROUND-seaTop+30);
+  fillVBand(ctx,seaTop,GROUND-seaTop+30,seaTop,GROUND+30,[0,'rgba(255,255,255,0)',0.42,'rgba(250,253,255,0.82)',1,'rgba(226,240,250,0.98)']);
   // 雲海のふくらみ（1パス・moveTo を各 arc の前に置く）
   ctx.fillStyle='rgba(255,255,255,0.90)';
   ctx.beginPath();
@@ -7106,11 +7109,9 @@ function bgSea(){   // ★v251 W8海底（新規）
   // ▶ 差別化：水中／上から差す光の柱／青緑／珊瑚と海藻のシルエット／舞う粒子は気泡と マリンスノー
   //   bgSpace（黒紫＋星）との違いは「明るい上・暗い下」「光の柱」「揺れる海藻」。
   // ① 水：浅い水面の明るい青緑 → 深い藍
-  var seaG=gradL(ctx,0,0,0,GROUND+40,[0,'#2ea3b8',0.34,'#166a8e',0.72,'#0c3c63',1,'#07223f']);
-  ctx.fillStyle=seaG;ctx.fillRect(0,0,W,GROUND+40);
+  fillVBand(ctx,0,GROUND+40,0,GROUND+40,[0,'#2ea3b8',0.34,'#166a8e',0.72,'#0c3c63',1,'#07223f']);
   // ② 水面のゆらぎ：上端の明るい帯
-  var surG=gradL(ctx,0,0,0,46,[0,'rgba(180,244,255,0.55)',1,'rgba(140,220,240,0)']);
-  ctx.fillStyle=surG;ctx.fillRect(0,0,W,46);
+  fillVBand(ctx,0,46,0,46,[0,'rgba(180,244,255,0.55)',1,'rgba(140,220,240,0)']);
   // ③ 光の柱：水面から斜めに差す。視差は浅く(0.03)＝光源は遠い。
   ctx.fillStyle='rgba(180,238,255,0.10)';
   ctx.beginPath();
@@ -7189,8 +7190,7 @@ function bgHell(){   // ★v252 W9魔界（新規）
   //   bgVolcano（赤×黒・円錐の山）との違いは「紫が主」「鋭く細い尖塔」「巨大な月」。
   //   bgSpace との違いは「地平線がある」「星ではなく火の粉」。
   // ① 空：天頂の黒紫 → 地平の深紅
-  var hG=gradL(ctx,0,0,0,GROUND+40,[0,'#150a22',0.46,'#301038',0.82,'#5c1330',1,'#7d1a2b']);
-  ctx.fillStyle=hG;ctx.fillRect(0,0,W,GROUND+40);
+  fillVBand(ctx,0,GROUND+40,0,GROUND+40,[0,'#150a22',0.46,'#301038',0.82,'#5c1330',1,'#7d1a2b']);
   // ② 血の月：視差はごく浅く(0.010)、画面内にクランプする（CLAUDE.md §1-9）
   var mx3=W*0.70-cam*0.010;
   if(mx3<W*0.26) mx3=W*0.26;
@@ -7207,8 +7207,7 @@ function bgHell(){   // ★v252 W9魔界（新規）
   ctx.arc(mx3+mr3*0.42,my3-mr3*0.16,mr3*0.86,0,Math.PI*2);
   ctx.fill();
   // ③ 地平の溶けた光：尖塔のシルエットを背景から分離させる帯
-  var hzG=gradL(ctx,0,GROUND-150,0,GROUND+10,[0,'rgba(190,40,70,0)',0.6,'rgba(214,58,66,0.34)',1,'rgba(120,20,40,0.16)']);
-  ctx.fillStyle=hzG;ctx.fillRect(0,GROUND-150,W,160);
+  fillVBand(ctx,GROUND-150,160,GROUND-150,GROUND+10,[0,'rgba(190,40,70,0)',0.6,'rgba(214,58,66,0.34)',1,'rgba(120,20,40,0.16)']);
   // ④ 遠景の尖塔：黒曜石。細く鋭い＝火山の円錐とは別シルエット（0.018）
   ctx.fillStyle='#1b0d20';
   ctx.beginPath();
@@ -7262,8 +7261,7 @@ function bgTemple(){   // ★v253 W10天空神殿（新規・最終ワールド�
   //   W7空中（青空＋雲海＋浮遊島）との違いは「金基調」「人工物の柱」「垂直の光条」。
   //   最終ワールドなので、他のどれよりも荘厳で明るい側に振る。
   // ① 空：天頂の澄んだ藍 → 地平の金
-  var tG=gradL(ctx,0,0,0,GROUND+40,[0,'#2a4d86',0.38,'#6d84b8',0.72,'#d3b483',1,'#f2dcae']);
-  ctx.fillStyle=tG;ctx.fillRect(0,0,W,GROUND+40);
+  fillVBand(ctx,0,GROUND+40,0,GROUND+40,[0,'#2a4d86',0.38,'#6d84b8',0.72,'#d3b483',1,'#f2dcae']);
   // ② 後光：画面上部中央の光源。視差なし＝無限遠。
   var hx=W*0.50, hy=64;
   var hg2=gradR(ctx,hx,hy,8,hx,hy,190,[0,'rgba(255,250,224,0.88)',0.34,'rgba(255,236,178,0.34)',1,'rgba(255,228,160,0)']);
@@ -7347,8 +7345,7 @@ function bgForest(){   // ★v254 W2夕暮れの森（新規・bgSunsetの「森
   //   W1草原（昼・なだらかな丘）との違いは「橙の空」「幹と樹冠のシルエット」「蛍」。
   //   まものの視認性を落とさないよう、樹冠は地平の明るい帯より上に出しすぎない。
   // ① 空：天頂の紫紺 → 地平の橙（bgSunset の配色を踏襲）
-  var fG=gradL(ctx,0,0,0,GROUND+40,[0,'#2b1b46',0.40,'#7b3560',0.74,'#d1642f',1,'#f0a44e']);
-  ctx.fillStyle=fG;ctx.fillRect(0,0,W,GROUND+40);
+  fillVBand(ctx,0,GROUND+40,0,GROUND+40,[0,'#2b1b46',0.40,'#7b3560',0.74,'#d1642f',1,'#f0a44e']);
   // ② 夕日：視差はごく浅く＋クランプ（ラップだと後半で消えたまま戻らない・§1-9）
   var sx4=W*0.30-cam*0.010;
   if(sx4<W*0.14) sx4=W*0.14;
@@ -7402,8 +7399,7 @@ function bgForest(){   // ★v254 W2夕暮れの森（新規・bgSunsetの「森
   // ⑥ 森の陰：地面付近を沈める。夕暮れの森で足元が翳るのは自然で、
   //   同時に「まものが背景から見えるか」を成立させている層（CLAUDE.md §1-14/§1-15）。
   //   これが無いと帯の輝度が0.168まで上がり、ウッドゴーレムの外周比が1.35＝基準割れになる。
-  var shG=gradL(ctx,0,GROUND-132,0,GROUND+20,[0,'rgba(26,10,32,0)',0.50,'rgba(26,10,32,0.40)',1,'rgba(18,7,24,0.70)']);
-  ctx.fillStyle=shG;ctx.fillRect(0,GROUND-132,W,152);
+  fillVBand(ctx,GROUND-132,152,GROUND-132,GROUND+20,[0,'rgba(26,10,32,0)',0.50,'rgba(26,10,32,0.40)',1,'rgba(18,7,24,0.70)']);
   // ⑦ 蛍：夕暮れの森の目印。ゆっくり明滅しながら漂う。
   for(var hi=0;hi<9;hi++){
     var hbl=0.35+0.65*Math.abs(Math.sin(fr*0.028+hi*1.3));
@@ -7419,8 +7415,7 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
   //   W9魔界（紫×深紅・血の月・尖塔）との違いは「青い夜」「白い月」「四角い建造物」。
   //   W3洞窟（閉じた岩）との違いは「空がある」「窓の灯りが点在する」。
   // ① 空：天頂の濃紺 → 地平のわずかな藍。夜だが真っ黒にはしない。
-  var cG=gradL(ctx,0,0,0,GROUND+40,[0,'#0a1030',0.48,'#152048',0.84,'#243560',1,'#33487a']);
-  ctx.fillStyle=cG;ctx.fillRect(0,0,W,GROUND+40);
+  fillVBand(ctx,0,GROUND+40,0,GROUND+40,[0,'#0a1030',0.48,'#152048',0.84,'#243560',1,'#33487a']);
   // ② 星：城壁より上だけ。W9の火の粉と違い動かない。
   ctx.fillStyle='rgba(224,236,255,0.62)';
   ctx.beginPath();
@@ -7484,8 +7479,7 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
   }
   ctx.fill();
   // ⑦ 夜霧：城壁の根元をやわらげ、まものが立つ帯の輝度を下げる（§1-14/§1-15）
-  var mgG=gradL(ctx,0,GROUND-92,0,GROUND+20,[0,'rgba(18,26,56,0)',0.55,'rgba(18,26,56,0.42)',1,'rgba(12,18,42,0.66)']);
-  ctx.fillStyle=mgG;ctx.fillRect(0,GROUND-92,W,112);
+  fillVBand(ctx,GROUND-92,112,GROUND-92,GROUND+20,[0,'rgba(18,26,56,0)',0.55,'rgba(18,26,56,0.42)',1,'rgba(12,18,42,0.66)']);
   // ⑧ コウモリ：夜の城の目印。月の側を横切る。
   ctx.fillStyle='rgba(14,18,40,0.72)';
   ctx.beginPath();

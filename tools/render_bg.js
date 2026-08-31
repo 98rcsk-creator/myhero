@@ -74,7 +74,7 @@ function makeMock(counter, nanLog, fnName) {
 
 // ---- 実行 ----
 // ★v293 グラデーションのキャッシュ経由になったので、ヘルパーも取り込む
-const helpers = ['ctxEllipse', '_gcOf', 'gradL', 'gradR', 'fillSky', 'hillStrip', 'treeStrip', 'bushStrip'];
+const helpers = ['ctxEllipse', '_gcOf', 'gradL', 'gradR', 'fillVBand', 'fillSky', 'hillStrip', 'treeStrip', 'bushStrip'];
 const srcAll = [...helpers, BASELINE_FN, ...active.filter(n => n !== BASELINE_FN)]
   .filter((v, i, a) => a.indexOf(v) === i)
   .map(grabFn).join('\n');
