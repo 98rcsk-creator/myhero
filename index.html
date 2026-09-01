@@ -8270,17 +8270,24 @@ var STORY_PAGES=[
 var storyPage=0;
 function showStory(){
   gs='story';
-  ov.classList.remove('home');
+  // ★v298 className は明示代入（直前の画面の tut / csbg などが残ると背景と余白が崩れる）
+  ov.className='opaque';
   var pg=STORY_PAGES[storyPage];
-  var h='<div style="font-size:64px;margin-bottom:18px">'+pg.icon+'</div>'
-    +'<div style="color:#fff;font-size:16px;line-height:1.7;font-weight:bold;white-space:pre-line;max-width:300px;margin-bottom:24px">'+pg.text+'</div>'
-    +'<div style="display:flex;gap:6px;margin-bottom:18px">';
+  // 絵と文が地の背景に浮いていたので uiPanel に載せる（画像は増やしていない）
+  var h='<div class="uiPanel" style="width:340px;max-width:94%;padding:18px 16px 15px;box-sizing:border-box">'
+    +'<div style="font-size:64px;margin-bottom:14px">'+pg.icon+'</div>'
+    +'<div style="color:#fff;font-size:16px;line-height:1.7;font-weight:bold;white-space:pre-line">'+pg.text+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;margin:18px 0">';
   for(var i=0;i<STORY_PAGES.length;i++){
     h+='<div style="width:8px;height:8px;border-radius:50%;background:'+(i===storyPage?'#ffd24a':'rgba(255,255,255,0.3)')+'"></div>';
   }
   h+='</div>'
-    +'<div class="press" style="font-size:13px">▶ タップで'+(storyPage<STORY_PAGES.length-1?'つづき':'勇者を選ぶ')+' ◀</div>'
-    +'<div id="storySkip" style="margin-top:14px;color:#888;font-size:11px;cursor:pointer">スキップ</div>';
+    +'<div class="uiBtn go" style="width:260px;font-size:15px;min-height:48px">▶ タップで'+(storyPage<STORY_PAGES.length-1?'つづき':'勇者を選ぶ')+'</div>'
+    // スキップは目立たせない（子どもに飛ばしてほしいわけではない）。
+    // ただし uiBtn を base だけ付けて最低44pxの当たり判定は確保する。
+    +'<div id="storySkip" class="uiBtn" style="margin-top:10px;width:140px;font-size:11px;color:#8fa4b0;'
+      +'background:rgba(120,150,190,0.14);border:1px solid rgba(150,200,255,0.22)">スキップ</div>';
   ov.innerHTML=h;
   ov.style.display='flex';
   setTimeout(function(){
@@ -8442,10 +8449,11 @@ function showTutorial(){
   ov.className='tut';
   var t=TUT_STEPS[tutStep];
   var lbl=(t.btn==='move')?'左右キー':(t.btn==='coin')?'あつめる':(t.btn==='goal')?'めざす':(t.btn==='inv')?'緑ボタン✨':'このボタン';
-  var h='<div style="background:rgba(16,20,36,0.94);border:2.5px solid #ffd24a;border-radius:18px;padding:15px 17px 13px;max-width:312px;box-shadow:0 10px 30px rgba(0,0,0,0.55)">'
+  // ★v298 カードを uiPanel に統一（金の枠は「学習中」の目印なので残す）
+  var h='<div class="uiPanel" style="border:2.5px solid #ffd24a;border-radius:18px;padding:15px 17px 13px;max-width:312px;background:linear-gradient(180deg,rgba(40,64,110,0.55),rgba(14,24,46,0.94))">'
     +'<div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:10px">'
       +'<span style="color:#9fe4ff;font-size:11px;font-weight:bold">'+(tutStep+1)+'/'+TUT_STEPS.length+'</span>'
-      +'<span style="color:#ffd24a;font-size:18px;font-weight:bold;letter-spacing:1px">'+t.title+'</span></div>'
+      +'<span class="uiTitle" style="font-size:17px;padding:4px 14px;margin-bottom:0">'+t.title+'</span></div>'
     +'<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:11px">'
       +'<div style="background:linear-gradient(160deg,#2a4068,#16233a);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:3px 5px;display:flex">'+tutSceneHTML(t.scene)+'</div>'
       +'<div style="display:flex;flex-direction:column;align-items:center;gap:4px">'+tutBtnHTML(t.btn)
@@ -8457,8 +8465,10 @@ function showTutorial(){
     h+='<div style="width:7px;height:7px;border-radius:50%;background:'+(i===tutStep?'#ffd24a':'rgba(255,255,255,0.3)')+'"></div>';
   }
   h+='</div>'
-    +'<div class="press" style="font-size:12.5px;margin:0">▶ タップで'+(tutStep<TUT_STEPS.length-1?'つぎへ':'スタート')+'</div>'
-    +(tutStep>0?'<div style="color:#9fe4ff;font-size:10px;margin-top:3px;opacity:0.85">◀ 右スワイプでもどる</div>':'')
+    // 「タップでつぎへ」がただの文字で押せる感じがなかったので、他画面と同じボタンの見た目にする。
+    // 画面のどこをタップしても進むので、当たり判定は増やしていない（見た目だけ）。
+    +'<div class="uiBtn go" style="width:100%;box-sizing:border-box;font-size:14px;min-height:46px">▶ タップで'+(tutStep<TUT_STEPS.length-1?'つぎへ':'スタート')+'</div>'
+    +(tutStep>0?'<div style="color:#9fe4ff;font-size:10px;margin-top:8px;opacity:0.85">◀ 右スワイプでもどる</div>':'')
     +'</div>';
   ov.innerHTML=h;
   ov.style.display='flex';
