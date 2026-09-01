@@ -2189,14 +2189,37 @@ function buildWorld(lv){
   // LV5はボス手前(GOAL_X-420)までにコインを配置（ボス後のコインは取れず無意味なため）
   var coinRange=cfg.bossDensity?(GOAL_X-420):(GOAL_X-300); // ★v230 密度側
   var gcStep=(coinRange-200)/gcCount;
+  // ★v299 穴の上に来たコインを「スキップ」していたため、穴が多く広い後半ワールドほど
+  //   コインが激減していた。実測（各50回生成の中央値）:
+  //     W1=30 W5=54 W6=55 W7=55 → W8=49 W9=46 W10=32
+  //   W10は長さ3倍・敵13倍なのにコインはW1と同数だった。設計意図（gcCount が
+  //   LEN_K で増える＝後半ほどコインが多い）と逆になっている。
+  //   スキップせず、近くの安全な地面へずらす。枚数が gcCount どおりになり、
+  //   ついでに分母のブレも小さくなる。
+  //   ⚠ ずらし先が同じ場所に集中すると、同じ穴に落ちた複数枚が完全に重なる
+  //     （実測で最小間隔0.01px・W10で30回中92組）。置いた位置を覚えて最低24px空ける。
+  var _placedX=[], COIN_GAP=24;
+  var _coinSafe=function(x){
+    if(x<200 || x>coinRange) return false;
+    if(holes.some(function(h){return x>h.x-30&&x<h.x+h.w+30;})) return false;
+    for(var _p=0;_p<_placedX.length;_p++) if(Math.abs(_placedX[_p]-x)<COIN_GAP) return false;
+    return getGroundY(x)<=GROUND+10;
+  };
+  var _shiftMax=Math.round(gcStep*1.2+140);
   for(var i=0;i<gcCount;i++){
     var cx2=200+gcStep*(i+0.5)+(Math.random()-0.5)*gcStep*0.4;
     cx2=Math.round(cx2);
-    var inH=holes.some(function(h){return cx2>h.x-30&&cx2<h.x+h.w+30;});
-    if(inH) continue;
-    // 地形に合わせたY座標（穴の上には置かない）
+    if(!_coinSafe(cx2)){
+      var _f=-1;
+      for(var _d=20;_d<=_shiftMax;_d+=20){
+        if(_coinSafe(cx2-_d)){ _f=cx2-_d; break; }
+        if(_coinSafe(cx2+_d)){ _f=cx2+_d; break; }
+      }
+      if(_f<0) continue;   // 近くに置ける地面が無いときだけ諦める
+      cx2=_f;
+    }
     var cgy=getGroundY(cx2);
-    if(cgy>GROUND+10) continue; // 穴の上はスキップ
+    _placedX.push(cx2);
     cins.push({x:cx2,y:cgy-22,w:14,h:14,got:false,bob:Math.random()*6.28});
   }
 
