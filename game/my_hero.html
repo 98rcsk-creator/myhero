@@ -4552,9 +4552,10 @@ function advanceStage(){
     }
   }
   ov.innerHTML='<div style="font-size:48px;margin-bottom:8px">'+wIcon+'</div>'
-    +'<h2 style="font-size:28px;margin-bottom:6px">'+(cfg.boss?'<span style="color:#ff5544">ボス</span> ':'')+'WORLD '+cfg.world+'</h2>'
+    // ★v301 「ボス」表記を撤去。全ステージにボスがいるので情報量がゼロで、
+    //   逆に「このステージだけ特別なのか？」と紛らわしかった（実機で指摘）。
+    +'<h2 style="font-size:28px;margin-bottom:6px">WORLD '+cfg.world+'</h2>'
     +'<div style="color:#9fe4ff;font-size:14px;font-weight:bold;margin-bottom:10px">'+wName+'</div>'
-    +(cfg.boss?'<div style="color:#ff5544;font-size:15px;font-weight:bold;margin-top:6px">⚠ ボスが まっている！</div>':'')
     +advHtml
     +'<div class="go" style="margin-top:20px">タップでスタート</div>';
   gs='levelup';
@@ -8971,26 +8972,42 @@ function showStageClear(star, scoreRate){
   var _hPct=p.maxHP>0?Math.round(p.hp/p.maxHP*100):0;
   var _kOK2=(_kPct>=STAR_KILL2*100), _kOK3=(_kPct>=STAR_KILL3*100);
   var _cOK=(_cPct>=STAR_COIN*100), _dOK=(_hPct>=100);
-  function _row(ok,star,cond,now){
-    // 条件と現在値を横に並べると幅が足りず折り返すので、上下2行にして全幅を使う
-    return '<div style="padding:6px 0;'+(star<3?'border-bottom:1px solid rgba(159,228,255,0.16);':'')+'">'
+  // ★v301 %をやめて「なんひき・なんまい」の実数にした（実機で「平仮名だけど見にくい・
+  //   よく分からない」と指摘）。低学年に70%は伝わらない。あわせて行ごとに繰り返していた
+  //   「いま〜」をパネル下の1行にまとめ、★3の ＋ と か の入れ子は行を分けた。
+  function _row(ok,star,l1,l2){
+    return '<div style="padding:7px 0;'+(star<3?'border-bottom:1px solid rgba(159,228,255,0.16);':'')+'">'
       +'<div style="display:flex;align-items:center;gap:7px">'
-        +'<span style="font-size:13px;width:16px;flex:none">'+(ok?'✅':'⬜')+'</span>'
-        +'<span style="font-size:13px;font-weight:bold;color:'+(ok?'#ffd24a':'#7f8f99')+';width:26px;flex:none">★'+star+'</span>'
-        +'<span style="flex:1;font-size:12px;line-height:1.35;color:'+(ok?'#eaf6ff':'#9fb6c2')+';text-align:left">'+cond+'</span>'
+        +'<span style="font-size:14px;width:18px;flex:none">'+(ok?'✅':'⬜')+'</span>'
+        +'<span style="font-size:14px;font-weight:bold;color:'+(ok?'#ffd24a':'#7f8f99')+';width:28px;flex:none">★'+star+'</span>'
+        +'<span style="flex:1;font-size:13px;line-height:1.4;color:'+(ok?'#eaf6ff':'#9fb6c2')+';text-align:left">'+l1+'</span>'
       +'</div>'
-      +(now?'<div style="margin-left:49px;font-size:10.5px;line-height:1.3;color:'+(ok?'#bdf5c8':'#8fa4b0')+';text-align:left">'+now+'</div>':'')
+      +(l2?'<div style="margin-left:53px;font-size:13px;line-height:1.4;color:'+(ok?'#eaf6ff':'#9fb6c2')+';text-align:left">'+l2+'</div>':'')
     +'</div>';
   }
-  var _pK2=Math.round(STAR_KILL2*100), _pK3=Math.round(STAR_KILL3*100), _pC=Math.round(STAR_COIN*100);
-  // ★v292 uiPanel（§UIデザインシステム）に統一。幅を300→324pxにして★3の条件が折り返さないようにした
-  var _starHint='<div class="uiPanel" style="width:324px;max-width:94%;margin:10px auto 0;padding:9px 13px">'
-    +'<div style="color:#9fe4ff;font-size:11.5px;font-weight:bold;text-align:left;margin-bottom:2px">★のじょうけん</div>'
-    +_row(true,1,'クリアする','')
-    +_row(_kOK2||_cOK,2,'てき '+_pK2+'% か コイン '+_pC+'%',
-          'いま　てき '+_kPct+'% ・ コイン '+_cPct+'%')
-    +_row(_kOK3&&(_cOK||_dOK),3,'てき '+_pK3+'% ＋ コイン '+_pC+'% かノーダメ',
-          _dOK?'いま　てき '+_kPct+'% ・ ノーダメージ！':'いま　てき '+_kPct+'% ・ たいりょく '+_hPct+'%');
+  // 必要「数」を出す（率のままだと子どもに伝わらない）
+  var _nK2=Math.ceil(STAR_KILL2*stageEnemyTotal), _nK3=Math.ceil(STAR_KILL3*stageEnemyTotal);
+  var _nC =Math.ceil(STAR_COIN*stageCoinTotal);
+  var _hasE=stageEnemyTotal>0, _hasC=stageCoinTotal>0;
+  // 単語の途中で折り返すと読めない（実測で「ダメージ/0」「たいり/ょく」と割れた）ので
+  // 意味のかたまりごとに nowrap で包む
+  var _nw=function(t){ return '<span style="white-space:nowrap">'+t+'</span>'; };
+  var _eTxt=function(n){ return _hasE?_nw('てきを <b>'+n+'</b>ひき たおす'):'てきは いない'; };
+  var _cTxt=function(n){ return _hasC?_nw('コインを <b>'+n+'</b>まい とる'):'コインは ない'; };
+  var _starHint='<div class="uiPanel" style="width:324px;max-width:94%;margin:10px auto 0;padding:10px 13px">'
+    +'<div style="color:#9fe4ff;font-size:12px;font-weight:bold;text-align:left;margin-bottom:3px">★のじょうけん</div>'
+    +_row(true,1,'ゴールする','')
+    +_row(_kOK2||_cOK,2,_eTxt(_nK2),'または '+_cTxt(_nC))
+    // ★3は「＋」と「か」が入れ子で一番わかりにくい。2行目は動詞を省いて1行に収める
+    +_row(_kOK3&&(_cOK||_dOK),3,_eTxt(_nK3),
+          _hasC?_nw('＋ コイン <b>'+_nC+'</b>まい か ダメージ0'):_nw('＋ ダメージ0'))
+    // 「いま」は各行に繰り返さず、ここに1行だけ
+    +'<div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(159,228,255,0.22);'
+      +'font-size:12px;line-height:1.5;color:#bdf5c8;text-align:left">いま　'
+      +(_hasE?_nw('てき <b>'+stageEnemyKilled+'</b>/'+stageEnemyTotal+'ひき')+'　':'')
+      +(_hasC?_nw('コイン <b>'+stageCoinGot+'</b>/'+stageCoinTotal+'まい')+'　':'')
+      +(_dOK?_nw('<span style="color:#ffe9a8">ダメージ0！</span>'):_nw('たいりょく '+_hPct+'%'))
+    +'</div>';
   if(star<3){
     var _tgt=(star<2)?2:3;
     var _restE=Math.max(0,stageEnemyTotal-stageEnemyKilled);
