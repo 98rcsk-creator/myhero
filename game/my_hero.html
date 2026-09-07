@@ -1255,6 +1255,15 @@ function slopeSpd(cx,dir){
 //   GIANT_K : ミニドラゴン(ハートを落とす敵)だけに掛かる倍率。1.0で通常敵と同じ大きさ。
 //   BOSS_CAP: ボスの成長の頭打ち。**36より大きくすると画面からはみ出す**（実測: 40で頭がy=-5）。
 var GIANT_K=1.7, BOSS_CAP=36;
+// ★v302 タイプ別のサイズ倍率。基準(baseW x baseH = 26x30)に掛ける。
+//   実機で「敵によって適正サイズが違う。火の玉を撃つやつは26x30でも小さい」と指摘。
+//   ⚠ 当たり判定も一緒に変わる（見た目だけ大きくすると「当たってないのに当たる」になるため）。
+//   ここに無いタイプは 1.0（基準どおり）。
+var ENE_SIZE_K={
+  giant  : GIANT_K,   // ミニドラゴン（ハートを落とす）＝従来どおり
+  fire   : 1.20,      // 火の玉を撃つ。実機で「小さい」と名指しされた
+  shooter: 1.15       // 砲台。弾を撃つ側は少し大きいほうが脅威が伝わる
+};
 var BELEM={
   fire :{o:'#ff6600', g:'#ff4400', c:'#ffcc00'},  // 火（既定）
   ice  :{o:'#7fdcff', g:'#37b6ff', c:'#ffffff'},  // 氷・雪
@@ -2324,15 +2333,18 @@ function buildWorld(lv){
     //   経緯: v231まで sEff 直結（W10で 112x116）→ v247で W5相当(23)頭打ち(62x66)
     //   → v277で完全固定。「デカくなると難しすぎる」の実機フィードバックの最終形。
     //   ⚠ sSz を戻せばワールド別サイズが復活する（他は何も変えていない）。
-    var sSz=3;                      // = W1 の sEff。3 以外にすると全ワールド一律で変わる
-    var baseW=16+sSz*2, baseH=20+sSz*2;   // = 22 x 26
+    //   ★v302 実機で「敵が小さく感じる」と指摘され 3 → 5 に。主人公の描画高さ50.5pxに対し
+    //   敵の表示高は 26*1.34=34.8px（69%）しかなかった。5 で 30*1.34=40.2px（80%）になる。
+    var sSz=5;                      // = 全ワールド共通の基準。ここだけで一律に変わる
+    var baseW=16+sSz*2, baseH=20+sSz*2;   // = 26 x 30
 
     if(isFlying){
       var ftype=flyTypes[(fPtr++)%flyTypes.length];
       var isDiver=(ftype==='diver');
       var isBomber=(ftype==='bomber');
-      var fh=Math.floor(baseH*(isDiver?0.6:0.7));
-      var fw=baseW+(isBomber?4:0)+(isDiver?-2:0);
+      var _fk=ENE_SIZE_K[ftype]||1;              // ★v302 タイプ別倍率
+      var fh=Math.floor(baseH*(isDiver?0.6:0.7)*_fk);
+      var fw=Math.round((baseW+(isBomber?4:0)+(isDiver?-2:0))*_fk);
       enms.push({
         x:ex, y:isDiver?GROUND-100:GROUND-58,
         w:fw, h:fh,
@@ -2362,8 +2374,9 @@ function buildWorld(lv){
       //   になってしまった。元の倍率1.7を戻して 37x44（通常敵の面積2.9倍）にする。
       //   ⚠ ワールドでは大きくならない。全ワールド同じ 37x44。
       //   残る差分: hp=2 / 速度0.45倍 / maybeDrop のハート / ワールド別の専用スプライト。
-      var gw=isGiant?Math.round(baseW*GIANT_K):baseW;
-      var gh=isGiant?Math.round(baseH*GIANT_K):baseH;
+      var _sk=ENE_SIZE_K[gtype]||1;              // ★v302 タイプ別倍率
+      var gw=Math.round(baseW*_sk);
+      var gh=Math.round(baseH*_sk);
       var gspd=spd*(isGiant?0.45:isShooter?0.3:isFire?0.4:1);
       var ghp=isGiant?2:isGhost?999:cfg.enemyHp;
       var gyPos=getGroundY(ex);
