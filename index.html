@@ -1264,6 +1264,11 @@ var ENE_SIZE_K={
   fire   : 1.20,      // 火の玉を撃つ。実機で「小さい」と名指しされた
   shooter: 1.15       // 砲台。弾を撃つ側は少し大きいほうが脅威が伝わる
 };
+// ★v302 飛ぶ敵の高さ係数。地上敵より低くしてシルエットを小さく見せる仕組み。
+//   実機で「飛ぶ敵が小さすぎる」と判断され 0.70→0.85 / 0.60→0.73 に引き上げ。
+//   （主人公比: ひこう・ばくだん 64%→77% ／ きゅうこうか 55%→65%）
+//   急降下は「他より小さくて避けにくい」関係を保つため同じ比率で上げている。
+var FLY_H_K=0.85, DIVER_H_K=0.73;
 var BELEM={
   fire :{o:'#ff6600', g:'#ff4400', c:'#ffcc00'},  // 火（既定）
   ice  :{o:'#7fdcff', g:'#37b6ff', c:'#ffffff'},  // 氷・雪
@@ -2343,7 +2348,7 @@ function buildWorld(lv){
       var isDiver=(ftype==='diver');
       var isBomber=(ftype==='bomber');
       var _fk=ENE_SIZE_K[ftype]||1;              // ★v302 タイプ別倍率
-      var fh=Math.floor(baseH*(isDiver?0.6:0.7)*_fk);
+      var fh=Math.floor(baseH*(isDiver?DIVER_H_K:FLY_H_K)*_fk);
       var fw=Math.round((baseW+(isBomber?4:0)+(isDiver?-2:0))*_fk);
       enms.push({
         x:ex, y:isDiver?GROUND-100:GROUND-58,
