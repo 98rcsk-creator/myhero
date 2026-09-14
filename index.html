@@ -2699,7 +2699,7 @@ var HEADCFG={
     var savedFace=window.localStorage.getItem('yk_custom_face');
     if(savedFace){
       var cim=new Image();
-      cim.onload=function(){ HEAD_READY['custom']=true; };
+      cim.onload=function(){ applyCustomHead(cim); };
       cim.onerror=function(){ showErrEarly('customFace画像読込失敗'); };
       cim.src=savedFace;
       HEAD['custom']=cim;
@@ -2730,10 +2730,81 @@ function saveCustomList(list){
 // アクティブなマイヒーローの顔を HEAD['custom'] にロード
 function activateCustom(face,cb){
   var cim=new Image();
-  cim.onload=function(){ HEAD_READY['custom']=true; if(cb)cb(true); };
+  cim.onload=function(){ applyCustomHead(cim); if(cb)cb(true); };
   cim.onerror=function(){ if(cb)cb(false); };
   cim.src=face;
   HEAD['custom']=cim;
+}
+
+// ===== マイヒーロー：顔写真と体を馴染ませる（読み込み時1回だけ・描画中の負荷ゼロ）=====
+// ① 体の肌色(CHARS.custom.skin)を写真の顔から採る。固定値のままだと首と手だけ別人の色になる。
+// ② 体(cylGrad/sphGrad)と同じ「左上が明るく右下が暗い」光を顔写真にも焼き込む。
+//    顔だけ陰影ゼロだと光の向きが体と食い違って「貼り付けた感」になる。
+var CUSTOM_SKIN_DEF='#e8b88a';   // 写真から採れなかったときのフォールバック（従来の固定値）
+// 顔の中央帯から肌色をサンプリングして中央値を返す。採れなければ null。
+function _ccPickSkin(im){
+  try{
+    var S=128, cv=document.createElement('canvas');
+    cv.width=S; cv.height=S;
+    var g=cv.getContext('2d');
+    g.drawImage(im,0,0,S,S);
+    // 相対座標。目(faceCY≒0.47)と口(≒0.72)と髪を避けた「ほお・鼻すじ」の帯だけを見る。
+    var pts=[[0.32,0.55],[0.68,0.55],[0.30,0.62],[0.70,0.62],[0.36,0.68],[0.64,0.68],
+             [0.50,0.54],[0.50,0.60],[0.50,0.65],[0.42,0.58],[0.58,0.58]];
+    var rs=[], gz=[], bs=[], R=4, i, j;
+    for(i=0;i<pts.length;i++){
+      var px=Math.round(pts[i][0]*S)-R, py=Math.round(pts[i][1]*S)-R;
+      var d=g.getImageData(px,py,R*2,R*2).data;
+      var sr=0,sg=0,sb=0,n=0;
+      for(j=0;j<d.length;j+=4){
+        if(d[j+3]<200) continue;                 // 背景除去済みの透明部は数えない
+        sr+=d[j]; sg+=d[j+1]; sb+=d[j+2]; n++;
+      }
+      if(n<R*R*2) continue;                      // パッチの半分以上が透明＝顔の外
+      var r=sr/n, gg=sg/n, b=sb/n;
+      var lum=0.299*r+0.587*gg+0.114*b;
+      if(lum<40||lum>245) continue;              // 影・髪・白飛びを除く
+      if(b>r) continue;                          // 青が赤を超える＝肌ではない（髪・服）
+      rs.push(r); gz.push(gg); bs.push(b);
+    }
+    if(rs.length<3) return null;                 // サンプル不足＝信用しないで既定色のまま
+    var med=function(a){ a.sort(function(x,y){return x-y;}); return a[a.length>>1]; };
+    var hx=function(v){ v=Math.max(0,Math.min(255,Math.round(v))); return (v<16?'0':'')+v.toString(16); };
+    return '#'+hx(med(rs))+hx(med(gz))+hx(med(bs));
+  }catch(e){ return null; }
+}
+// 顔写真に体と同じ光を焼き込んだ canvas を返す。失敗したら null。
+// source-atop なので透明な背景には一切色が乗らない（四角い影が出ない）。
+function _ccShadeHead(im){
+  try{
+    var w=im.naturalWidth||im.width||0, h=im.naturalHeight||im.height||0;
+    if(!w||!h) return null;
+    var cv=document.createElement('canvas');
+    cv.width=w; cv.height=h;
+    var g=cv.getContext('2d');
+    g.drawImage(im,0,0,w,h);
+    g.globalCompositeOperation='source-atop';
+    var sh=g.createRadialGradient(w*0.34,h*0.30,w*0.10,w*0.50,h*0.50,w*0.78);
+    sh.addColorStop(0,'rgba(22,13,8,0)');
+    sh.addColorStop(0.55,'rgba(22,13,8,0.05)');
+    sh.addColorStop(1,'rgba(22,13,8,0.28)');
+    g.fillStyle=sh; g.fillRect(0,0,w,h);
+    var hi=g.createRadialGradient(w*0.34,h*0.28,0,w*0.34,h*0.28,w*0.52);
+    hi.addColorStop(0,'rgba(255,244,226,0.16)');
+    hi.addColorStop(1,'rgba(255,244,226,0)');
+    g.fillStyle=hi; g.fillRect(0,0,w,h);
+    g.globalCompositeOperation='source-over';
+    return cv;
+  }catch(e){ return null; }
+}
+// 読み込み完了した顔画像に①②を適用して HEAD['custom'] を確定させる。
+// 顔をロードする経路（起動時の旧キー移行・マイヒーロー切替・クロップ確定）は必ずここを通す。
+function applyCustomHead(im){
+  var sk=_ccPickSkin(im);
+  if(typeof CHARS!=='undefined'&&CHARS.custom) CHARS.custom.skin=sk||CUSTOM_SKIN_DEF;
+  var sc=_ccShadeHead(im);
+  if(sc) HEAD['custom']=sc;
+  HEAD_READY['custom']=true;
 }
 
 // ===== 敵スプライト（実画像・一部のみ。未定義はベクター描画にフォールバック）=====
@@ -3776,7 +3847,7 @@ function _showCustomCrop(){
       _ccPendingFace=dataURL;
       var cim=new Image();
       cim.onload=function(){
-        HEAD_READY['custom']=true;
+        applyCustomHead(cim);
         _ccImg=null; // メモリ解放
         _showCustomConfirm(true);
       };
