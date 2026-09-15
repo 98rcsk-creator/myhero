@@ -3363,6 +3363,21 @@ var _CC_GAME_SCALE=1.1;
 var _ccDragging=false, _ccStartPX=0, _ccStartPY=0, _ccStartImgX=0, _ccStartImgY=0;
 var _ccW=260, _ccH=260, _ccCx=130, _ccCy=130, _ccR=110;
 var _ccMaskCanvas=null;
+// ★v304b 切り抜きの形。丸 → 頭のかたち（たまご型）。
+// 丸だと四隅に部屋の背景が必ず残る。形だけで切るので色の判定に一切依存せず、
+// どんな写真でも必ず同じだけ背景が落ちる（_ccRemoveWhiteBg が失敗しても効く）。
+// 保存される正方形（＝円の外接四角・256px）に対する比率で持つ。canvas側もここから導く。
+// ガイドのたまご（_ccDrawGuide の rx=72/ry=88）より一回り大きい＝髪が多少はみ出しても切れない。
+var CC_EGG={cx:0.5, cy:0.4438, rx:0.3727, ry:0.4273};
+// 比率 → 切り抜きcanvasの座標
+function _ccEggCv(){
+  var L=_ccCx-_ccR, T=_ccCy-_ccR, S=_ccR*2;
+  return {cx:L+CC_EGG.cx*S, cy:T+CC_EGG.cy*S, rx:CC_EGG.rx*S, ry:CC_EGG.ry*S};
+}
+// 比率 → 保存する正方形(N px)の座標
+function _ccEggPx(N){
+  return {cx:CC_EGG.cx*N, cy:CC_EGG.cy*N, rx:CC_EGG.rx*N, ry:CC_EGG.ry*N};
+}
 
 // ★v304 切り抜き枠の「顔ガイド」。
 // 実機で「写真のうち61%が体」だった＝顔が22.7pxしかなかった。枠がただの丸で、
@@ -3407,7 +3422,8 @@ function _ccBuildMask(){
   mctx.fillStyle='rgba(8,10,18,0.66)';
   mctx.fillRect(0,0,_ccW,_ccH);
   mctx.globalCompositeOperation='destination-out';
-  mctx.beginPath(); mctx.arc(_ccCx,_ccCy,_ccR,0,Math.PI*2); mctx.fill();
+  var eg=_ccEggCv();
+  mctx.beginPath(); ctxEllipse(mctx,eg.cx,eg.cy,eg.rx,eg.ry,0,0,Math.PI*2); mctx.fill();
   mctx.globalCompositeOperation='source-over';
   _ccMaskCanvas=mc;
   return mc;
@@ -3488,6 +3504,20 @@ function _ccIllustrate(srcCanvas){
 // ★v204(①): 白限定だった判定を撤廃し、黒/グレー/クリーム/任意の無地色に対応。
 //   服の色など内側は縁と繋がっていないため消えない。
 // 戻り値: true=除去した(シルエット化成功) / false=無地背景ではない(実写等→呼び出し側で円形処理)
+// ★v304b 透明が1画素でもあるか。縮小時にPNGとJPEGのどちらで焼き直すかの判定に使う。
+// 2pxおき（全画素の1/4）で十分：切り抜き画像の透明域は広いので粗い走査でも必ず当たる。
+function _ccHasAlpha(cv){
+  try{
+    var g=cv.getContext('2d'), w=cv.width, h=cv.height;
+    var d=g.getImageData(0,0,w,h).data;
+    for(var y=0;y<h;y+=2){
+      var row=y*w*4;
+      for(var x=0;x<w;x+=2){ if(d[row+x*4+3]<250) return true; }
+    }
+  }catch(e){}
+  return false;
+}
+
 function _ccRemoveWhiteBg(cv){
   var w=cv.width,h=cv.height,c2=cv.getContext('2d');
   var img=c2.getImageData(0,0,w,h),d=img.data;
@@ -3701,6 +3731,13 @@ function _showCustomCrop(){
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-top:1px solid rgba(0,0,0,0.09);color:#9aa0aa;font-size:13px">ファイルを選択<span style="font-size:14px;opacity:0.45">📁</span></div>'
     +'</div>'
     +'<div style="color:#8fa8c0;font-size:11px;margin-top:6px">↑ これは見本だよ</div>'
+    // ★v304b iPhoneの「被写体を切り抜く」で作ったPNGは _ccRemoveWhiteBg が
+    //   「切り抜き済み」として最高品質のまま受け取れる（四隅が透明なら素通しする経路）。
+    //   実装は前からあったのに誰にも案内していなかった。ここが一番キレイになる道。
+    +'<div style="margin-top:12px;padding:9px 12px;background:rgba(255,228,77,0.10);border:1px solid rgba(255,228,77,0.35);border-radius:10px;max-width:250px">'
+    +'<div style="color:#ffe44d;font-size:12px;font-weight:bold;margin-bottom:4px;text-align:center">✨ はいけいを けしたいとき</div>'
+    +'<div style="color:#c8d6e4;font-size:11px;line-height:1.65">① しゃしんアプリで じぶんを ながおし<br>② でてきた じぶんを ほぞん<br>③ それを えらぶ</div>'
+    +'</div>'
     +'</div>'
     +'<div id="ccCropWrap" style="display:none;flex-direction:column;align-items:center">'
     +'<canvas id="ccStage" width="'+_ccW+'" height="'+_ccH+'" style="display:block;border-radius:14px;background:#060a14;touch-action:none;width:230px;height:230px"></canvas>'
@@ -3766,7 +3803,8 @@ function _showCustomCrop(){
       cctx.drawImage(_ccImg,_ccImgX,_ccImgY,dw,dh);
       cctx.drawImage(mask,0,0);
       cctx.strokeStyle='rgba(255,255,255,0.9)'; cctx.lineWidth=3;
-      cctx.beginPath(); cctx.arc(_ccCx,_ccCy,_ccR,0,Math.PI*2); cctx.stroke();
+      var eg2=_ccEggCv();
+      cctx.beginPath(); ctxEllipse(cctx,eg2.cx,eg2.cy,eg2.rx,eg2.ry,0,0,Math.PI*2); cctx.stroke();
       _ccDrawGuide(cctx);   // ★v304 顔ガイド（あごの線・頭のあたり）
     }
     function setZoom(nz){
@@ -3810,7 +3848,11 @@ function _showCustomCrop(){
               var down=new Image();
               down.onload=function(){ _ccImg=down; initLayout(); pickWrap.style.display='none'; cropWrap.style.display='flex'; render(); };
               down.onerror=function(){ _ccImg=image; initLayout(); pickWrap.style.display='none'; cropWrap.style.display='flex'; render(); };
-              down.src=tmp.toDataURL('image/jpeg',0.9);
+              // ★v304b JPEGには透明が無い。iPhoneの「被写体を切り抜く」で作ったPNGを
+              //   ここでJPEGに再エンコードすると、せっかくの切り抜きが潰れて背景が黒く埋まり、
+              //   _ccRemoveWhiteBg の「切り抜き済み」経路（四隅が透明）に入れなくなる。
+              //   iPhoneの写真は普通3000px超なので、必ずこの縮小経路を通っていた。
+              down.src=_ccHasAlpha(tmp) ? tmp.toDataURL('image/png') : tmp.toDataURL('image/jpeg',0.9);
             } else {
               _ccImg=image; initLayout(); pickWrap.style.display='none'; cropWrap.style.display='flex'; render();
             }
@@ -3876,13 +3918,17 @@ function _showCustomCrop(){
         // 実写など→円形クロップ＋縁5pxをソフトフェード（硬い縁の「ハメただけ感」を軽減）
         octx.drawImage(sq,0,0);
         var oim=octx.getImageData(0,0,256,256), od=oim.data;
+        // ★v304b 円 → たまご型。dist は「たまごの縁を1.0とした正規化距離」で、
+        //   縁の内側5px相当(=1-5/ry)だけソフトフェードする（従来の縁5pxと同じ考え方）。
+        var eg3=_ccEggPx(256);
+        var fadeFrom=1-5/eg3.ry;
         for(var oy=0;oy<256;oy++){
           for(var ox=0;ox<256;ox++){
-            var dx=ox-128, dyy=oy-128;
+            var dx=(ox-eg3.cx)/eg3.rx, dyy=(oy-eg3.cy)/eg3.ry;
             var dist=Math.sqrt(dx*dx+dyy*dyy);
             var oi=(oy*256+ox)*4;
-            if(dist>128){ od[oi+3]=0; }
-            else if(dist>123){ od[oi+3]=Math.round(od[oi+3]*(128-dist)/5); }
+            if(dist>1){ od[oi+3]=0; }
+            else if(dist>fadeFrom){ od[oi+3]=Math.round(od[oi+3]*(1-dist)/(1-fadeFrom)); }
           }
         }
         octx.putImageData(oim,0,0);
@@ -4098,7 +4144,7 @@ function _showCustomConfirm(isNew, editHero){
     +(isNew
       ? (_ccPendingSilhouette
           ? '<div style="color:#9fe4ff;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">✅ はいけいを きれいに けせたよ</div>'
-          : '<div style="color:#ffcc88;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">はいけいが けせなかったから まるく きりぬいたよ。<br><span style="color:#8fa8c0">しろい かべの まえで とると もっと きれいになるよ</span></div>')
+          : '<div style="color:#ffcc88;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">はいけいが けせなかったので あたまの かたちに きりぬいたよ。<br><span style="color:#8fa8c0">しゃしんアプリで じぶんを ながおし→ほぞん して えらぶと きれいに けせるよ</span></div>')
       : '');
   if(_showName){
     html+='<div style="color:#9fe4ff;font-size:12px;margin-bottom:6px">'+(isNew?'なまえをつけよう':'なまえ（タップで変えられるよ）')+'</div>'
