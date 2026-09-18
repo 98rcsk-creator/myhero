@@ -1736,6 +1736,8 @@ var bossClearPending=false; // ボス撃破→自動クリア予約
 var selectedChar='KENTO'; // 選択中キャラ（KENTO/ARISA/NINA/KAMATAKU）
 
 // ===== プレイヤー =====
+// ★v305 盾ガード中の移動速度（0＝進行不可）。§2-9 のとおり使用箇所より前で宣言する。
+var GUARD_SPD=0;
 // skillLv: 0=なし 1=2段ジャンプ 2=ソード 3=盾 4=巨大レーザー 5=無敵シールド
 var p={};
 var pJprev=false, pAprev=false;
@@ -5095,7 +5097,10 @@ function update(){
   if(gG() && hasSk(3)){ p.guardHold=Math.round(14*(eqShield().guardMul||1)); }  // 押すたびにガード延長(スター盾で+50%)
   else if(p.guardHold>0){ p.guardHold--; }
   var guarding=(hasSk(3))&&(gG()||p.guardHold>0);
-  var MAXSPD=guarding?1.5:(4.4*(p.trait==='speed'?1.22:1));  // 俊足：移動速度UP
+  // ★v305 ガード中は進行不可。盾は「止まって守る」構え。
+  //   0=完全停止 / 1.5=v304までの歩ける速度 / 4.4=通常速度。ここの数字だけで戻せる。
+  //   （進みながら構えると弾も体当たりも防げて実質無敵になっていたため）
+  var MAXSPD=guarding?GUARD_SPD:(4.4*(p.trait==='speed'?1.22:1));  // 俊足：移動速度UP
   // ★v260 坂：接地して歩いている間だけ上限を上下させる（攻撃・ジャンプには非干渉）
   if(p.onG && p.vx!==0) MAXSPD*=slopeSpd(p.x+pw()/2, p.vx>0?1:-1);
   var ACCEL=p.onG?0.7:0.5;        // 空中はやや鈍く（慣性感）
@@ -5815,7 +5820,12 @@ function update(){
     var bBox={x:b.x-b.r,y:b.y-b.r,w:b.r*2,h:b.r*2};
     if(p.ifrm<=0 && aabb({x:p.x,y:p.y,w:pw(),h:ph()},bBox)){
       bullets.splice(bi,1);
-      if((gG()||p.guardHold>0)&&hasSk(3)){
+      // ★v305 体当たりの判定(p.st==='guard')と条件をそろえた。
+      //   以前はここだけ「ボタンが押されているか」で見ていたため、
+      //   剣を振っている最中は「弾は防げるのに体当たりは食らう」という食い違いがあった。
+      //   p.st は 攻撃中→'atk' が先に評価されるので、振っている間はガードが外れる＝
+      //   「攻撃と防御は同時にできない」に統一される。
+      if(p.st==='guard'){
         // 盾スキル（LV3）＋防御ボタン → ブロック成功！
         burst(p.x+pw()/2,p.y+ph()*0.3,'#aaddff',10); // 青白いスパーク
         burst(p.x+pw()/2,p.y+ph()*0.3,'#ffffff',6);  // 白フラッシュ
