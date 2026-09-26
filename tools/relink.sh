@@ -4,7 +4,7 @@
 #
 # 使い方:
 #   sh tools/relink.sh                      … 本番（index.html）を検査
-#   sh tools/relink.sh test/mh_v304.html    … テスト用の別ページを検査
+#   sh tools/relink.sh test/foo.html        … テスト用の別ページを検査
 #
 # ★v304b テスト用URLを渡す運用を足したので、引数で対象を切り替えられるようにした。
 #   以前は本番URLしか見ていなかったため、テスト用URLを渡したときに
