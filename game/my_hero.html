@@ -3887,6 +3887,14 @@ function _showCustomCrop(){
     // ★v288 メニューの「新規作成」で選んだ写真が待っていれば、この画面を出した瞬間に処理して
     //   切り抜きUIへ直行する（写真選択ページを挟まない）。
     if(_ccPendingFile){ var _pf=_ccPendingFile; _ccPendingFile=null; _ccLoadFile(_pf); }
+    // ★v307 確定画面から「もどる」で来た場合。写真を選び直さずに調整の続きから。
+    //   _ccImgX/_ccImgY/_ccZoom/_ccBaseScale はトップレベル変数なので画面を作り直しても残る。
+    //   initLayout() を呼ぶと位置がリセットされるので呼ばない。
+    else if(_ccImg){
+      zoomSlider.value=Math.round(_ccZoom*100);
+      pickWrap.style.display='none'; cropWrap.style.display='flex';
+      render();
+    }
 
     zoomSlider.addEventListener('input',function(){ setZoom(parseInt(zoomSlider.value,10)/100); });
     tap(resetBtn,function(){ if(_ccImg){ initLayout(); render(); } });
@@ -3928,34 +3936,33 @@ function _showCustomCrop(){
       var out=document.createElement('canvas');
       out.width=256; out.height=256;
       var octx=out.getContext('2d');
-      if(silhouetteOK){
-        // 白背景を除去できた→自然な頭シルエット（円クリップ不要）
-        octx.drawImage(sq,0,0);
-      } else {
-        // 実写など→円形クロップ＋縁5pxをソフトフェード（硬い縁の「ハメただけ感」を軽減）
-        octx.drawImage(sq,0,0);
-        var oim=octx.getImageData(0,0,256,256), od=oim.data;
-        // ★v304b 円 → たまご型。dist は「たまごの縁を1.0とした正規化距離」で、
-        //   縁の内側5px相当(=1-5/ry)だけソフトフェードする（従来の縁5pxと同じ考え方）。
-        var eg3=_ccEggPx(256);
-        var fadeFrom=1-5/eg3.ry;
-        for(var oy=0;oy<256;oy++){
-          for(var ox=0;ox<256;ox++){
-            var dx=(ox-eg3.cx)/eg3.rx, dyy=(oy-eg3.cy)/eg3.ry;
-            var dist=Math.sqrt(dx*dx+dyy*dyy);
-            var oi=(oy*256+ox)*4;
-            if(dist>1){ od[oi+3]=0; }
-            else if(dist>fadeFrom){ od[oi+3]=Math.round(od[oi+3]*(1-dist)/(1-fadeFrom)); }
-          }
+      octx.drawImage(sq,0,0);
+      // ★v307 たまご型のトリムは「背景を消せたかどうか」に関係なく必ず掛ける。
+      //   v304b では除去に失敗したときだけ掛けていたため、iPhoneの「被写体を切り抜く」で
+      //   作った画像（＝除去は必ず成功する）だと、切り抜かれた人物まるごと ＝ 頭だけでなく
+      //   肩や服まで「頭」として描かれていた（実機で「枠外の身体部分まで拾った」と報告）。
+      //   アルファを下げるだけなので、すでに透明な部分はそのまま＝たまごとの交差になる。
+      //   dist は「たまごの縁を1.0とした正規化距離」で、縁の内側5px相当だけソフトフェードする。
+      var oim=octx.getImageData(0,0,256,256), od=oim.data;
+      var eg3=_ccEggPx(256);
+      var fadeFrom=1-5/eg3.ry;
+      for(var oy=0;oy<256;oy++){
+        for(var ox=0;ox<256;ox++){
+          var dx=(ox-eg3.cx)/eg3.rx, dyy=(oy-eg3.cy)/eg3.ry;
+          var dist=Math.sqrt(dx*dx+dyy*dyy);
+          var oi=(oy*256+ox)*4;
+          if(dist>1){ od[oi+3]=0; }
+          else if(dist>fadeFrom){ od[oi+3]=Math.round(od[oi+3]*(1-dist)/(1-fadeFrom)); }
         }
-        octx.putImageData(oim,0,0);
       }
+      octx.putImageData(oim,0,0);
       var dataURL=out.toDataURL('image/png');
       _ccPendingFace=dataURL;
       var cim=new Image();
       cim.onload=function(){
         applyCustomHead(cim);
-        _ccImg=null; // メモリ解放
+        // ★v307 ここで _ccImg を捨てると確定画面の「もどる」で調整に戻れないので残す。
+        //   解放は「この顔でスタート」「選び直す」「クロップ画面のもどる」で行う。
         _showCustomConfirm(true);
       };
       cim.onerror=function(){ mkBanner('⚠ 顔画像の反映に失敗しました'); };
@@ -4206,14 +4213,22 @@ function _showCustomConfirm(isNew, editHero){
         for(var i=0;i<cur.length;i++){ if(cur[i].id===editHero.id){ cur[i].name=nm; break; } }
         saveCustomList(cur);
       }
+      _ccImg=null;   // ★v307 作成フローを抜けるのでここで解放
       selectedChar='custom'; saveData(); doStart();
     });
     var rb=document.getElementById('ccRedoBtn');
-    if(rb) tap(rb,function(){ _showCustomCrop(); });
+    // ★v307 「選び直す」は別の写真を選び直す＝元画像を捨ててから写真選択に戻る
+    if(rb) tap(rb,function(){ _ccImg=null; _showCustomCrop(); });
     var lb=document.getElementById('ccListBtn');
     if(lb) tap(lb,function(){ _showCustomList(); });
     var bb2=document.getElementById('ccBackBtn2');
-    if(bb2) tap(bb2,function(){ SELECT_STEP=1; _showGenderStep(); });
+    // ★v307 実機で「戻るを押すと写真を選ぶ前まで戻ってしまう。顔の調整に戻りたい」と報告。
+    //   元画像が残っていれば切り抜き画面（＝顔の調整）へ戻す。位置と拡大率はそのまま。
+    //   そこからさらに「もどる」を押せば、従来どおりリスト／性別選択へ抜けられる。
+    if(bb2) tap(bb2,function(){
+      if(_ccImg){ _showCustomCrop(); }
+      else { SELECT_STEP=1; _showGenderStep(); }
+    });
   },50);
 }
 
