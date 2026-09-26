@@ -3221,6 +3221,21 @@ function bindNav(){
     (function(el){ _csTap(el,function(){ navGo(el.dataset.nav); }); })(els[i]);
   }
 }
+// ★v306 選択マーク（金リング）だけを付け替える。
+// 以前はカードをタップするたびに _showGenderStep() で画面ごと作り直しており、
+// innerHTML の入れ替えと ov.scrollTop=0 の二重で、下までスクロールしていても
+// 毎回いちばん上へ飛ばされていた（実機で「地味にストレス」と報告）。
+// 描画で変わるのは .csSelRing がどのカードに付くかだけなので、そこだけ触る。
+function _csMarkSel(){
+  var cards=document.querySelectorAll('.csHitCard');
+  for(var i=0;i<cards.length;i++){
+    var el=cards[i];
+    var on=(el.id==='customSlot') ? !!_pickedCustom
+                                  : (!_pickedCustom && selectedGender===el.dataset.gender);
+    if(on) el.classList.add('csSelRing'); else el.classList.remove('csSelRing');
+  }
+}
+
 function _showGenderStep(){
   if(typeof _pickedCustom==='undefined') _pickedCustom=false;
   // ★v274 ホームv267と同じ「1枚絵＋透明な当たり判定」方式。
@@ -3242,11 +3257,11 @@ function _showGenderStep(){
   setTimeout(function(){
     document.querySelectorAll('.charCard[data-gender]').forEach(function(el){
       _csTap(el,function(){ _pickedCustom=false;
-        selectedGender=el.dataset.gender; _showGenderStep(); });
+        selectedGender=el.dataset.gender; _csMarkSel(); });   // ★v306 作り直さない＝スクロール位置が飛ばない
     });
     // ★タップは「選択」のみ。進むのは「次へ」ボタン（MEN/WOMENと同じ操作感）
     _csTap(document.getElementById('customSlot'),function(){
-      _pickedCustom=true; _showGenderStep(); });
+      _pickedCustom=true; _csMarkSel(); });                   // ★v306 同上
     _csTap(document.getElementById('nextBtn'),function(){
       if(_pickedCustom){
         var l=loadCustomList();
