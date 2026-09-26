@@ -1736,6 +1736,8 @@ var bossClearPending=false; // ボス撃破→自動クリア予約
 var selectedChar='KENTO'; // 選択中キャラ（KENTO/ARISA/NINA/KAMATAKU）
 
 // ===== プレイヤー =====
+// ★v305 盾ガード中の移動速度（0＝進行不可）。§2-9 のとおり使用箇所より前で宣言する。
+var GUARD_SPD=0;
 // skillLv: 0=なし 1=2段ジャンプ 2=ソード 3=盾 4=巨大レーザー 5=無敵シールド
 var p={};
 var pJprev=false, pAprev=false;
@@ -3356,9 +3358,63 @@ function _showFaceStep(){
 var _ccPendingFile=null;   // ★v288 メニューで選んだ写真を切り抜き画面へ渡す
 var _ccImg=null, _ccBaseScale=1, _ccZoom=1, _ccImgX=0, _ccImgY=0;
 var _ccPendingFace=null; // ★クロップ確定直後の顔dataURL（名前入力→リスト追加までの一時置き場）
+var _ccPendingSilhouette=false; // ★v304 その顔で白背景を除去できたか（確定画面でユーザーに伝える）
+// ★v304 プレビューをゲーム中と同じ大きさで出すための倍率。
+// drawStick は HR=11 / drawCharPreview は HR=10。頭の描画高はどちらも HR*3.4 なので 11/10。
+var _CC_GAME_SCALE=1.1;
 var _ccDragging=false, _ccStartPX=0, _ccStartPY=0, _ccStartImgX=0, _ccStartImgY=0;
 var _ccW=260, _ccH=260, _ccCx=130, _ccCy=130, _ccR=110;
 var _ccMaskCanvas=null;
+// ★v304b 切り抜きの形。丸 → 頭のかたち（たまご型）。
+// 丸だと四隅に部屋の背景が必ず残る。形だけで切るので色の判定に一切依存せず、
+// どんな写真でも必ず同じだけ背景が落ちる（_ccRemoveWhiteBg が失敗しても効く）。
+// 保存される正方形（＝円の外接四角・256px）に対する比率で持つ。canvas側もここから導く。
+// ガイドのたまご（_ccDrawGuide の rx=72/ry=88）より一回り大きい＝髪が多少はみ出しても切れない。
+var CC_EGG={cx:0.5, cy:0.4438, rx:0.3727, ry:0.4273};
+// 比率 → 切り抜きcanvasの座標
+function _ccEggCv(){
+  var L=_ccCx-_ccR, T=_ccCy-_ccR, S=_ccR*2;
+  return {cx:L+CC_EGG.cx*S, cy:T+CC_EGG.cy*S, rx:CC_EGG.rx*S, ry:CC_EGG.ry*S};
+}
+// 比率 → 保存する正方形(N px)の座標
+function _ccEggPx(N){
+  return {cx:CC_EGG.cx*N, cy:CC_EGG.cy*N, rx:CC_EGG.rx*N, ry:CC_EGG.ry*N};
+}
+
+// ★v304 切り抜き枠の「顔ガイド」。
+// 実機で「写真のうち61%が体」だった＝顔が22.7pxしかなかった。枠がただの丸で、
+// 何を入れるのが正解かを一言も言っていなかったのが原因。
+// 保存される正方形は円の外接四角なので、画像の比率 f → canvas y = (_ccCy-_ccR)+f*_ccR*2。
+// HEAD_META.custom（chinY=108/128・faceCY=60/128）と同じ比率で引くので、
+// ガイドどおりに切るとゲーム側のあごアンカーと一致する。
+function _ccGuideY(f){ return (_ccCy-_ccR)+f*(_ccR*2); }
+function _ccDrawGuide(c2){
+  var chinY=_ccGuideY(108/128), eyeY=_ccGuideY(60/128);
+  var rx=72, crown=chinY-176, cy=(crown+chinY)/2, ry=(chinY-crown)/2;
+  c2.save();
+  // ① 頭のあたり（ここいっぱいに顔を入れる）
+  c2.setLineDash([6,5]);
+  c2.lineWidth=3.2; c2.strokeStyle='rgba(0,0,0,0.38)';           // 写真の上でも見えるよう黒で裏打ち
+  c2.beginPath(); ctxEllipse(c2,_ccCx,cy,rx,ry,0,0,Math.PI*2); c2.stroke();
+  c2.lineWidth=1.8; c2.strokeStyle='rgba(255,228,77,0.62)';
+  c2.beginPath(); ctxEllipse(c2,_ccCx,cy,rx,ry,0,0,Math.PI*2); c2.stroke();
+  // ② 目のたかさ（控えめ・位置合わせの補助）
+  c2.setLineDash([4,6]);
+  c2.lineWidth=1; c2.strokeStyle='rgba(159,228,255,0.42)';
+  c2.beginPath(); c2.moveTo(_ccCx-rx*0.78,eyeY); c2.lineTo(_ccCx+rx*0.78,eyeY); c2.stroke();
+  // ③ あごの線（いちばん大事なので実線で強く）
+  c2.setLineDash([]);
+  c2.lineWidth=4; c2.strokeStyle='rgba(0,0,0,0.42)';
+  c2.beginPath(); c2.moveTo(_ccCx-rx-8,chinY); c2.lineTo(_ccCx+rx+8,chinY); c2.stroke();
+  c2.lineWidth=2.4; c2.strokeStyle='rgba(255,228,77,0.95)';
+  c2.beginPath(); c2.moveTo(_ccCx-rx-8,chinY); c2.lineTo(_ccCx+rx+8,chinY); c2.stroke();
+  c2.font='bold 13px sans-serif'; c2.textAlign='center'; c2.textBaseline='top';
+  c2.lineWidth=3; c2.strokeStyle='rgba(0,0,0,0.55)';
+  c2.strokeText('あご',_ccCx,chinY+4);
+  c2.fillStyle='rgba(255,228,77,0.95)';
+  c2.fillText('あご',_ccCx,chinY+4);
+  c2.restore();
+}
 
 function _ccBuildMask(){
   if(_ccMaskCanvas) return _ccMaskCanvas;
@@ -3368,7 +3424,8 @@ function _ccBuildMask(){
   mctx.fillStyle='rgba(8,10,18,0.66)';
   mctx.fillRect(0,0,_ccW,_ccH);
   mctx.globalCompositeOperation='destination-out';
-  mctx.beginPath(); mctx.arc(_ccCx,_ccCy,_ccR,0,Math.PI*2); mctx.fill();
+  var eg=_ccEggCv();
+  mctx.beginPath(); ctxEllipse(mctx,eg.cx,eg.cy,eg.rx,eg.ry,0,0,Math.PI*2); mctx.fill();
   mctx.globalCompositeOperation='source-over';
   _ccMaskCanvas=mc;
   return mc;
@@ -3449,6 +3506,20 @@ function _ccIllustrate(srcCanvas){
 // ★v204(①): 白限定だった判定を撤廃し、黒/グレー/クリーム/任意の無地色に対応。
 //   服の色など内側は縁と繋がっていないため消えない。
 // 戻り値: true=除去した(シルエット化成功) / false=無地背景ではない(実写等→呼び出し側で円形処理)
+// ★v304b 透明が1画素でもあるか。縮小時にPNGとJPEGのどちらで焼き直すかの判定に使う。
+// 2pxおき（全画素の1/4）で十分：切り抜き画像の透明域は広いので粗い走査でも必ず当たる。
+function _ccHasAlpha(cv){
+  try{
+    var g=cv.getContext('2d'), w=cv.width, h=cv.height;
+    var d=g.getImageData(0,0,w,h).data;
+    for(var y=0;y<h;y+=2){
+      var row=y*w*4;
+      for(var x=0;x<w;x+=2){ if(d[row+x*4+3]<250) return true; }
+    }
+  }catch(e){}
+  return false;
+}
+
 function _ccRemoveWhiteBg(cv){
   var w=cv.width,h=cv.height,c2=cv.getContext('2d');
   var img=c2.getImageData(0,0,w,h),d=img.data;
@@ -3662,10 +3733,20 @@ function _showCustomCrop(){
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-top:1px solid rgba(0,0,0,0.09);color:#9aa0aa;font-size:13px">ファイルを選択<span style="font-size:14px;opacity:0.45">📁</span></div>'
     +'</div>'
     +'<div style="color:#8fa8c0;font-size:11px;margin-top:6px">↑ これは見本だよ</div>'
+    // ★v304b iPhoneの「被写体を切り抜く」で作ったPNGは _ccRemoveWhiteBg が
+    //   「切り抜き済み」として最高品質のまま受け取れる（四隅が透明なら素通しする経路）。
+    //   実装は前からあったのに誰にも案内していなかった。ここが一番キレイになる道。
+    +'<div style="margin-top:12px;padding:9px 12px;background:rgba(255,228,77,0.10);border:1px solid rgba(255,228,77,0.35);border-radius:10px;max-width:250px">'
+    +'<div style="color:#ffe44d;font-size:12px;font-weight:bold;margin-bottom:4px;text-align:center">✨ はいけいを けしたいとき</div>'
+    +'<div style="color:#c8d6e4;font-size:11px;line-height:1.65">① しゃしんアプリで じぶんを ながおし<br>② でてきた じぶんを ほぞん<br>③ それを えらぶ</div>'
+    +'</div>'
     +'</div>'
     +'<div id="ccCropWrap" style="display:none;flex-direction:column;align-items:center">'
     +'<canvas id="ccStage" width="'+_ccW+'" height="'+_ccH+'" style="display:block;border-radius:14px;background:#060a14;touch-action:none;width:230px;height:230px"></canvas>'
-    +'<div style="color:#9fe4ff;font-size:12px;margin:10px 0 6px">ドラッグで位置調整・スライダーで拡大縮小</div>'
+    // ★v304 「どう操作するか」より先に「何が正解か」を言う。
+    //   実機で写真の61%が体になっていた原因は、枠がただの丸で目標を示していなかったこと。
+    +'<div style="color:#ffe44d;font-size:13px;font-weight:bold;margin:10px 0 2px">かおを わくいっぱいに！</div>'
+    +'<div style="color:#9fe4ff;font-size:12px;margin-bottom:6px;line-height:1.5">あごを きいろい せんに あわせてね<br><span style="color:#8fa8c0;font-size:11px">ドラッグでいどう・スライダーで大きさ</span></div>'
     +'<div style="display:flex;align-items:center;gap:10px;width:230px;margin-bottom:14px">'
     +'<span style="color:#9fe4ff;font-size:17px">－</span>'
     +'<input type="range" id="ccZoomSlider" min="100" max="300" value="100" style="flex:1;height:6px">'
@@ -3724,7 +3805,9 @@ function _showCustomCrop(){
       cctx.drawImage(_ccImg,_ccImgX,_ccImgY,dw,dh);
       cctx.drawImage(mask,0,0);
       cctx.strokeStyle='rgba(255,255,255,0.9)'; cctx.lineWidth=3;
-      cctx.beginPath(); cctx.arc(_ccCx,_ccCy,_ccR,0,Math.PI*2); cctx.stroke();
+      var eg2=_ccEggCv();
+      cctx.beginPath(); ctxEllipse(cctx,eg2.cx,eg2.cy,eg2.rx,eg2.ry,0,0,Math.PI*2); cctx.stroke();
+      _ccDrawGuide(cctx);   // ★v304 顔ガイド（あごの線・頭のあたり）
     }
     function setZoom(nz){
       if(!_ccImg) return;
@@ -3767,7 +3850,11 @@ function _showCustomCrop(){
               var down=new Image();
               down.onload=function(){ _ccImg=down; initLayout(); pickWrap.style.display='none'; cropWrap.style.display='flex'; render(); };
               down.onerror=function(){ _ccImg=image; initLayout(); pickWrap.style.display='none'; cropWrap.style.display='flex'; render(); };
-              down.src=tmp.toDataURL('image/jpeg',0.9);
+              // ★v304b JPEGには透明が無い。iPhoneの「被写体を切り抜く」で作ったPNGを
+              //   ここでJPEGに再エンコードすると、せっかくの切り抜きが潰れて背景が黒く埋まり、
+              //   _ccRemoveWhiteBg の「切り抜き済み」経路（四隅が透明）に入れなくなる。
+              //   iPhoneの写真は普通3000px超なので、必ずこの縮小経路を通っていた。
+              down.src=_ccHasAlpha(tmp) ? tmp.toDataURL('image/png') : tmp.toDataURL('image/jpeg',0.9);
             } else {
               _ccImg=image; initLayout(); pickWrap.style.display='none'; cropWrap.style.display='flex'; render();
             }
@@ -3822,6 +3909,7 @@ function _showCustomCrop(){
       sq.getContext('2d').drawImage(_ccImg,sx,sy,sSize,sSize,0,0,256,256);
       var silhouetteOK=false;
       try{ silhouetteOK=_ccRemoveWhiteBg(sq); }catch(err){ silhouetteOK=false; }
+      _ccPendingSilhouette=silhouetteOK;   // ★v304 確定画面で結果を伝えるため持ち越す
       var out=document.createElement('canvas');
       out.width=256; out.height=256;
       var octx=out.getContext('2d');
@@ -3832,13 +3920,17 @@ function _showCustomCrop(){
         // 実写など→円形クロップ＋縁5pxをソフトフェード（硬い縁の「ハメただけ感」を軽減）
         octx.drawImage(sq,0,0);
         var oim=octx.getImageData(0,0,256,256), od=oim.data;
+        // ★v304b 円 → たまご型。dist は「たまごの縁を1.0とした正規化距離」で、
+        //   縁の内側5px相当(=1-5/ry)だけソフトフェードする（従来の縁5pxと同じ考え方）。
+        var eg3=_ccEggPx(256);
+        var fadeFrom=1-5/eg3.ry;
         for(var oy=0;oy<256;oy++){
           for(var ox=0;ox<256;ox++){
-            var dx=ox-128, dyy=oy-128;
+            var dx=(ox-eg3.cx)/eg3.rx, dyy=(oy-eg3.cy)/eg3.ry;
             var dist=Math.sqrt(dx*dx+dyy*dyy);
             var oi=(oy*256+ox)*4;
-            if(dist>128){ od[oi+3]=0; }
-            else if(dist>123){ od[oi+3]=Math.round(od[oi+3]*(128-dist)/5); }
+            if(dist>1){ od[oi+3]=0; }
+            else if(dist>fadeFrom){ od[oi+3]=Math.round(od[oi+3]*(1-dist)/(1-fadeFrom)); }
           }
         }
         octx.putImageData(oim,0,0);
@@ -4043,7 +4135,19 @@ function _showCustomConfirm(isNew, editHero){
   var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
     +'<div class="title-logo" style="font-size:24px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6)">マイヒーローをつくる</div>'
     +'<div style="color:#ffcc88;font-size:13px;letter-spacing:2px;margin-bottom:14px">― この顔でいい？ ―</div>'
-    +'<canvas id="ccConfirmPreview" width="110" height="138" style="display:block;margin-bottom:10px"></canvas>';
+    // ★v304 大きいプレビューだけだと「ちゃんと顔が見えてる」と思って進んでしまう。
+    //   実機のゲーム中では頭の描画枠は 37.4px しかないので、等倍を並べて決める前に気づけるようにする。
+    +'<div style="display:flex;align-items:flex-end;justify-content:center;gap:18px;margin-bottom:8px">'
+    +'<div style="text-align:center"><canvas id="ccConfirmPreview" width="110" height="96" style="display:block"></canvas>'
+    +'<div style="color:#8fa8c0;font-size:10px;margin-top:2px">おおきく みたところ</div></div>'
+    +'<div style="text-align:center"><canvas id="ccSizePreview" width="70" height="64" style="display:block"></canvas>'
+    +'<div style="color:#ffcc88;font-size:10px;margin-top:2px">ゲーム中のおおきさ</div></div>'
+    +'</div>'
+    +(isNew
+      ? (_ccPendingSilhouette
+          ? '<div style="color:#9fe4ff;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">✅ はいけいを きれいに けせたよ</div>'
+          : '<div style="color:#ffcc88;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">はいけいが けせなかったので あたまの かたちに きりぬいたよ。<br><span style="color:#8fa8c0">しゃしんアプリで じぶんを ながおし→ほぞん して えらぶと きれいに けせるよ</span></div>')
+      : '');
   if(_showName){
     html+='<div style="color:#9fe4ff;font-size:12px;margin-bottom:6px">'+(isNew?'なまえをつけよう':'なまえ（タップで変えられるよ）')+'</div>'
       +'<input type="text" id="ccNameInput" maxlength="10" value="'+_escHtml(_nameVal)+'" style="width:220px;font-size:16px;text-align:center;padding:8px 10px;border-radius:10px;border:1.5px solid rgba(127,216,255,0.5);background:rgba(0,0,0,0.3);color:#fff;margin-bottom:14px">';
@@ -4061,7 +4165,10 @@ function _showCustomConfirm(isNew, editHero){
   ov.style.display='flex';
   setTimeout(function(){
     var cv2=document.getElementById('ccConfirmPreview');
-    if(cv2) drawCharPreview(cv2.getContext('2d'),55,130,'custom',false,1.75);
+    if(cv2) drawCharPreview(cv2.getContext('2d'),55,88,'custom',false,1.75);
+    // ★v304 ゲーム中と同じ大きさ（drawStick の HR=11 / preview の HR=10 → 1.1倍）
+    var cv3=document.getElementById('ccSizePreview');
+    if(cv3) drawCharPreview(cv3.getContext('2d'),35,56,'custom',false,_CC_GAME_SCALE,false,true);
     // ★v285 §2-12: touchstart で preventDefault するとiOSでスクロールが死ぬ。
     //   共通の _csTap（指の移動8px未満のときだけ touchend で発火）に統一する。
     //   ⚠ _showCustomCrop は cropmode で意図的にスクロール禁止なので置き換えない。
@@ -4095,7 +4202,10 @@ function _showCustomConfirm(isNew, editHero){
   },50);
 }
 
-function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic){
+// clipHead: ★v304 ゲーム中(drawStick)と同じく肩の高さで頭部写真を切る。
+//   既定は false ＝ 従来どおり写真を切らずに描く（キャラ選択の見た目は変えない）。
+//   「ゲーム中のおおきさ」プレビューだけが true を渡す。ここを合わせないと見本が嘘になる。
+function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead){
   var c=CHARS[cid];
   if(!c) return;
   scale=scale||1;
@@ -4237,7 +4347,17 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic){
     var hdw=hm.w*hsc, hdh=hm.h*hsc;
     var hdx=-(hm.cx*hsc);
     var hdy=(shouldY+2)-(hm.chinY*hsc)+(hcfg.oy||0);
-    ctx2.drawImage(hd, hdx, hdy, hdw, hdh);
+    if(clipHead){
+      // drawStick と同じ切り方（肩のすぐ下 shouldY+4 まで）
+      ctx2.save();
+      ctx2.beginPath();
+      ctx2.rect(hdx-2, hdy-2, hdw+4, ((shouldY+4)-hdy)+2);
+      ctx2.clip();
+      ctx2.drawImage(hd, hdx, hdy, hdw, hdh);
+      ctx2.restore();
+    } else {
+      ctx2.drawImage(hd, hdx, hdy, hdw, hdh);
+    }
   } else {
     // ── ベクター頭（性別選択 or 画像未ロード）──
     ctx2.save();ctx2.lineJoin='round';
@@ -4977,7 +5097,10 @@ function update(){
   if(gG() && hasSk(3)){ p.guardHold=Math.round(14*(eqShield().guardMul||1)); }  // 押すたびにガード延長(スター盾で+50%)
   else if(p.guardHold>0){ p.guardHold--; }
   var guarding=(hasSk(3))&&(gG()||p.guardHold>0);
-  var MAXSPD=guarding?1.5:(4.4*(p.trait==='speed'?1.22:1));  // 俊足：移動速度UP
+  // ★v305 ガード中は進行不可。盾は「止まって守る」構え。
+  //   0=完全停止 / 1.5=v304までの歩ける速度 / 4.4=通常速度。ここの数字だけで戻せる。
+  //   （進みながら構えると弾も体当たりも防げて実質無敵になっていたため）
+  var MAXSPD=guarding?GUARD_SPD:(4.4*(p.trait==='speed'?1.22:1));  // 俊足：移動速度UP
   // ★v260 坂：接地して歩いている間だけ上限を上下させる（攻撃・ジャンプには非干渉）
   if(p.onG && p.vx!==0) MAXSPD*=slopeSpd(p.x+pw()/2, p.vx>0?1:-1);
   var ACCEL=p.onG?0.7:0.5;        // 空中はやや鈍く（慣性感）
@@ -5697,7 +5820,12 @@ function update(){
     var bBox={x:b.x-b.r,y:b.y-b.r,w:b.r*2,h:b.r*2};
     if(p.ifrm<=0 && aabb({x:p.x,y:p.y,w:pw(),h:ph()},bBox)){
       bullets.splice(bi,1);
-      if((gG()||p.guardHold>0)&&hasSk(3)){
+      // ★v305 体当たりの判定(p.st==='guard')と条件をそろえた。
+      //   以前はここだけ「ボタンが押されているか」で見ていたため、
+      //   剣を振っている最中は「弾は防げるのに体当たりは食らう」という食い違いがあった。
+      //   p.st は 攻撃中→'atk' が先に評価されるので、振っている間はガードが外れる＝
+      //   「攻撃と防御は同時にできない」に統一される。
+      if(p.st==='guard'){
         // 盾スキル（LV3）＋防御ボタン → ブロック成功！
         burst(p.x+pw()/2,p.y+ph()*0.3,'#aaddff',10); // 青白いスパーク
         burst(p.x+pw()/2,p.y+ph()*0.3,'#ffffff',6);  // 白フラッシュ
