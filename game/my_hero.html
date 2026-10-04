@@ -2795,6 +2795,7 @@ function applyCustomColors(col){
   c.leg  = col.leg  ? mhRamp(col.leg)  : o.leg.slice();
   c.boot = col.boot ? mhRamp(col.boot) : o.boot.slice();
   c.acc  = col.acc  || o.acc;
+  c.accSet = !!col.acc;   // ★v311 マントの色を自分で選んだか（ヒーロースーツの赤マントを置き換えるかの判定）
 }
 // アクティブなマイヒーローの色。顔(yk_custom_face)と同じ扱いで鏡像を持つ。
 function saveActiveColors(col){
@@ -3471,6 +3472,7 @@ var _ccPendingFile=null;   // ★v288 メニューで選んだ写真を切り抜
 var _ccImg=null, _ccBaseScale=1, _ccZoom=1, _ccImgX=0, _ccImgY=0;
 var _ccPendingFace=null; // ★クロップ確定直後の顔dataURL（名前入力→リスト追加までの一時置き場）
 var _ccPendingSilhouette=false; // ★v304 その顔で白背景を除去できたか（確定画面でユーザーに伝える）
+var _ccPendingName=null, _ccPendingCol=null; // ★v310 新規作成中に色えらびから顔の確認へ戻ったとき、入力済みの名前と色を覚えておく
 // ★v304 プレビューをゲーム中と同じ大きさで出すための倍率。
 // drawStick は HR=11 / drawCharPreview は HR=10。頭の描画高はどちらも HR*3.4 なので 11/10。
 var _CC_GAME_SCALE=1.1;
@@ -4055,6 +4057,7 @@ function _showCustomCrop(){
       octx.putImageData(oim,0,0);
       var dataURL=out.toDataURL('image/png');
       _ccPendingFace=dataURL;
+      _ccPendingName=null; _ccPendingCol=null;   // ★v310 新しい顔＝作り直しなので前回の入力は捨てる
       var cim=new Image();
       cim.onload=function(){
         applyCustomHead(cim);
@@ -4246,92 +4249,114 @@ function _showCustomList(){
   },50);
 }
 
-// ★v309 からだを きせかえ。4スロット×12色をタップで選ぶ（子ども向けなのでスライダーにしない）。
-// 選んだ1色から6段を mhRamp で作って CHARS.custom に入れ、その場でプレビューに反映する。
-// hero を渡すと保存できる。hero が無い（新規作成の途中）ときは見た目だけ変えて保存しない。
-function _showBodyEditor(hero){
-  var cur=(hero&&hero.col)?{body:hero.col.body,leg:hero.col.leg,boot:hero.col.boot,acc:hero.col.acc}:{};
+// ★v310 ふくの いろを 1部位ずつ えらぶ（からだ→あし→くつ→マント→スタート）。
+// v309 は4部位×12色を1ページに並べ、確認画面の小さいボタンから入る作りだった。
+// 実機で「ボタンがわかりにくい。一個ずつ選択してスタートする行程がいい」と指摘されたので、
+// 新規作成は顔を決めたあと必ずこの流れを通り、最後の画面からそのままスタートする。
+// 1画面＝1部位の12色だけなのでスクロールが要らない（v309のロゴ帯との重なりも出ない）。
+// st = {isNew, hero, name, cur:{body,leg,boot,acc}, step:0..3, before:元の色(やめたとき戻す)}
+function _showColorStep(st){
+  var sl=MH_SLOTS[st.step], last=(st.step===MH_SLOTS.length-1), cur=st.cur;
+  var chips=MH_SLOTS.map(function(x,i){
+    var on=(i===st.step);
+    return '<div style="padding:3px 9px;border-radius:10px;font-size:11px;font-weight:bold;'
+      +(on?'background:#ffe44d;color:#3a2a00':'background:rgba(255,255,255,0.10);color:'+(i<st.step?'#bfe6ff':'#6f8ba0'))+'">'
+      +(i<st.step?'✓ ':'')+x.name+'</div>';
+  }).join('<div style="color:#6f8ba0;font-size:10px">›</div>');
   var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
-    +'<div class="title-logo" style="font-size:23px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6)">からだを きせかえ</div>'
-    +'<div style="color:#ffcc88;font-size:12px;letter-spacing:2px;margin-bottom:10px">― すきな いろを えらんでね ―</div>'
-    // ★v309 色見本が4スロット分あって画面に収まらないので、プレビューは上に貼り付けておく。
-    //   下のスロットを選んでいる最中も結果が見えないと、選ぶ意味がない。
-    //   WKWebViewで sticky が効かなくても通常の流れに戻るだけで、退行はしない。
-    +'<div style="position:sticky;top:0;z-index:5;width:100%;display:flex;flex-direction:column;align-items:center;'
-      +'padding:6px 0 4px;margin-bottom:8px;background:linear-gradient(180deg,rgba(8,20,40,0.97) 70%,rgba(8,20,40,0))">'
-      +'<canvas id="mhBodyPrev" width="110" height="96" style="display:block"></canvas>'
-      +'<div style="color:#8fa8c0;font-size:10px;margin-top:2px">ゲーム中のおおきさ</div>'
-    +'</div>';
-  MH_SLOTS.forEach(function(sl){
-    html+='<div style="width:100%;max-width:320px;margin-bottom:12px">'
-      +'<div style="color:#9fe4ff;font-size:12px;font-weight:bold;margin-bottom:5px;text-align:left">'
-        +sl.name+(sl.note?'<span style="color:#6f8ba0;font-weight:normal;font-size:10px">　'+sl.note+'</span>':'')+'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">';
-    MH_PALETTE.forEach(function(c){
-      var on=(cur[sl.key]===c.hex);
-      html+='<div class="mhSw" data-slot="'+sl.key+'" data-hex="'+c.hex+'" title="'+c.name+'" '
-        +'style="height:30px;border-radius:7px;background:'+c.hex+';cursor:pointer;'
-        +'border:'+(on?'3px solid #ffe44d':'2px solid rgba(255,255,255,0.22)')+';box-sizing:border-box"></div>';
-    });
-    html+='</div></div>';
+    +'<div class="title-logo" style="font-size:22px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6)">ふくの いろを えらぼう</div>'
+    +'<div style="display:flex;align-items:center;justify-content:center;gap:4px;margin:0 0 6px">'+chips+'</div>'
+    +'<div style="display:flex;align-items:flex-end;justify-content:center;gap:18px;margin-bottom:2px">'
+    +'<div style="text-align:center"><canvas id="mhStepPrev" width="110" height="96" style="display:block"></canvas>'
+    +'<div style="color:#8fa8c0;font-size:10px;margin-top:2px">おおきく みたところ</div></div>'
+    +'<div style="text-align:center"><canvas id="mhStepSize" width="70" height="64" style="display:block"></canvas>'
+    +'<div style="color:#ffcc88;font-size:10px;margin-top:2px">ゲーム中のおおきさ</div></div>'
+    +'</div>'
+    +'<div style="color:#9fe4ff;font-size:15px;font-weight:bold;margin:2px 0 6px">'
+      +sl.name+'の いろ'+(sl.note?'<span style="color:#6f8ba0;font-weight:normal;font-size:11px">（'+sl.note+'）</span>':'')+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px;width:100%;max-width:300px;margin-bottom:6px">';
+  MH_PALETTE.forEach(function(c){
+    html+='<div class="mhSw" data-hex="'+c.hex+'" title="'+c.name+'" '
+      +'style="height:33px;border-radius:9px;background:'+c.hex+';cursor:pointer;box-sizing:border-box;'
+      +'border:'+(cur[sl.key]===c.hex?'3px solid #ffe44d':'2px solid rgba(255,255,255,0.22)')+'"></div>';
   });
-  html+='<div style="color:#8fa8c0;font-size:11px;line-height:1.5;margin:2px 0 14px;max-width:300px;text-align:center">'
-      +'よろいを きると からだの いろは よろいの いろに なるよ</div>'
-    +'<div class="menuBtnMain" id="mhColOk" style="margin-top:0;font-size:17px">▶ これでOK</div>'
+  html+='</div>'
+    +'<div style="color:#8fa8c0;font-size:11px;line-height:1.5;min-height:16px;margin-bottom:8px;max-width:300px;text-align:center">'
+      +(sl.key==='body'?'よろいを きると からだは よろいの いろに なるよ':(sl.key==='acc'?'せなかで ひらっと なびくよ。よろいを きても この いろ':''))+'</div>'
+    +'<div class="menuBtnMain" id="mhStepNext" style="margin-top:0;font-size:18px">'+(last?'▶ これで スタート！':'つぎへ ▶')+'</div>'
     +'<div class="menuRow">'
-    +'<div class="uiBtn info" id="mhColReset" style="font-size:14px">もとに もどす</div>'
-    +'<div class="uiBtn info" id="mhColBack" style="font-size:14px">◀ やめる</div>'
+    +'<div class="uiBtn info" id="mhStepBack" style="font-size:14px">◀ もどる</div>'
+    +'<div class="uiBtn info" id="mhStepReset" style="font-size:14px">もとの いろ</div>'
     +'</div>';
   ov.className='scrollable mhbg';
   ov.innerHTML=html;
   ov.style.display='flex';
-  var before=(hero&&hero.col)?JSON.parse(JSON.stringify(hero.col)):null;
+  ov.scrollTop=0;
   applyCustomColors(cur);
   setTimeout(function(){
     function draw(){
-      var cv=document.getElementById('mhBodyPrev');
-      if(cv){ var g=cv.getContext('2d'); g.clearRect(0,0,110,96); drawCharPreview(g,55,88,'custom',false,_CC_GAME_SCALE,false,true); }
+      var cc=CHARS.custom.acc;
+      var cv=document.getElementById('mhStepPrev');
+      if(cv){ var g=cv.getContext('2d'); g.clearRect(0,0,110,96); drawCharPreview(g,55,88,'custom',false,1.75,false,false,cc); }
+      var cv2=document.getElementById('mhStepSize');
+      if(cv2){ var g2=cv2.getContext('2d'); g2.clearRect(0,0,70,64); drawCharPreview(g2,35,56,'custom',false,_CC_GAME_SCALE,false,true,cc); }
     }
     draw();
     // ★v2-14: 色を変えても画面を作り直さない（選択枠の付け替えとプレビュー再描画だけ）
     document.querySelectorAll('.mhSw').forEach(function(el){
       _csTap(el,function(){
-        var k=el.dataset.slot;
-        cur[k]=el.dataset.hex;
-        document.querySelectorAll('.mhSw[data-slot="'+k+'"]').forEach(function(o){
+        cur[sl.key]=el.dataset.hex;
+        document.querySelectorAll('.mhSw').forEach(function(o){
           o.style.border=(o===el)?'3px solid #ffe44d':'2px solid rgba(255,255,255,0.22)';
         });
         applyCustomColors(cur); draw();
       });
     });
-    _csTap(document.getElementById('mhColReset'),function(){
-      cur={};
+    _csTap(document.getElementById('mhStepReset'),function(){
+      delete cur[sl.key];
       document.querySelectorAll('.mhSw').forEach(function(o){ o.style.border='2px solid rgba(255,255,255,0.22)'; });
       applyCustomColors(cur); draw();
     });
-    _csTap(document.getElementById('mhColOk'),function(){
-      var keep=(cur.body||cur.leg||cur.boot||cur.acc)?cur:null;
-      if(hero){
-        var l=loadCustomList();
-        for(var i=0;i<l.length;i++){ if(l[i].id===hero.id){ l[i].col=keep; hero.col=keep; break; } }
-        saveCustomList(l);
-      }
-      saveActiveColors(keep);
-      applyCustomColors(keep);
-      _showCustomConfirm(false, hero);
+    _csTap(document.getElementById('mhStepNext'),function(){
+      if(!last){ st.step++; _showColorStep(st); return; }
+      _mhFinish(st);
     });
-    _csTap(document.getElementById('mhColBack'),function(){
-      applyCustomColors(before);   // 触る前の色に戻す（保存しない）
-      _showCustomConfirm(false, hero);
+    _csTap(document.getElementById('mhStepBack'),function(){
+      if(st.step>0){ st.step--; _showColorStep(st); return; }
+      // 1つめの画面の「もどる」は顔の確認へ。新規なら選んだ色と名前は覚えておく
+      if(st.isNew){ _ccPendingCol=cur; _ccPendingName=st.name; }
+      else applyCustomColors(st.before);   // 既存ヒーローは触る前の色に戻す（保存しない）
+      _showCustomConfirm(st.isNew, st.hero);
     });
   },50);
+}
+// ★v310 最後の画面の「スタート」。新規はここで初めてリストに保存する（色も一緒に）。
+function _mhFinish(st){
+  var c=st.cur, keep=(c.body||c.leg||c.boot||c.acc)?c:null;
+  if(st.isNew){
+    if(_ccPendingFace){
+      var list2=loadCustomList();
+      if(list2.length<CUSTOM_MAX){ list2.push({id:'mh_'+Date.now(), name:st.name, face:_ccPendingFace, col:keep}); saveCustomList(list2); }
+      try{ store.set('yk_custom_face',_ccPendingFace); }catch(err){}
+      _ccPendingFace=null;
+    }
+  } else if(st.hero){
+    var l=loadCustomList();
+    for(var i=0;i<l.length;i++){ if(l[i].id===st.hero.id){ l[i].name=st.name; l[i].col=keep; st.hero.col=keep; break; } }
+    saveCustomList(l);
+  }
+  _ccPendingCol=null; _ccPendingName=null;
+  saveActiveColors(keep);   // 新規でも必ず上書き（前のヒーローの色を引き継がない）
+  applyCustomColors(keep);
+  _ccImg=null;   // ★v307 作成フローを抜けるのでここで解放
+  selectedChar='custom'; saveData(); doStart();
 }
 
 function _showCustomConfirm(isNew, editHero){
   var list=loadCustomList();
   var defaultName='マイヒーロー'+(list.length+1);
   var _showName=isNew||editHero;                       // 新規 or 既存編集時に名前欄を出す
-  var _nameVal=isNew?defaultName:(editHero?editHero.name:'');
+  var _nameVal=isNew?(_ccPendingName||defaultName):(editHero?editHero.name:'');
   // ★v287 v285の帯（夜空＋草地）を使い回す＝画像は増えない
   var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
     +'<div class="title-logo" style="font-size:24px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6)">マイヒーローをつくる</div>'
@@ -4354,16 +4379,21 @@ function _showCustomConfirm(isNew, editHero){
       +'<input type="text" id="ccNameInput" maxlength="10" value="'+_escHtml(_nameVal)+'" style="width:220px;font-size:16px;text-align:center;padding:8px 10px;border-radius:10px;border:1.5px solid rgba(127,216,255,0.5);background:rgba(0,0,0,0.3);color:#fff;margin-bottom:14px">';
   }
   html+='<div style="color:#9fe4ff;font-size:12px;line-height:1.5;margin-bottom:18px;max-width:300px;text-align:center">とくぎ・スキルは無し。<br>コインを集めてショップで装備をそろえ、<br><b>じぶんだけのヒーロー</b>に育てよう！</div>'
-    +'<div class="menuBtnMain" id="ccUseBtn" style="margin-top:0;font-size:18px">▶ この顔でスタート</div>'
-    +'<div class="menuRow">'
+    // ★v310 新規は「スタート」の代わりに色えらびへ進む（最後の色の画面からスタートする）。
+    //   既存ヒーローはすぐ遊べるようスタートを残し、色の変更は横幅いっぱいのボタンで目立たせる。
     +(isNew
-      ?'<div class="uiBtn info" id="ccRedoBtn" style="font-size:14px">🖼️ 選び直す</div>'
-      :'<div class="uiBtn info" id="ccColorBtn" style="font-size:14px">🎨 からだの いろ</div>')
+      ?'<div class="menuBtnMain" id="ccNextBtn" style="margin-top:0;font-size:18px">つぎへ：ふくの いろ ▶</div>'
+      :'<div class="menuBtnMain" id="ccUseBtn" style="margin-top:0;font-size:18px">▶ この顔でスタート</div>'
+        +'<div class="uiBtn info" id="ccColorBtn" style="width:240px;font-size:15px;margin:4px 0 2px">🎨 ふくの いろを かえる</div>')
+    +'<div class="menuRow">'
+    +(isNew?'<div class="uiBtn info" id="ccRedoBtn" style="font-size:14px">🖼️ 選び直す</div>':'')
     +'<div class="uiBtn info" id="ccBackBtn2" style="font-size:14px">◀ もどる</div>'
     +'</div>';
   ov.className='scrollable mhbg';   // ★v287 作成の流れで背景を揃える
   ov.innerHTML=html;
   ov.style.display='flex';
+  // ★v310 新規は前のヒーローの色（yk_custom_col）を引き継がない。applyCustomHead が読んだ色を上書きする
+  if(isNew) applyCustomColors(_ccPendingCol);
   setTimeout(function(){
     var cv2=document.getElementById('ccConfirmPreview');
     if(cv2) drawCharPreview(cv2.getContext('2d'),55,88,'custom',false,1.75);
@@ -4374,20 +4404,19 @@ function _showCustomConfirm(isNew, editHero){
     //   共通の _csTap（指の移動8px未満のときだけ touchend で発火）に統一する。
     //   ⚠ _showCustomCrop は cropmode で意図的にスクロール禁止なので置き換えない。
     function tap(el,fn){ _csTap(el,fn); }
+    function nameNow(fallback){
+      var ni=document.getElementById('ccNameInput');
+      return (ni&&ni.value.trim())?ni.value.trim().slice(0,10):fallback;
+    }
+    var nb=document.getElementById('ccNextBtn');
+    if(nb) tap(nb,function(){
+      _showColorStep({isNew:true, hero:null, name:nameNow(defaultName), cur:_ccPendingCol||{}, step:0, before:null});
+    });
     var ub=document.getElementById('ccUseBtn');
     if(ub) tap(ub,function(){
-      if(isNew && _ccPendingFace){
-        var nameInput=document.getElementById('ccNameInput');
-        var name=(nameInput&&nameInput.value.trim())?nameInput.value.trim().slice(0,10):defaultName;
-        var newHero={id:'mh_'+Date.now(), name:name, face:_ccPendingFace, col:null};
-        var list2=loadCustomList();
-        if(list2.length<CUSTOM_MAX){ list2.push(newHero); saveCustomList(list2); }
-        try{ store.set('yk_custom_face',_ccPendingFace); }catch(err){}
-        _ccPendingFace=null;
-      } else if(editHero){
+      if(editHero){
         // ★v199 ①: 既存マイヒーローの名前変更を保存
-        var ni=document.getElementById('ccNameInput');
-        var nm=(ni&&ni.value.trim())?ni.value.trim().slice(0,10):editHero.name;
+        var nm=nameNow(editHero.name);
         var cur=loadCustomList();
         for(var i=0;i<cur.length;i++){ if(cur[i].id===editHero.id){ cur[i].name=nm; break; } }
         saveCustomList(cur);
@@ -4398,9 +4427,13 @@ function _showCustomConfirm(isNew, editHero){
     var rb=document.getElementById('ccRedoBtn');
     // ★v307 「選び直す」は別の写真を選び直す＝元画像を捨ててから写真選択に戻る
     if(rb) tap(rb,function(){ _ccImg=null; _showCustomCrop(); });
-    // ★v309 からだを きせかえ（既存ヒーローのみ＝保存先があるとき）
+    // ★v310 既存ヒーローの色を変える＝新規と同じ1部位ずつの流れ（最後の画面からスタート）
     var cb=document.getElementById('ccColorBtn');
-    if(cb) tap(cb,function(){ _showBodyEditor(editHero||null); });
+    if(cb) tap(cb,function(){
+      var c0=editHero.col||{};
+      _showColorStep({isNew:false, hero:editHero, name:nameNow(editHero.name),
+        cur:{body:c0.body,leg:c0.leg,boot:c0.boot,acc:c0.acc}, step:0, before:editHero.col||null});
+    });
     var bb2=document.getElementById('ccBackBtn2');
     // ★v307 実機で「戻るを押すと写真を選ぶ前まで戻ってしまう。顔の調整に戻りたい」と報告。
     //   元画像が残っていれば切り抜き画面（＝顔の調整）へ戻す。位置と拡大率はそのまま。
@@ -4416,10 +4449,12 @@ function _showCustomConfirm(isNew, editHero){
   },50);
 }
 
+// capeCol: ★v310 マントの色。渡したときだけ（金オーラ無しで）マントを描く。
+//   heroic のマントは赤固定なので、マイヒーローのきせかえで選んだ色を見せる手段が無かった。
 // clipHead: ★v304 ゲーム中(drawStick)と同じく肩の高さで頭部写真を切る。
 //   既定は false ＝ 従来どおり写真を切らずに描く（キャラ選択の見た目は変えない）。
 //   「ゲーム中のおおきさ」プレビューだけが true を渡す。ここを合わせないと見本が嘘になる。
-function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead){
+function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead,capeCol){
   var c=CHARS[cid];
   if(!c) return;
   scale=scale||1;
@@ -4483,8 +4518,10 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead){
   ctx2.beginPath();ctxEllipse(ctx2,0,1.5,13,3.2,0,0,Math.PI*2);ctx2.fill();
   ctx2.restore();
   // ★v208: ヒーローマント（体の背面・赤くひらり）
-  if(heroic){
-    var capeG=gradL(ctx2,0,shouldY,0,waistY+LH*0.8,[0,'#e04848',1,'#8a1d1d']);
+  if(heroic||capeCol){
+    var _cHsl=capeCol?_hex2hsl(capeCol):null;
+    var capeG=gradL(ctx2,0,shouldY,0,waistY+LH*0.8,
+      capeCol?[0,capeCol,1,_hsl2hex(_cHsl.h,_cHsl.s,_cHsl.l*0.55)]:[0,'#e04848',1,'#8a1d1d']);
     ctx2.save();ctx2.lineJoin='round';
     ctx2.strokeStyle='rgba(35,22,28,0.35)';ctx2.lineWidth=1.1;
     ctx2.beginPath();
@@ -6279,7 +6316,9 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
   }
 
   // ═══ マント（LV2以上・背後にたなびく）═══
-  if(hasSk(2)){
+  // ★v311 マイヒーローは最初からマント付き（ほかのキャラはソードを取ってから）。
+  //   きせかえで選んだマントの色がゲーム中に出る場面を増やし、「じぶんのヒーロー」の印にする。
+  if(hasSk(2) || selectedChar==='custom'){
     ctx.save();
     var capeCol=acc;
     ctx.lineJoin='round';
@@ -6652,7 +6691,10 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     ctx.save();
     var _cw=Math.sin(fr*0.18)*2.2 + (Math.abs(p&&p.vx||0)>1?2.5:0);  // なびき(走ると大きく)
     var _cTop=shouldY+bobY+1.5, _cBot=shouldY+bobY+TH+7;
-    var _cg=gradL(ctx,0,_cTop,0,_cBot,[0,'#e8433a',1,'#8e1616']);
+    // ★v311 マイヒーローがマントの色を選んでいれば、ヒーロースーツのマントもその色にする（鎧を着ても自分の色が残る）
+    var _cc0='#e8433a', _cc1='#8e1616';
+    if(selectedChar==='custom' && ch.accSet){ var _ah=_hex2hsl(acc); _cc0=acc; _cc1=_hsl2hex(_ah.h,_ah.s,_ah.l*0.55); }
+    var _cg=gradL(ctx,0,_cTop,0,_cBot,[0,_cc0,1,_cc1]);
     ctx.fillStyle=_cg;
     ctx.beginPath();
     ctx.moveTo(-2,_cTop);
