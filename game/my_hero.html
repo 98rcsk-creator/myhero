@@ -3292,11 +3292,14 @@ var _pickedCustom=false; // 性別選択画面でマイヒーロー枠を選択�
 // ★v280 共通ナビバー。active は 'home'|'char'|'world'|'shop'|''。
 //   画面のHTMLの末尾に navHTML(active) を足し、setTimeout の中で bindNav() を呼ぶ。
 //   タップは _csTap（touchstartでpreventDefaultしない）を使うのでスクロールを殺さない。
+// ★v312 ホームの4ボタン（ステージ／ショップ／じっせき／ランキング）と並び・名前・アイコンを揃える。
+//   ホームは1枚絵で並びを変えられないので、こちらを合わせる（実機で「順番がバラバラ」と指摘）。
+//   'world' はステージ選択（showStageMap）。画面タイトルも「ステージ選択」なので表示名はステージ。
 var NAV_ITEMS=[
   {k:'home', ico:'\ud83c\udfe0', txt:'\u30db\u30fc\u30e0'},
-  {k:'char', ico:'\ud83e\uddd2', txt:'\u30ad\u30e3\u30e9'},
-  {k:'world',ico:'\ud83d\uddfa\ufe0f', txt:'\u30ef\u30fc\u30eb\u30c9'},
-  {k:'shop', ico:'\ud83c\udfea', txt:'\u30b7\u30e7\u30c3\u30d7'}
+  {k:'world',ico:'\ud83d\uddfa\ufe0f', txt:'\u30b9\u30c6\u30fc\u30b8'},
+  {k:'shop', ico:'\ud83d\udecd\ufe0f', txt:'\u30b7\u30e7\u30c3\u30d7'},
+  {k:'char', ico:'\ud83e\uddd2', txt:'\u30ad\u30e3\u30e9'}
 ];
 function navHTML(active){
   var h='<div class="mhNav">';
