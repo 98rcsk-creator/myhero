@@ -2795,6 +2795,7 @@ function applyCustomColors(col){
   c.leg  = col.leg  ? mhRamp(col.leg)  : o.leg.slice();
   c.boot = col.boot ? mhRamp(col.boot) : o.boot.slice();
   c.acc  = col.acc  || o.acc;
+  c.accSet = !!col.acc;   // ★v311 マントの色を自分で選んだか（ヒーロースーツの赤マントを置き換えるかの判定）
 }
 // アクティブなマイヒーローの色。顔(yk_custom_face)と同じ扱いで鏡像を持つ。
 function saveActiveColors(col){
@@ -4281,7 +4282,7 @@ function _showColorStep(st){
   });
   html+='</div>'
     +'<div style="color:#8fa8c0;font-size:11px;line-height:1.5;min-height:16px;margin-bottom:8px;max-width:300px;text-align:center">'
-      +(sl.key==='body'?'よろいを きると からだは よろいの いろに なるよ':(sl.key==='acc'?'はしると うしろに ひらっと でるよ':''))+'</div>'
+      +(sl.key==='body'?'よろいを きると からだは よろいの いろに なるよ':(sl.key==='acc'?'せなかで ひらっと なびくよ。よろいを きても この いろ':''))+'</div>'
     +'<div class="menuBtnMain" id="mhStepNext" style="margin-top:0;font-size:18px">'+(last?'▶ これで スタート！':'つぎへ ▶')+'</div>'
     +'<div class="menuRow">'
     +'<div class="uiBtn info" id="mhStepBack" style="font-size:14px">◀ もどる</div>'
@@ -6315,7 +6316,9 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
   }
 
   // ═══ マント（LV2以上・背後にたなびく）═══
-  if(hasSk(2)){
+  // ★v311 マイヒーローは最初からマント付き（ほかのキャラはソードを取ってから）。
+  //   きせかえで選んだマントの色がゲーム中に出る場面を増やし、「じぶんのヒーロー」の印にする。
+  if(hasSk(2) || selectedChar==='custom'){
     ctx.save();
     var capeCol=acc;
     ctx.lineJoin='round';
@@ -6688,7 +6691,10 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     ctx.save();
     var _cw=Math.sin(fr*0.18)*2.2 + (Math.abs(p&&p.vx||0)>1?2.5:0);  // なびき(走ると大きく)
     var _cTop=shouldY+bobY+1.5, _cBot=shouldY+bobY+TH+7;
-    var _cg=gradL(ctx,0,_cTop,0,_cBot,[0,'#e8433a',1,'#8e1616']);
+    // ★v311 マイヒーローがマントの色を選んでいれば、ヒーロースーツのマントもその色にする（鎧を着ても自分の色が残る）
+    var _cc0='#e8433a', _cc1='#8e1616';
+    if(selectedChar==='custom' && ch.accSet){ var _ah=_hex2hsl(acc); _cc0=acc; _cc1=_hsl2hex(_ah.h,_ah.s,_ah.l*0.55); }
+    var _cg=gradL(ctx,0,_cTop,0,_cBot,[0,_cc0,1,_cc1]);
     ctx.fillStyle=_cg;
     ctx.beginPath();
     ctx.moveTo(-2,_cTop);
