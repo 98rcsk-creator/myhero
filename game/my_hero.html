@@ -9647,6 +9647,10 @@ function renderShopPreview(kind){
   _eqPreviewFree=true;
   _previewFront=true;   // ★v199(shop②): 試着中は剣/盾を頭より前面に
   _previewKind=kind;    // ★v206(試着分離): 今どのカテゴリを試着中か（描画側でこれだけを表示）
+  // ★v313 試着はいつも基本キャラ（ルーベルト）で見せる。選択中のキャラで描くと、
+  //   マイヒーローで遊んでいる間はショップの絵が毎回自分の顔写真に固定されてしまう（実機で指摘）。
+  //   装備と同じく描く間だけ差し替えて、下で必ず戻す。
+  var oCh=selectedChar; selectedChar='men_0';
   var oc=ctx; ctx=pctx;
   try{
     ctx.save();
@@ -9656,6 +9660,7 @@ function renderShopPreview(kind){
     ctx.restore();
   }catch(err){}
   ctx=oc;
+  selectedChar=oCh;     // ★v313 選択中のキャラに戻す
   _eqPreviewFree=false;
   _previewFront=false;  // ★v199(shop②): 通常描画に戻す
   _previewKind='';      // ★v206(試着分離): 試着カテゴリをクリア
