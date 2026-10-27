@@ -4960,7 +4960,7 @@ function nextLevel(){
     statSet('runGold',0);
     checkAchievements();
     saveData();
-    _contAdvancePending=true;   // クリア画面の「つぎへ すすむ」で advanceStage() に戻る合図
+    _contAdvancePending=true;   // クリア画面の「次へ進む」（scNext）で advanceStage() に戻る合図
     showStageClear(earnedStar, stageScore);
     return;
   }
@@ -9431,7 +9431,7 @@ function showStageClear(star, scoreRate){
   // ★v292 className を明示代入する（add/remove だと直前の画面の csbg / hasnav が残り、
   //   上に77px・下に150pxの余白が付いたまま出ていた）
   ov.className='scrollable opaque';
-  var _w=stageWorld(level);   // ★v263 評価バー撤去に伴い killRate/coinRate/hpRate は _kPct等に一本化
+  var _w=stageWorld(level);
   // 星表示（獲得分は金＋発光・大きめ。アニメで順番に光る感じ）
   var starHTML='<div style="display:flex;gap:14px;justify-content:center;margin:6px 0 18px">';
   for(var i=0;i<3;i++){
@@ -9440,89 +9440,60 @@ function showStageClear(star, scoreRate){
       +(got?'animation:starPop 0.5s cubic-bezier(.2,1.5,.4,1) both, starTwinkle 1.6s ease-in-out infinite;animation-delay:'+(0.18+i*0.32)+'s, '+(0.7+i*0.32)+'s;':'')+'">★</span>';
   }
   starHTML+='</div>';
-  // ★v237 案A: 星の条件を可視化（判定式は一切変更しない・表示のみ）。SPEC §9-5
-  //   合算スコアが画面に出ておらず「敵を全滅させたのに★2」の理由が見えなかったため。
-  // ★v263 クリア画面を「どうなったら★いくつか」1枚に集約（実機で見にくいと指摘）。
-  //   v258 は別々だった「評価バー3本」と「条件チェックリスト」が同じ内容の二重表示で、
-  //   さらに幅220pxに長文を入れていたため途中で折り返して読めなかった。
-  //   1行＝1つの★にして、条件と現在値を横並びにする。幅は 276px。
-  var _kPct=stageEnemyTotal>0?Math.round(stageEnemyKilled/stageEnemyTotal*100):100;
-  var _cPct=stageCoinTotal>0?Math.round(stageCoinGot/stageCoinTotal*100):100;
-  var _hPct=p.maxHP>0?Math.round(p.hp/p.maxHP*100):0;
-  var _kOK2=(_kPct>=STAR_KILL2*100), _kOK3=(_kPct>=STAR_KILL3*100);
-  var _cOK=(_cPct>=STAR_COIN*100), _dOK=(_hPct>=100);
-  // ★v301 %をやめて「なんひき・なんまい」の実数にした（実機で「平仮名だけど見にくい・
-  //   よく分からない」と指摘）。低学年に70%は伝わらない。あわせて行ごとに繰り返していた
-  //   「いま〜」をパネル下の1行にまとめ、★3の ＋ と か の入れ子は行を分けた。
-  function _row(ok,star,l1,l2){
-    return '<div style="padding:7px 0;'+(star<3?'border-bottom:1px solid rgba(159,228,255,0.16);':'')+'">'
-      +'<div style="display:flex;align-items:center;gap:7px">'
-        +'<span style="font-size:14px;width:18px;flex:none">'+(ok?'✅':'⬜')+'</span>'
-        +'<span style="font-size:14px;font-weight:bold;color:'+(ok?'#ffd24a':'#7f8f99')+';width:28px;flex:none">★'+star+'</span>'
-        +'<span style="flex:1;font-size:13px;line-height:1.4;color:'+(ok?'#eaf6ff':'#9fb6c2')+';text-align:left">'+l1+'</span>'
-      +'</div>'
-      +(l2?'<div style="margin-left:53px;font-size:13px;line-height:1.4;color:'+(ok?'#eaf6ff':'#9fb6c2')+';text-align:left">'+l2+'</div>':'')
-    +'</div>';
-  }
-  // 必要「数」を出す（率のままだと子どもに伝わらない）
-  var _nK2=Math.ceil(STAR_KILL2*stageEnemyTotal), _nK3=Math.ceil(STAR_KILL3*stageEnemyTotal);
-  var _nC =Math.ceil(STAR_COIN*stageCoinTotal);
+  // ★v315 クリア画面は「結果をひと目で」に方針転換（実機で「凄い読みにくい・何が書いてるかわからん」）。
+  //   v237→v258→v263→v301 と4回「★の条件の説明を読みやすく」してきたが、条件そのもの
+  //   （または／＋／か の組み合わせ）が文章で伝えるには複雑だった（CLAUDE.md §5-3 で方針転換）。
+  //   条件の説明は出さない（ユーザー指定）。★の判定は nextLevel が今まで通り計算し、ここは結果を見せるだけ。
+  //   文字は漢字にする（ユーザー指定「ひらがなは見にくい」）。
   var _hasE=stageEnemyTotal>0, _hasC=stageCoinTotal>0;
-  // 単語の途中で折り返すと読めない（実測で「ダメージ/0」「たいり/ょく」と割れた）ので
-  // 意味のかたまりごとに nowrap で包む
-  var _nw=function(t){ return '<span style="white-space:nowrap">'+t+'</span>'; };
-  var _eTxt=function(n){ return _hasE?_nw('てきを <b>'+n+'</b>ひき たおす'):'てきは いない'; };
-  var _cTxt=function(n){ return _hasC?_nw('コインを <b>'+n+'</b>まい とる'):'コインは ない'; };
-  var _starHint='<div class="uiPanel" style="width:324px;max-width:94%;margin:10px auto 0;padding:10px 13px">'
-    +'<div style="color:#9fe4ff;font-size:12px;font-weight:bold;text-align:left;margin-bottom:3px">★のじょうけん</div>'
-    +_row(true,1,'ゴールする','')
-    +_row(_kOK2||_cOK,2,_eTxt(_nK2),'または '+_cTxt(_nC))
-    // ★3は「＋」と「か」が入れ子で一番わかりにくい。2行目は動詞を省いて1行に収める
-    +_row(_kOK3&&(_cOK||_dOK),3,_eTxt(_nK3),
-          _hasC?_nw('＋ コイン <b>'+_nC+'</b>まい か ダメージ0'):_nw('＋ ダメージ0'))
-    // 「いま」は各行に繰り返さず、ここに1行だけ
-    +'<div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(159,228,255,0.22);'
-      +'font-size:12px;line-height:1.5;color:#bdf5c8;text-align:left">いま　'
-      +(_hasE?_nw('てき <b>'+stageEnemyKilled+'</b>/'+stageEnemyTotal+'ひき')+'　':'')
-      +(_hasC?_nw('コイン <b>'+stageCoinGot+'</b>/'+stageCoinTotal+'まい')+'　':'')
-      +(_dOK?_nw('<span style="color:#ffe9a8">ダメージ0！</span>'):_nw('たいりょく '+_hPct+'%'))
-    +'</div>';
+  var _hPct=p.maxHP>0?Math.round(p.hp/p.maxHP*100):0;
+  var _dOK=(_hPct>=100);
+  // 星のすぐ下のひとこと：★3はパーフェクト、それ以外は次の★へのヒントを1つだけ
+  var _tip='';
   if(star<3){
     var _tgt=(star<2)?2:3;
     var _restE=Math.max(0,stageEnemyTotal-stageEnemyKilled);
     var _restC=Math.max(0,stageCoinTotal-stageCoinGot);
     var _needE=Math.max(0,Math.ceil(((_tgt===2)?STAR_KILL2:STAR_KILL3)*stageEnemyTotal)-stageEnemyKilled);
     var _needC=Math.max(0,Math.ceil(STAR_COIN*stageCoinTotal)-stageCoinGot);
-    var _tip='';
-    if(stageEnemyTotal>0 && _needE>0 && _needE<=_restE) _tip='てきを あと '+_needE+' たおすと ★'+_tgt+'！';
-    else if(stageCoinTotal>0 && _needC>0 && _needC<=_restC) _tip='コインを あと '+_needC+' まい とると ★'+_tgt+'！';
-    else if(_tgt===3) _tip='ダメージを うけずに クリアすると ★3！';
-    if(_tip) _starHint+='<div style="color:#ffe9a8;font-size:11px;line-height:1.5;margin-top:7px;font-weight:bold;text-align:center">'+_tip+'</div>';
+    if(_hasE && _needE>0 && _needE<=_restE) _tip='敵をあと'+_needE+'体倒すと ★'+_tgt+'！';
+    else if(_hasC && _needC>0 && _needC<=_restC) _tip='コインをあと'+_needC+'枚取ると ★'+_tgt+'！';
+    else if(_tgt===3) _tip='ダメージを受けずにクリアすると ★3！';
   }
-  _starHint+='</div>';
+  var _say=(star>=3)?'⭐ パーフェクト！ ⭐':_tip;
+  // 結果を3つのマスで（数字を大きく。文章にしない）
+  var _sub=function(t){ return '<span style="font-size:13px;color:#9fb6c2;font-weight:normal">'+t+'</span>'; };
+  var _tile=function(ico,big,lab){
+    return '<div class="uiPanel" style="flex:1 1 0;min-width:0;padding:8px 4px 7px;text-align:center">'
+      +'<div style="font-size:20px;line-height:1">'+ico+'</div>'
+      +'<div style="font-size:20px;font-weight:bold;color:#fff;margin-top:5px;white-space:nowrap">'+big+'</div>'
+      +'<div style="font-size:12px;color:#9fb6c2;margin-top:2px;white-space:nowrap">'+lab+'</div></div>';
+  };
   var nextStage=level+1;
   var hasNext=(nextStage<=MAX_STAGE);
-  // ★v292 見出し・パネル・ボタンを uiTitle / uiPanel / uiBtn に統一（画像は増やしていない・CSSのみ）
   var h='<div style="font-size:30px;margin-bottom:2px">🎉</div>'
     +'<div class="uiTitle" style="font-size:22px">クリア！</div>'
     +'<div style="color:#9fe4ff;font-size:13px;font-weight:bold;margin-bottom:4px">WORLD '+_w+'</div>'
     +starHTML
-    +_starHint
-    // スコアと報酬を1枚のパネルにまとめる（「報酬が見える」のがこの画面の主役）
-    +'<div class="uiPanel" style="width:324px;max-width:94%;margin:12px auto 0;padding:11px 13px">'
-      +'<div style="color:#ffe44d;font-size:13px">スコア <b style="font-size:24px">'+Math.floor(score)+'</b></div>'
-      +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,210,74,0.16);border:1.5px solid rgba(255,210,74,0.5);border-radius:10px;padding:6px 14px;margin:6px 0 3px"><span style="font-size:18px">💰</span><span style="color:#ffd24a;font-size:17px;font-weight:bold">+'+lastEarnedGold+'G</span><span style="color:#cda84a;font-size:11px">ゲット！</span></div>'
-      +'<div style="color:#bda86a;font-size:11px">しょじ '+totalGold+'G（ショップでつかえる）</div>'
+    +(_say?'<div style="color:#ffe9a8;font-size:17px;font-weight:bold;line-height:1.4;margin:-6px 0 12px;max-width:94%">'+_say+'</div>':'')
+    +'<div style="display:flex;gap:8px;width:324px;max-width:94%;margin:0 auto">'
+      +_tile('👾',_hasE?stageEnemyKilled+_sub('/'+stageEnemyTotal):'—','倒した敵')
+      +_tile('🪙',_hasC?stageCoinGot+_sub('/'+stageCoinTotal):'—','取ったコイン')
+      +(_dOK?_tile('❤️','<span style="color:#ffe9a8">0</span>','ダメージ'):_tile('❤️',_hPct+_sub('%'),'残り体力'))
+    +'</div>'
+    // ごほうび（この画面の主役）。スコアと所持金は下に小さく
+    +'<div class="uiPanel" style="width:324px;max-width:94%;margin:14px auto 0;padding:10px 13px">'
+      +'<div style="display:flex;align-items:center;justify-content:center;gap:8px">'
+        +'<span style="font-size:26px">💰</span><span style="color:#ffd24a;font-size:26px;font-weight:bold">+'+lastEarnedGold+'G</span>'
+        +'<span style="color:#cda84a;font-size:13px;font-weight:bold">ゲット！</span></div>'
+      +'<div style="color:#bda86a;font-size:12px;margin-top:4px">スコア '+Math.floor(score)+'　・　所持 '+totalGold+'G</div>'
     +'</div>';
-  if(star>=3){
-    h+='<div style="color:#ffd24a;font-size:14px;margin-top:8px;font-weight:bold">⭐ パーフェクト！ ⭐</div>';
-  }
   h+='<div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:16px;width:100%">';
   if(hasNext){
-    h+='<div id="scNext" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px">▶ つぎへ すすむ</div>';
+    h+='<div id="scNext" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px">▶ 次へ進む</div>';
   }
-  h+='<div id="scMap" class="uiBtn info" style="width:236px">🗺️ ステージをえらぶ</div>'
-    +'<div id="scHome" class="uiBtn info" style="width:190px">🏠 ホームにもどる</div>'
+  h+='<div id="scMap" class="uiBtn info" style="width:236px">🗺️ ステージを選ぶ</div>'
+    +'<div id="scHome" class="uiBtn info" style="width:190px">🏠 ホームに戻る</div>'
     +'</div>';
   ov.innerHTML=h;
   ov.style.display='flex';
