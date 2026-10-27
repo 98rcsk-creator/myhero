@@ -200,6 +200,26 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 /* ★ステージクリアの星がポンッと順番に出るアニメ */
 @keyframes starPop{0%{transform:scale(0) rotate(-45deg);opacity:1}55%{transform:scale(1.45) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
 @keyframes starTwinkle{0%,100%{filter:drop-shadow(0 0 10px rgba(255,210,74,0.8))}50%{filter:drop-shadow(0 0 20px rgba(255,210,74,1))}}
+/* ★v318 クリア画面の「クリア！」：金の文字が弾んで出て、後ろが光り、キラキラが1回だけ弾け飛ぶ。
+   どれも1回きり（無限ループなし）。キラキラは終わったら showStageClear が部品ごと消す。transform/opacity のみ（§2-4）。
+   文字の縁は -webkit-text-stroke（text-shadow は background-clip:text と組むとWebKitで上に乗るので使わない） */
+.clrTitle{position:relative;font-size:44px;font-weight:900;letter-spacing:4px;line-height:1.15;padding:0 6px;
+  font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans CJK JP','Noto Sans JP',sans-serif;
+  background:linear-gradient(180deg,#fffbe0 0%,#ffe27a 38%,#ffb81e 64%,#e88a10 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  -webkit-text-stroke:1px rgba(170,95,0,0.55);animation:clrPop .6s cubic-bezier(.2,1.6,.4,1) both;will-change:transform;}
+.clrHalo{position:absolute;left:50%;top:50%;width:240px;height:120px;margin:-60px 0 0 -120px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(255,214,90,0.55) 0%,rgba(255,170,40,0.18) 45%,rgba(255,170,40,0) 70%);
+  animation:clrHalo 1.1s ease-out both;will-change:transform,opacity;}
+.clrBurst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;}
+.clrBurst>i{position:absolute;left:0;top:0;font-style:normal;}
+.clrBurst>i>b{position:absolute;left:-8px;top:-11px;font-weight:normal;opacity:0;will-change:transform,opacity;
+  animation:clrBurstN .9s cubic-bezier(.15,.7,.3,1) both;}
+.clrBurst>i>b.f{animation-name:clrBurstF;}
+@keyframes clrPop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.18);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes clrHalo{0%{transform:scale(.3);opacity:0}35%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:.55}}
+@keyframes clrBurstN{0%{transform:translateY(0) scale(.4);opacity:0}15%{opacity:1}100%{transform:translateY(-80px) scale(1) rotate(90deg);opacity:0}}
+@keyframes clrBurstF{0%{transform:translateY(0) scale(.4);opacity:0}15%{opacity:1}100%{transform:translateY(-135px) scale(1.1) rotate(160deg);opacity:0}}
 /* 無敵スタンバイのラベル「むてき」（防御ボタンの上にプカッと表示） */
 #bg .invhint{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;
   display:none;background:linear-gradient(180deg,#fff2a0,#ffd24a);color:#7a5500;
@@ -9381,32 +9401,43 @@ function showStageClear(star, scoreRate){
     else if(_tgt===3) _tip='ダメージを受けずにクリアすると ★3！';
   }
   var _say=(star>=3)?'⭐ パーフェクト！ ⭐':_tip;
+  // ★v318 「クリア！」から弾け飛ぶキラキラ。向きは外側の i を回して決め、中の b は同じアニメ（上へ飛ぶ）を使う
+  var _bz='', _bn=10+star*2, _gl=['✦','✦','⭐','✨','●'], _co=['#ffe066','#ffffff','#ffd24a','#9fe4ff','#ff9ad5'];
+  for(var _k=0;_k<_bn;_k++){
+    var _ang=Math.round(_k*360/_bn+(_k%2?9:-9)), _far=(_k%2===0);
+    _bz+='<i style="transform:rotate('+_ang+'deg)"><b class="'+(_far?'f':'')+'" style="font-size:'+(_far?22:16)+'px;color:'+_co[_k%_co.length]+';'
+      +'animation-delay:'+(0.12+(_k%4)*0.04).toFixed(2)+'s">'+_gl[_k%_gl.length]+'</b></i>';
+  }
   // 結果を3つのマスで（数字を大きく。文章にしない）
   var _sub=function(t){ return '<span style="font-size:13px;color:#9fb6c2;font-weight:normal">'+t+'</span>'; };
   var _tile=function(ico,big,lab){
-    return '<div class="uiPanel" style="flex:1 1 0;min-width:0;padding:8px 4px 7px;text-align:center">'
+    return '<div style="flex:1 1 0;min-width:0;padding:6px 4px;text-align:center'+(lab!=='倒した敵'?';border-left:1px solid rgba(255,255,255,0.14)':'')+'">'
       +'<div style="font-size:20px;line-height:1">'+ico+'</div>'
-      +'<div style="font-size:20px;font-weight:bold;color:#fff;margin-top:5px;white-space:nowrap">'+big+'</div>'
+      +'<div style="font-size:24px;font-weight:bold;color:#fff;margin-top:5px;white-space:nowrap">'+big+'</div>'
       +'<div style="font-size:12px;color:#9fb6c2;margin-top:2px;white-space:nowrap">'+lab+'</div></div>';
   };
   var nextStage=level+1;
   var hasNext=(nextStage<=MAX_STAGE);
-  var h='<div style="font-size:30px;margin-bottom:2px">🎉</div>'
-    +'<div class="uiTitle" style="font-size:22px">クリア！</div>'
+  var h='<div style="position:relative;display:inline-block;margin:10px 0 2px">'
+      +'<div class="clrHalo"></div><div class="clrTitle">クリア！</div><div class="clrBurst" id="clrBurst">'+_bz+'</div>'
+    +'</div>'
     +'<div style="color:#9fe4ff;font-size:13px;font-weight:bold;margin-bottom:4px">WORLD '+_w+'</div>'
     +starHTML
     +(_say?'<div style="color:#ffe9a8;font-size:17px;font-weight:bold;line-height:1.4;margin:-6px 0 12px;max-width:94%">'+_say+'</div>':'')
-    +'<div style="display:flex;gap:8px;width:324px;max-width:94%;margin:0 auto">'
+    // ★v318 結果とごほうびは縁取りも影もない平らな面1枚に（実機で「全部ボタンみたい」。枠が付くのはボタンだけ）
+    +'<div style="width:324px;max-width:94%;margin:0 auto;background:rgba(255,255,255,0.06);border-radius:16px;padding:10px 6px 12px">'
+    +'<div style="display:flex">'
       +_tile('👾',_hasE?stageEnemyKilled+_sub('/'+stageEnemyTotal):'—','倒した敵')
       +_tile('🪙',_hasC?stageCoinGot+_sub('/'+stageCoinTotal):'—','取ったコイン')
       +(_dOK?_tile('❤️','<span style="color:#ffe9a8">0</span>','ダメージ'):_tile('❤️',_hPct+_sub('%'),'残り体力'))
     +'</div>'
     // ごほうび（この画面の主役）。スコアと所持金は下に小さく
-    +'<div class="uiPanel" style="width:324px;max-width:94%;margin:14px auto 0;padding:10px 13px">'
+    +'<div style="margin:12px 10px 0;padding-top:10px;border-top:1px solid rgba(255,255,255,0.12)">'
       +'<div style="display:flex;align-items:center;justify-content:center;gap:8px">'
-        +'<span style="font-size:26px">💰</span><span style="color:#ffd24a;font-size:26px;font-weight:bold">+'+lastEarnedGold+'G</span>'
+        +'<span style="font-size:30px">💰</span><span style="color:#ffd24a;font-size:32px;font-weight:900">+'+lastEarnedGold+'G</span>'
         +'<span style="color:#cda84a;font-size:13px;font-weight:bold">ゲット！</span></div>'
       +'<div style="color:#bda86a;font-size:12px;margin-top:4px">スコア '+Math.floor(score)+'　・　所持 '+totalGold+'G</div>'
+    +'</div>'
     +'</div>';
   h+='<div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:16px;width:100%">';
   if(hasNext){
@@ -9422,6 +9453,7 @@ function showStageClear(star, scoreRate){
     //   旧実装はボタンの上に指を置いてドラッグすると、スクロールせずにその場で画面が飛んでいた。
     //   実測: IG/SE とも scrollTop が最大値→0 になり誤遷移。パネルの上から引けば動いていたので露見しにくかった。
     var tapEv=_csTap;
+    setTimeout(function(){ var bz=document.getElementById('clrBurst'); if(bz&&bz.parentNode) bz.parentNode.removeChild(bz); },1700);
     if(hasNext){
       tapEv(document.getElementById('scNext'),function(){
         // ★v239 連続プレイ：score とランを維持したまま次ステージへ（doStart は score=0 にするため通さない）
