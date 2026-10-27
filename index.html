@@ -3419,7 +3419,9 @@ function _showFaceStep(){
                          :'0 4px 10px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.22)')+';'
       +'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;height:100%;">'
       +'<div class="csShineBar"></div>'
-      +(sel?'<div style="position:absolute;top:-9px;right:-6px;font-size:19px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.6))">⭐</div>':'')
+      // ★v317 選択中の⭐（右上）を撤去。カードの外にはみ出す位置(top:-9px)に置いていたが、
+      //   光の帯のために付けた .csCard の overflow:hidden で左下だけ残り、実機で「薄ら星」に見えていた。
+      //   選択中は金色の枠で分かるので、目印の二重表示でもあった（CLAUDE.md §10-1）。
       // ★v284 デザインどおりキャラの足元に台座を敷く（CSSのみ・画像なし）
       // ★v316 新しい頭は髪が高いキャラ（メルティ・ジルヴェスター）があり、高さ88では最大7px切れる。枠を10px高く
       +'<div style="position:relative;height:102px;width:100%;display:flex;align-items:flex-end;justify-content:center">'
