@@ -4372,6 +4372,10 @@ function _showCustomConfirm(isNew, editHero){
     +'<div style="text-align:center"><canvas id="ccSizePreview" width="70" height="64" style="display:block"></canvas>'
     +'<div style="color:#ffcc88;font-size:10px;margin-top:2px">ゲーム中のおおきさ</div></div>'
     +'</div>'
+    // ★v314 既存ヒーローは「色を選ぶ」をプレビューのすぐ下・緑の大ボタンにする（CLAUDE.md §10-5）。
+    //   v310 はスタート（緑・大）の下に置いていて、実機で「ついスタートを押して色の選択を忘れる」と指摘された。
+    //   スタートは押さないと遊べない＝自分で探すので、下の青ボタンで足りる。
+    +(isNew?'':'<div class="menuBtnMain" id="ccColorBtn" style="margin:4px 0 16px;font-size:17px">🎨 ふくの いろを えらぶ</div>')
     +(isNew
       ? (_ccPendingSilhouette
           ? '<div style="color:#9fe4ff;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">✅ はいけいを きれいに けせたよ</div>'
@@ -4383,11 +4387,10 @@ function _showCustomConfirm(isNew, editHero){
   }
   html+='<div style="color:#9fe4ff;font-size:12px;line-height:1.5;margin-bottom:18px;max-width:300px;text-align:center">とくぎ・スキルは無し。<br>コインを集めてショップで装備をそろえ、<br><b>じぶんだけのヒーロー</b>に育てよう！</div>'
     // ★v310 新規は「スタート」の代わりに色えらびへ進む（最後の色の画面からスタートする）。
-    //   既存ヒーローはすぐ遊べるようスタートを残し、色の変更は横幅いっぱいのボタンで目立たせる。
+    // ★v314 既存ヒーローのスタートは青の普通ボタン（色えらびは上へ移した）。もどるは最下段のまま。
     +(isNew
       ?'<div class="menuBtnMain" id="ccNextBtn" style="margin-top:0;font-size:18px">つぎへ：ふくの いろ ▶</div>'
-      :'<div class="menuBtnMain" id="ccUseBtn" style="margin-top:0;font-size:18px">▶ この顔でスタート</div>'
-        +'<div class="uiBtn info" id="ccColorBtn" style="width:240px;font-size:15px;margin:4px 0 2px">🎨 ふくの いろを かえる</div>')
+      :'<div class="uiBtn info" id="ccUseBtn" style="width:240px;font-size:16px">▶ この顔でスタート</div>')
     +'<div class="menuRow">'
     +(isNew?'<div class="uiBtn info" id="ccRedoBtn" style="font-size:14px">🖼️ 選び直す</div>':'')
     +'<div class="uiBtn info" id="ccBackBtn2" style="font-size:14px">◀ もどる</div>'
