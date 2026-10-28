@@ -3495,7 +3495,7 @@ function _showFaceStep(){
     (function drawNext(i){
       if(i>=previews.length) return;
       var cv2=previews[i];
-      try{ drawCharPreview(cv2.getContext('2d'),36,92,cv2.dataset.cid,false,1.35,true); }catch(err){}
+      try{ drawCharPreview(_hiDpiCanvas(cv2),36,92,cv2.dataset.cid,false,1.35,true); }catch(err){}   // ★v320
       requestAnimationFrame(function(){ drawNext(i+1); });
     })(0);
     // ★v276 STEP①と同じく touchstart の preventDefault をやめる（iOSでスクロールが死ぬ）
@@ -4229,7 +4229,7 @@ function _showCustomList(){
       var hero=list[idx];
       if(!hero) return;
       var img=new Image();
-      img.onload=function(){ try{ cv.getContext('2d').drawImage(img,0,0,60,60); }catch(err){} };
+      img.onload=function(){ try{ _hiDpiCanvas(cv).drawImage(img,0,0,60,60); }catch(err){} };   // ★v320
       img.src=hero.face;
     });
     // カードタップ→選択して確認画面へ（削除ボタンは別ハンドラでstopPropagationするため誤爆しない）
@@ -4344,9 +4344,9 @@ function _showColorStep(st){
     function draw(){
       var cc=CHARS.custom.acc;
       var cv=document.getElementById('mhStepPrev');
-      if(cv){ var g=cv.getContext('2d'); g.clearRect(0,0,110,96); drawCharPreview(g,55,88,'custom',false,1.75,false,false,cc); }
+      if(cv){ var g=_hiDpiCanvas(cv); g.clearRect(0,0,110,96); drawCharPreview(g,55,88,'custom',false,1.75,false,false,cc); }   // ★v320
       var cv2=document.getElementById('mhStepSize');
-      if(cv2){ var g2=cv2.getContext('2d'); g2.clearRect(0,0,70,64); drawCharPreview(g2,35,56,'custom',false,_CC_GAME_SCALE,false,true,cc); }
+      if(cv2){ var g2=_hiDpiCanvas(cv2); g2.clearRect(0,0,70,64); drawCharPreview(g2,35,56,'custom',false,_CC_GAME_SCALE,false,true,cc); }
     }
     draw();
     // ★v2-14: 色を変えても画面を作り直さない（選択枠の付け替えとプレビュー再描画だけ）
@@ -4446,10 +4446,10 @@ function _showCustomConfirm(isNew, editHero){
   if(isNew) applyCustomColors(_ccPendingCol);
   setTimeout(function(){
     var cv2=document.getElementById('ccConfirmPreview');
-    if(cv2) drawCharPreview(cv2.getContext('2d'),55,88,'custom',false,1.75);
+    if(cv2) drawCharPreview(_hiDpiCanvas(cv2),55,88,'custom',false,1.75);   // ★v320
     // ★v304 ゲーム中と同じ大きさ（drawStick の HR=11 / preview の HR=10 → 1.1倍）
     var cv3=document.getElementById('ccSizePreview');
-    if(cv3) drawCharPreview(cv3.getContext('2d'),35,56,'custom',false,_CC_GAME_SCALE,false,true);
+    if(cv3) drawCharPreview(_hiDpiCanvas(cv3),35,56,'custom',false,_CC_GAME_SCALE,false,true);
     // ★v285 §2-12: touchstart で preventDefault するとiOSでスクロールが死ぬ。
     //   共通の _csTap（指の移動8px未満のときだけ touchend で発火）に統一する。
     //   ⚠ _showCustomCrop は cropmode で意図的にスクロール禁止なので置き換えない。
@@ -4499,6 +4499,19 @@ function _showCustomConfirm(isNew, editHero){
   },50);
 }
 
+// ★v320 小さいプレビュー用canvasを端末の解像度で描く（iPhoneは3倍）。見た目の大きさ（CSS）は変えず、中身だけ細かくする。
+//   以前は CSS と同じ画素数で描いて端末が3倍に引き伸ばしており、キャラ選択・ショップ・確認画面の絵がぼやけていた。
+//   返す ctx は setTransform で倍率をかけ済みなので、描く側は今までどおり CSS の px で書ける。
+//   cv._cw/_ch = CSSの大きさ、cv._r = 倍率。何度呼んでも大きさは1回だけ変える（作り直すと中身が消えるため）。
+//   ⚠ shadowBlur は変換（scale）の影響を受けないので、ぼかしを使う描画は _blurK で倍率を掛ける（drawStick）。
+var _blurK=1;
+function _hiDpiCanvas(cv){
+  var r=Math.min(3, Math.max(1, window.devicePixelRatio||1));
+  // content-box：縁取り付きのcanvas（ショップ）で、大きさを指定すると縁の分だけ中身が縮むのを防ぐ（以前と同じ見た目の大きさに）
+  if(!cv._cw){ cv._cw=cv.width; cv._ch=cv.height; cv.style.boxSizing='content-box'; cv.style.width=cv._cw+'px'; cv.style.height=cv._ch+'px'; }
+  if(cv._r!==r){ cv.width=Math.round(cv._cw*r); cv.height=Math.round(cv._ch*r); cv._r=r; }
+  var g=cv.getContext('2d'); g.setTransform(r,0,0,r,0,0); return g;
+}
 // capeCol: ★v310 マントの色。渡したときだけ（金オーラ無しで）マントを描く。
 //   heroic のマントは赤固定なので、マイヒーローのきせかえで選んだ色を見せる手段が無かった。
 // clipHead: ★v304 ゲーム中(drawStick)と同じく肩の高さで頭部写真を切る。
@@ -6278,7 +6291,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
 
   // 無敵グロー
   if(hasSk(5) && (ifrm>0||p.invTimer>0)){
-    ctx.shadowColor='#ffe44d'; ctx.shadowBlur=20;
+    ctx.shadowColor='#ffe44d'; ctx.shadowBlur=20*_blurK;
   }
 
   // ═══ マント（LV2以上・背後にたなびく）═══
@@ -6559,7 +6572,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     ctx.translate(shX,shY);
     if(st==='guard')ctx.scale(1.18,1.18);  // ガード中は盾を大きく構える
     // ★無敵(LV5)中だけ金色に光る。それ以外は発光なし（青く光らない）
-    if(hasSk(5)&&(ifrm>0||p.invTimer>0)){ctx.shadowColor='#ffe44d';ctx.shadowBlur=16;}
+    if(hasSk(5)&&(ifrm>0||p.invTimer>0)){ctx.shadowColor='#ffe44d';ctx.shadowBlur=16*_blurK;}
     // 盾本体（装備した盾デザインで形が変わる）
     var shKind=(typeof eqShield==='function')?(eqShield().shape||'normal'):'normal';
     var shieldPath=function(){
@@ -6603,7 +6616,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     else if(shKind==='heart') shieldBase='#ff5588'; // ハートはピンク
     else if(shKind==='hero'){                        // ★ヒーロー：メタリックな鋼青＋発光
       shieldBase='#cfe3ff';
-      ctx.shadowColor='rgba(120,180,255,0.9)'; ctx.shadowBlur=14;
+      ctx.shadowColor='rgba(120,180,255,0.9)'; ctx.shadowBlur=14*_blurK;
     }
     // メタリックなグラデ塗り（hero/normalは縦グラデで金属感）
     if(shKind==='hero'){
@@ -6859,8 +6872,8 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
   var up=hasSk(2);
   var _sw=(typeof eqSword==='function')?eqSword():null;
   var _useSk=(_sw && _sw.id!=='silver');
-  if(_useSk){ctx.shadowColor=(_sw.aura||'#33bbff').replace(/[\d.]+\)$/,'0.9)');ctx.shadowBlur=(st==='atk')?22:11;}
-  else if(up){ctx.shadowColor='#33bbff';ctx.shadowBlur=(st==='atk')?22:10;}
+  if(_useSk){ctx.shadowColor=(_sw.aura||'#33bbff').replace(/[\d.]+\)$/,'0.9)');ctx.shadowBlur=((st==='atk')?22:11)*_blurK;}
+  else if(up){ctx.shadowColor='#33bbff';ctx.shadowBlur=((st==='atk')?22:10)*_blurK;}
   // 柄（茶色グリップ＋柄頭）
   fillOL(function(){rr(-2,2,4,8,2);},cyl(-2,2,'#6b4520'));
   ctx.fillStyle=sphGrad(ctx,0,10.5,2.4,'#8a5a28');
@@ -6918,7 +6931,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
     var hdw=hm.w*hsc, hdh=hm.h*hsc;
     var hdx=-(hm.cx*hsc);                           // 顔中心Xを0に
     var hdy=(shouldY+bobY+2)-(hm.chinY*hsc)+(hcfg.oy||0); // あごを肩のすぐ上に
-    if(hasSk(5)&&(ifrm>0||p.invTimer>0)){ctx.shadowColor='#ffe44d';ctx.shadowBlur=14;}
+    if(hasSk(5)&&(ifrm>0||p.invTimer>0)){ctx.shadowColor='#ffe44d';ctx.shadowBlur=14*_blurK;}
     // ★頭部写真の下端（首・余白）が体にハミ出て四角く見切れるのを防ぐ：
     //   肩ラインの少し下でクリップし、首から下は体（胴体）が隠す
     ctx.save();
@@ -9585,8 +9598,8 @@ function startPerkDemos(){
 function renderShopPreview(kind){
   var cvp=document.getElementById('shopPrevCv');
   if(!cvp) return;
-  var pctx=cvp.getContext('2d');
-  pctx.clearRect(0,0,cvp.width,cvp.height);
+  var pctx=_hiDpiCanvas(cvp);   // ★v320 端末の解像度で描く（以前は150pxを3倍に引き伸ばしてぼやけていた）
+  pctx.clearRect(0,0,cvp._cw,cvp._ch);
   var id=_shopPrevSel[kind] || (kind==='sword'?equippedSword:(kind==='outfit'?equippedOutfit:equippedShield));
   // 一時上書き（装備・スキル・状態）
   var oS=equippedSword,oO=equippedOutfit,oH=equippedShield;
@@ -9606,12 +9619,14 @@ function renderShopPreview(kind){
   var oc=ctx; ctx=pctx;
   try{
     ctx.save();
-    var pcx=cvp.width/2, pcy=cvp.height-16;
+    var pcx=cvp._cw/2, pcy=cvp._ch-16;
     ctx.translate(pcx,pcy); ctx.scale(1.9,1.9); ctx.translate(-pcx,-pcy);
+    _blurK=cvp._r;   // 剣の光などのぼかしを今と同じ見た目の太さに
     drawStick(pcx,pcy,1,(kind==='shield')?'guard':'idle',0,0,3,0,(kind==='shield'));
     ctx.restore();
   }catch(err){}
   ctx=oc;
+  _blurK=1;             // ★v320 ゲーム中は倍率なし
   selectedChar=oCh;     // ★v313 選択中のキャラに戻す
   _eqPreviewFree=false;
   _previewFront=false;  // ★v199(shop②): 通常描画に戻す
