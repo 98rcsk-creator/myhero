@@ -4333,7 +4333,7 @@ function _showColorStep(st){
   });
   html+='</div>'
     +'<div style="color:#8fa8c0;font-size:11px;line-height:1.5;min-height:16px;margin-bottom:8px;max-width:300px;text-align:center">'
-      +(sl.key==='body'?'よろいを きると からだは よろいの いろに なるよ':(sl.key==='acc'?(NEW_BODY_ON?'たてを もつと この いろに なるよ':'せなかで ひらっと なびくよ。よろいを きても この いろ'):''))+'</div>'
+      +(sl.key==='body'?'よろいを きると からだは よろいの いろに なるよ':(sl.key==='acc'?(NEW_BODY_ON?'たての ふちと もようが この いろに なるよ':'せなかで ひらっと なびくよ。よろいを きても この いろ'):''))+'</div>'
     +'<div class="menuBtnMain" id="mhStepNext" style="margin-top:0;font-size:18px">'+(last?'▶ これで スタート！':'つぎへ ▶')+'</div>'
     +'<div class="menuRow">'
     +'<div class="uiBtn info" id="mhStepBack" style="font-size:14px">◀ もどる</div>'
@@ -4346,7 +4346,7 @@ function _showColorStep(st){
   applyCustomColors(cur);
   setTimeout(function(){
     function draw(){
-      var cc=CHARS.custom.acc;
+      var cc=(NEW_BODY_ON && sl.key!=='acc')?null:CHARS.custom.acc;   // ★v322 新しい体は「たて」の画面だけ盾を持つ
       var cv=document.getElementById('mhStepPrev');
       if(cv){ var g=_hiDpiCanvas(cv); g.clearRect(0,0,110,96); drawCharPreview(g,55,88,'custom',false,1.75,false,false,cc); }   // ★v320
       var cv2=document.getElementById('mhStepSize');
@@ -4705,6 +4705,20 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead,capeCo
     // 刃のハイライト
     ctx2.strokeStyle='rgba(255,255,255,0.85)';ctx2.lineWidth=0.9;
     ctx2.beginPath();ctx2.moveTo(-1.1,-2.5);ctx2.lineTo(-0.4,-bl+3);ctx2.stroke();
+    ctx2.restore();
+  }
+  // ★v322 新しい体（テスト版）はマントの代わりに左手へ盾を持たせる（色えらびの「たて」画面だけが capeCol を渡す）。
+  //   塗り分けはゲーム中のノーマル盾（drawStick の _drawShieldBlk）と同じ＝本体はくつの色、ふちと真ん中の飾りが capeCol。
+  if(_nb && capeCol){
+    ctx2.save();
+    ctx2.translate((BODY_SPR.handL[0]-BODY_SPR.cx)*_bk-2, (BODY_SPR.handL[1]-BODY_SPR.soleY)*_bk-1);
+    var shP=function(){ ctx2.beginPath(); ctx2.moveTo(-8,-11); ctx2.lineTo(8,-11); ctx2.lineTo(8,3);
+      ctx2.quadraticCurveTo(8,11,0,14); ctx2.quadraticCurveTo(-8,11,-8,3); ctx2.closePath(); };
+    soft(shP,c.boot[0]);
+    ctx2.strokeStyle=capeCol; ctx2.lineWidth=2; shP(); ctx2.stroke();
+    ctx2.fillStyle=capeCol;
+    ctx2.beginPath(); ctx2.moveTo(0,-7); ctx2.lineTo(3,0); ctx2.lineTo(0,7); ctx2.lineTo(-3,0); ctx2.closePath(); ctx2.fill();
+    ctx2.fillStyle='rgba(255,255,255,0.35)'; ctx2.fillRect(-6,-9,3,8);
     ctx2.restore();
   }
   // 首（落ち影）。★v321 新しい体は画像に首がある
