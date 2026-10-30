@@ -3502,7 +3502,8 @@ function _showFaceStep(){
     (function drawNext(i){
       if(i>=previews.length) return;
       var cv2=previews[i];
-      try{ drawCharPreview(_hiDpiCanvas(cv2),36,92,cv2.dataset.cid,false,1.35,true); }catch(err){}   // ★v320
+      // ★v324 新しい体（テスト版）はキャラだけ（剣・金の光なし。ユーザー指定）。剣のぶん左へ寄せていたのも台座の真ん中(38)へ
+      try{ drawCharPreview(_hiDpiCanvas(cv2),NEW_BODY_ON?38:36,92,cv2.dataset.cid,false,1.35,!NEW_BODY_ON); }catch(err){}   // ★v320
       requestAnimationFrame(function(){ drawNext(i+1); });
     })(0);
     // ★v276 STEP①と同じく touchstart の preventDefault をやめる（iOSでスクロールが死ぬ）
