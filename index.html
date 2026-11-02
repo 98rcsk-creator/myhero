@@ -4532,7 +4532,8 @@ var BODY_READY=false, _bodyPx=null, _bodyRg=null, _bodyCache={}, _bodyCacheN=0;
   }
   a.onload=done; m.onload=done; a.src=BODY_SPR.base; m.src=BODY_SPR.map;
 })();
-function _hexRGB(h){ h=String(h||'#888888').replace('#',''); if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+function _hexRGB(h){ var m=String(h||'').match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/); if(m) return [+m[1],+m[2],+m[3]];   // ★v326 rgb() も受ける
+  h=String(h||'#888888').replace('#',''); if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
   return [parseInt(h.substr(0,2),16)||0, parseInt(h.substr(2,2),16)||0, parseInt(h.substr(4,2),16)||0]; }
 // 体をキャラの色で塗った canvas。色の組み合わせごとに1回だけ作って使い回す（白い素材の陰影はそのまま残る）。
 //   基準の明るさ(wref/sref)より暗い所は色×明るさ、明るい所（つや）は白へ寄せる。
@@ -4567,12 +4568,73 @@ function _hiDpiCanvas(cv){
   if(cv._r!==r){ cv.width=Math.round(cv._cw*r); cv.height=Math.round(cv._ch*r); cv._r=r; }
   var g=cv.getContext('2d'); g.setTransform(r,0,0,r,0,0); return g;
 }
+// ★v326 新しい体（正面向き）に持たせる盾と剣。ショップの試着とマイヒーローの色えらび「たて」で使う。
+//   ⚠ 盾4種とヒーローソードは仮。ユーザーが ChatGPT で絵を作る予定で、届いたら差し替える。
+//   盾の見せ方はユーザーが選んだ「B」：少し斜めに構える・体に落ちる影・縦のグラデ・内側の照り。
+//   ノーマル盾の色はゲーム中と同じ＝本体はくつの色、ふちと真ん中のひし形が acc（マイヒーローの「たて」の色）。
+function _frontShieldPath(g,k){
+  g.beginPath();
+  if(k==='star'){ for(var i=0;i<10;i++){ var r=(i%2===0)?12:5, a=Math.PI*1.5+i*Math.PI/5; if(i===0) g.moveTo(Math.cos(a)*r,Math.sin(a)*r); else g.lineTo(Math.cos(a)*r,Math.sin(a)*r); } g.closePath(); }
+  else if(k==='heart'){ g.moveTo(0,-3); g.bezierCurveTo(-2,-11,-13,-8,-11,1); g.bezierCurveTo(-10,7,-3,11,0,14); g.bezierCurveTo(3,11,10,7,11,1); g.bezierCurveTo(13,-8,2,-11,0,-3); g.closePath(); }
+  else if(k==='hero'){ g.moveTo(-10.5,-13); g.lineTo(10.5,-13); g.lineTo(11.5,-6); g.lineTo(10,-1); g.quadraticCurveTo(10,11,0,18); g.quadraticCurveTo(-10,11,-10,-1); g.lineTo(-11.5,-6); g.closePath(); }
+  else { g.moveTo(-8,-11); g.lineTo(8,-11); g.lineTo(8,3); g.quadraticCurveTo(8,11,0,14); g.quadraticCurveTo(-8,11,-8,3); g.closePath(); }
+}
+function _frontShield(g,k,base,acc){
+  var fill=base, rim=acc;
+  if(k==='star'){ fill='#ffcc33'; rim='#ff9900'; } else if(k==='heart'){ fill='#ff5588'; rim='#cc2266'; } else if(k==='hero'){ rim='#3a5c9c'; }
+  g.save(); g.lineJoin='round';
+  g.rotate(-0.14); g.scale(0.9,1);
+  g.save(); g.translate(1.8,1.6); g.fillStyle='rgba(25,12,30,0.28)'; _frontShieldPath(g,k); g.fill(); g.restore();   // 体に落ちる影
+  if(k==='hero'){ g.shadowColor='rgba(120,180,255,0.9)'; g.shadowBlur=14*_blurK; }
+  g.strokeStyle='rgba(35,22,28,0.35)'; g.lineWidth=1.2; _frontShieldPath(g,k); g.stroke();
+  g.fillStyle=(k==='hero')?gradL(g,0,-13,0,18,[0,'#eaf3ff',0.45,'#9fc0ee',1,'#4a6aa8'])
+                          :gradL(g,0,-12,0,14,[0,_blendHex(fill,'#ffffff',0.35),0.5,fill,1,shadeCol(fill,0.62)]);
+  _frontShieldPath(g,k); g.fill();
+  g.shadowBlur=0; g.shadowColor='transparent';
+  g.strokeStyle=rim; g.lineWidth=(k==='hero')?2.4:2; _frontShieldPath(g,k); g.stroke();
+  g.save(); g.scale(0.82,0.82); g.strokeStyle='rgba(255,255,255,0.3)'; g.lineWidth=1; _frontShieldPath(g,k); g.stroke(); g.restore();
+  if(k==='normal'){
+    g.fillStyle=gradL(g,0,-7,0,7,[0,_blendHex(acc,'#ffffff',0.4),1,shadeCol(acc,0.7)]);
+    g.beginPath(); g.moveTo(0,-7); g.lineTo(3,0); g.lineTo(0,7); g.lineTo(-3,0); g.closePath(); g.fill();
+  }
+  if(k==='hero'){
+    g.strokeStyle='rgba(255,255,255,0.5)'; g.lineWidth=1.4;
+    g.beginPath(); g.moveTo(0,-11); g.lineTo(0,15); g.stroke();
+    g.beginPath(); g.moveTo(-8.5,-4); g.lineTo(8.5,-4); g.stroke();
+    g.fillStyle='rgba(60,92,156,0.55)';
+    g.beginPath(); g.moveTo(0,-6); g.quadraticCurveTo(-9,-5,-8,2); g.quadraticCurveTo(-4,-1,0,4); g.quadraticCurveTo(4,-1,8,2); g.quadraticCurveTo(9,-5,0,-6); g.closePath(); g.fill();
+    g.fillStyle='#ff5a6e'; g.beginPath(); g.arc(0,-1,2.6,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,255,255,0.85)'; g.beginPath(); g.arc(-0.8,-1.8,0.9,0,Math.PI*2); g.fill();
+  }
+  g.save(); _frontShieldPath(g,k); g.clip();   // 左上の照り（盾の形の中だけ）
+  g.fillStyle=gradR(g,-4,-6,0,-4,-6,9,[0,'rgba(255,255,255,0.45)',1,'rgba(255,255,255,0)']); g.fillRect(-13,-15,26,20);
+  g.restore();
+  g.restore();
+}
+// 剣：刃を上に向けて持つ（原点＝手）。色と光は装備した剣（SWORD_SKINS）のまま
+function _frontSword(g,sw){
+  var L=32, bl=(sw&&sw.blade)?sw.blade:['#f2f5f8','#cfd6dd','#9aa3ac'];
+  g.save(); g.lineJoin='round';
+  g.fillStyle=cylGrad(g,-1.6,1.6,'#6b4520'); g.fillRect(-1.6,1.5,3.2,6.5);
+  g.fillStyle=sphGrad(g,0,8.6,2,'#8a5a28'); g.beginPath(); g.arc(0,8.6,2,0,Math.PI*2); g.fill();
+  g.fillStyle=cylGrad(g,-5.5,5.5,'#c9992e'); g.fillRect(-5.5,-0.8,11,2.8);
+  var bp=function(){ g.beginPath(); g.moveTo(-2.8,-0.8); g.lineTo(-3.6,-L*0.5); g.lineTo(0,-L); g.lineTo(3.6,-L*0.5); g.lineTo(2.8,-0.8); g.closePath(); };
+  g.strokeStyle='rgba(35,22,28,0.4)'; g.lineWidth=1.2; bp(); g.stroke();
+  if(sw&&sw.aura){ g.shadowColor=sw.aura.replace(/[\d.]+\)$/,'0.9)'); g.shadowBlur=11*_blurK; }
+  g.fillStyle=gradL(g,-3.6,0,3.6,0,[0,bl[2],0.5,bl[0],1,bl[2]]); bp(); g.fill();
+  g.shadowBlur=0; g.shadowColor='transparent';
+  g.fillStyle='rgba(0,0,0,0.18)'; g.beginPath(); g.moveTo(0,-0.8); g.lineTo(0,-L); g.lineTo(3.6,-L*0.5); g.lineTo(2.8,-0.8); g.closePath(); g.fill();
+  g.strokeStyle='rgba(255,255,255,0.85)'; g.lineWidth=1; g.beginPath(); g.moveTo(-1.4,-3); g.lineTo(-0.6,-L+4); g.stroke();
+  g.restore();
+}
 // capeCol: ★v310 マントの色。渡したときだけ（金オーラ無しで）マントを描く。
 //   heroic のマントは赤固定なので、マイヒーローのきせかえで選んだ色を見せる手段が無かった。
 // clipHead: ★v304 ゲーム中(drawStick)と同じく肩の高さで頭部写真を切る。
 //   既定は false ＝ 従来どおり写真を切らずに描く（キャラ選択の見た目は変えない）。
 //   「ゲーム中のおおきさ」プレビューだけが true を渡す。ここを合わせないと見本が嘘になる。
-function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead,capeCol){
+// opt: ★v326 新しい体のときだけ使う {body,leg,boot:色の上書き, sword:SWORD_SKINS の1つ, shield:SHIELD_SKINS の1つ}（ショップの試着）
+function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead,capeCol,opt){
+  opt=opt||{};
   var c=CHARS[cid];
   if(!c) return;
   scale=scale||1;
@@ -4658,7 +4720,7 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead,capeCo
   }
   if(_nb){
     // ★v321 新しい体をキャラの色で塗って1枚で貼る（手・首も含む）
-    ctx2.drawImage(bodyTinted(c.body[0],c.leg[0],c.boot[0],c.skin), -BODY_SPR.cx*_bk, -BODY_SPR.soleY*_bk, BODY_SPR.w*_bk, BODY_SPR.h*_bk);
+    ctx2.drawImage(bodyTinted(opt.body||c.body[0],opt.leg||c.leg[0],opt.boot||c.boot[0],c.skin), -BODY_SPR.cx*_bk, -BODY_SPR.soleY*_bk, BODY_SPR.w*_bk, BODY_SPR.h*_bk);
   } else {
     // 足（ぷっくり＋丸靴）
     [-BW*0.42,BW*0.42].forEach(function(ox){
@@ -4713,17 +4775,11 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead,capeCo
     ctx2.restore();
   }
   // ★v322 新しい体（テスト版）はマントの代わりに左手へ盾を持たせる（色えらびの「たて」画面だけが capeCol を渡す）。
-  //   塗り分けはゲーム中のノーマル盾（drawStick の _drawShieldBlk）と同じ＝本体はくつの色、ふちと真ん中の飾りが capeCol。
-  if(_nb && capeCol){
+  // ★v326 ショップの盾の試着（opt.shield）も同じ所に持つ。描き方は _frontShield にまとめた
+  if(_nb && (capeCol || opt.shield)){
     ctx2.save();
     ctx2.translate((BODY_SPR.handL[0]-BODY_SPR.cx)*_bk-2, (BODY_SPR.handL[1]-BODY_SPR.soleY)*_bk-1);
-    var shP=function(){ ctx2.beginPath(); ctx2.moveTo(-8,-11); ctx2.lineTo(8,-11); ctx2.lineTo(8,3);
-      ctx2.quadraticCurveTo(8,11,0,14); ctx2.quadraticCurveTo(-8,11,-8,3); ctx2.closePath(); };
-    soft(shP,c.boot[0]);
-    ctx2.strokeStyle=capeCol; ctx2.lineWidth=2; shP(); ctx2.stroke();
-    ctx2.fillStyle=capeCol;
-    ctx2.beginPath(); ctx2.moveTo(0,-7); ctx2.lineTo(3,0); ctx2.lineTo(0,7); ctx2.lineTo(-3,0); ctx2.closePath(); ctx2.fill();
-    ctx2.fillStyle='rgba(255,255,255,0.35)'; ctx2.fillRect(-6,-9,3,8);
+    _frontShield(ctx2, opt.shield?(opt.shield.shape||'normal'):'normal', opt.boot||c.boot[0], capeCol||c.acc);
     ctx2.restore();
   }
   // 首（落ち影）。★v321 新しい体は画像に首がある
@@ -4766,6 +4822,11 @@ function drawCharPreview(ctx2,cx,cy,cid,forceVector,scale,heroic,clipHead,capeCo
     }
     hairGloss(ctx2,headCY,HR);
     _drawPreviewFace(ctx2,cid,c,HR,headCY);
+  }
+  // ★v326 ショップの剣の試着：右手に持ち、顔にかぶらないよう外へ傾ける。剣は商品なので頭より前に描く
+  if(_nb && opt.sword){
+    ctx2.save(); ctx2.translate((BODY_SPR.handR[0]-BODY_SPR.cx)*_bk, (BODY_SPR.handR[1]-BODY_SPR.soleY)*_bk);
+    ctx2.rotate(0.35); _frontSword(ctx2,opt.sword); ctx2.restore();
   }
   ctx2.restore();
   if(scale!==1) ctx2.restore();
@@ -9699,12 +9760,22 @@ function renderShopPreview(kind){
   var oCh=selectedChar; selectedChar='men_0';
   var oc=ctx; ctx=pctx;
   try{
-    ctx.save();
     var pcx=cvp._cw/2, pcy=cvp._ch-16;
-    ctx.translate(pcx,pcy); ctx.scale(1.9,1.9); ctx.translate(-pcx,-pcy);
     _blurK=cvp._r;   // 剣の光などのぼかしを今と同じ見た目の太さに
+    if(NEW_BODY_ON && BODY_READY){
+      // ★v326 新しい体は正面向き・マントなし。服は体を装備の色で塗るだけ（鎧の形は出さない＝ユーザー了承）。
+      //   上着＝装備の2番目に明るい色、ズボンと靴はゲーム中（drawStick）と同じく装備の暗めの色へ寄せる
+      var o={}, c0=CHARS['men_0'];
+      if(kind==='outfit'){ var of=eqOutfit(); if(of && of.body){ o.body=of.body[1]; var t=of.body[3]; o.leg=_blendHex(c0.leg[0],t,0.65); o.boot=_blendHex(c0.boot[0],t,0.75); } }
+      else if(kind==='sword') o.sword=eqSword();
+      else if(kind==='shield') o.shield=eqShield();
+      drawCharPreview(ctx,pcx,pcy,'men_0',false,1.9,false,false,null,o);
+    } else {
+    ctx.save();
+    ctx.translate(pcx,pcy); ctx.scale(1.9,1.9); ctx.translate(-pcx,-pcy);
     drawStick(pcx,pcy,1,(kind==='shield')?'guard':'idle',0,0,3,0,(kind==='shield'));
     ctx.restore();
+    }
   }catch(err){}
   ctx=oc;
   _blurK=1;             // ★v320 ゲーム中は倍率なし
