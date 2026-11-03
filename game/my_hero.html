@@ -2800,9 +2800,11 @@ function mhRamp(hex){
   for(var i=0;i<MH_RAMP.length;i++) out.push(_hsl2hex(c.h, c.s, c.l*MH_RAMP[i]));
   return out;
 }
-// 選べる12色。どのスロットでも同じ並びにして迷わないようにする。
+// 選べる13色。どのスロットでも同じ並びにして迷わないようにする。
 // 背景に埋もれないことを全10ワールドで実測してから確定した色（§12参照）。
+// ★v330 しろ を追加（ユーザー指定「白も重要」）。白い服のプリセット（ルーベルト・クララ・エルザ）が既にいるので、見え方は既存と同じ範囲（CLAUDE.md §1-15）
 var MH_PALETTE=[
+  {id:'white',  name:'しろ',     hex:'#f2f0ea'},
   {id:'steel',  name:'はがね',   hex:'#7a8a9a'},
   {id:'navy',   name:'あお',     hex:'#3a66b0'},
   {id:'sky',    name:'みずいろ', hex:'#48a8d8'},
@@ -4331,7 +4333,7 @@ function _showColorStep(st){
     +'</div>'
     +'<div style="color:#9fe4ff;font-size:15px;font-weight:bold;margin:2px 0 6px">'
       +sl.name+'の いろ'+(sl.note?'<span style="color:#6f8ba0;font-weight:normal;font-size:11px">（'+sl.note+'）</span>':'')+'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px;width:100%;max-width:300px;margin-bottom:6px">';
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px;width:100%;max-width:300px;margin-bottom:6px">';   // ★v330 13色を2段に
   MH_PALETTE.forEach(function(c){
     html+='<div class="mhSw" data-hex="'+c.hex+'" title="'+c.name+'" '
       +'style="height:33px;border-radius:9px;background:'+c.hex+';cursor:pointer;box-sizing:border-box;'
