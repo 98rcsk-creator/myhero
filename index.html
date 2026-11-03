@@ -1573,7 +1573,7 @@ var OUTFIT_SKINS=[
   {id:'gold',    name:'黄金の鎧',   icon:'🥇', price:2800,  body:['#fff0a0','#ffd24a','#e0a820','#c89010','#a87808','#886008'], desc:'被ダメージ -10%', dmgCut:0.10},
   {id:'darkarmor', name:'漆黒の鎧',   icon:'🖤', price:7000,  body:['#5a5a66','#44444e','#33333a','#26262c','#1a1a20','#101014'], desc:'被ダメージ -20%', dmgCut:0.20},
   {id:'royal',   name:'王者のローブ',icon:'👑', price:14000, body:['#c890e8','#a860d8','#8e44c8','#7430b0','#5e2498','#4a1880'], desc:'最大HP +30', hpBonus:30},
-  {id:'herosuit', name:'ヒーロースーツ', icon:'🦸', price:16000, body:['#ff8a8a','#f05555','#d83838','#c02828','#a01c1c','#801414'], desc:'HP+20・被ダメ-15%・マント付き', hpBonus:20, dmgCut:0.15, cape:true, hero:true}
+  {id:'herosuit', name:'ヒーロースーツ', icon:'🦸', price:16000, body:['#ff8a8a','#f05555','#d83838','#c02828','#a01c1c','#801414'], desc:NEW_BODY_ON?'HP+20・被ダメ-15%':'HP+20・被ダメ-15%・マント付き', hpBonus:20, dmgCut:0.15, cape:true, hero:true}
 ];
 // 購入済みアイテムID
 var ownedItems=(function(){
@@ -4795,25 +4795,129 @@ function _hiDpiCanvas(cv){
 // ★v326 新しい体（正面向き）に持たせる盾と剣。ショップの試着とマイヒーローの色えらび「たて」で使う。
 // ★v327 盾は ChatGPT の絵（ITEM_SPR）。見せ方はユーザーが選んだ「B」：少し斜めに構える・体に落ちる影。
 //   id＝SHIELD_SKINS の id。tint＝まるガードの金属に塗る色（マイヒーローの「たて」の色。渡さなければ絵のままのグレー）
-function _frontShield(g,id,tint){
+function _frontShield(g,id,tint,sm){
   var base=ITEM_IMG['sh_'+id]; if(!base) return;   // 読み込み前は描かない（起動時に読むので、画面を開く頃には済んでいる）
-  var im=(id==='normal' && tint)?shieldTinted(tint):base;
+  var im=(id==='normal' && tint)?shieldTinted(tint):base, sh=_itemShadow(base);
+  if(sm){ im=_shrunk(im,sm); sh=_shrunk(sh,sm); }   // ★v334 ゲーム中は前もって縮めた絵（毎フレーム大きい絵を縮めると重い・ちらつく）
   var H=ITEM_SPR.shieldH[id]||25, W=H*base.width/base.height;
   g.save(); g.rotate(-0.14); g.scale(0.9,1);
-  g.globalAlpha=0.28; g.drawImage(_itemShadow(base),-W/2+1.8,-H/2+1.6,W,H); g.globalAlpha=1;   // 体に落ちる影
+  g.globalAlpha=0.28; g.drawImage(sh,-W/2+1.8,-H/2+1.6,W,H); g.globalAlpha=1;   // 体に落ちる影
   if(id==='heroshield'){ g.shadowColor='rgba(120,180,255,0.9)'; g.shadowBlur=14*_blurK; }      // いちばん特別な盾だけ光る（今のゲームと同じ）
   g.drawImage(im,-W/2,-H/2,W,H);
   g.restore();
 }
 // ★v328 剣は5本とも ChatGPT の絵。原点＝握る所。光は今のゲームと同じ装備の色（SWORD_SKINS の aura）、
 //   ヒーローソードだけ絵の金と白に合わせた金色（今のゲームのピンクの光は横向きのコードの剣用）。銀の剣は光らない
-function _frontSword(g,sw){
+function _frontSword(g,sw,sm){
   var id=(sw&&sw.id)||'silver', im=ITEM_IMG['sw_'+id]; if(!im) return;   // 読み込み前は描かない
   var k=ITEM_SPR.swordLen[id]/im.height, gp=ITEM_SPR.swordGrip[id];
   var glow=(id==='herosword')?'rgba(255,230,140,0.9)':((sw&&sw.aura)?sw.aura.replace(/[\d.]+\)$/,'0.9)'):null);
   g.save(); if(glow){ g.shadowColor=glow; g.shadowBlur=11*_blurK; }
-  g.drawImage(im,-gp[0]*k,-gp[1]*k,im.width*k,im.height*k);
+  g.drawImage(sm?_shrunk(im,sm):im,-gp[0]*k,-gp[1]*k,im.width*k,im.height*k);   // ★v334 sm＝ゲーム中用に縮めた絵
   g.restore();
+}
+// ★v334 絵を高さ h まで縮めた canvas（半分ずつ縮めてから仕上げる＝細い線がつぶれにくい）。絵ごとに1回だけ作る
+function _shrunk(im,h){
+  var c=im._sm||(im._sm={}); if(c[h]) return c[h];
+  var cur=im, cw=im.width, ch=im.height;
+  while(ch>h*2){ var t=document.createElement('canvas'); t.width=Math.max(1,Math.round(cw/2)); t.height=Math.max(1,Math.round(ch/2));
+    var tg=t.getContext('2d'); tg.imageSmoothingQuality='high'; tg.drawImage(cur,0,0,t.width,t.height); cur=t; cw=t.width; ch=t.height; }
+  var o=document.createElement('canvas'); o.height=h; o.width=Math.max(1,Math.round(cw*h/ch));
+  var og=o.getContext('2d'); og.imageSmoothingQuality='high'; og.drawImage(cur,0,0,o.width,o.height);
+  return (c[h]=o);
+}
+// ★v334 ゲーム中の新しい体（テスト版）。体の絵を腕・脚・胴に切り分けて、関節で回して動かす（ユーザーが2案からBを選択）。
+//   切り分け方は「体の絵（357x360）の画素」の多角形。腕は肩の少し上から、脚は股の少し上から切って胴と重ねる（回しても隙間が出ない）。
+//   線は塗り分けの地図で測って引いた：手（肌）は x≦62・x≧294 で y≦220、ズボンは x85〜273、靴は x50〜307 まで広がる。
+//   腕の部品にズボンが、脚の部品に手が入らないこと・腰より下が胴に残らないことを全画素で確認済み（重なり0・取りこぼし0）。
+//   ⚠ 長方形で切ると、靴のつま先が胴に残り・手の端が脚に入って、走ると点が残る（最初の試作で実際に出た）。
+//   piv＝回す中心（肩・股）。手の位置は BODY_SPR.handL/handR。鎧の絵を入れるときも、体と同じ形なら同じ切り方で動く。
+var NB_RIG={
+  armL:[[0,96],[108,96],[96,150],[90,196],[80,224],[0,224]],     armR:[[357,96],[249,96],[261,150],[267,196],[277,224],[357,224]],
+  legL:[[72,204],[178,204],[178,360],[30,360],[30,226],[72,226]], legR:[[178,204],[286,204],[286,226],[330,226],[330,360],[178,360]],
+  cutArmL:[[0,128],[100,128],[93,150],[90,196],[80,224],[0,224]], cutArmR:[[357,128],[257,128],[264,150],[267,196],[277,224],[357,224]],   // 胴から抜く所（腕の下半分）
+  cutLeg:[[72,214],[286,214],[286,226],[330,226],[330,360],[30,360],[30,226],[72,226]],                                                   // 胴から抜く所（脚）
+  piv:{al:[100,112], ar:[257,112], ll:[136,210], lr:[221,210]}
+};
+var _nbCache={}, _nbCacheN=0;
+// 色を塗った体を部品に切って、ゲーム中の大きさの2倍強（高さ100px）に縮めておく。色の組み合わせごとに1回だけ
+function _nbParts(body,leg,boot,skin){
+  var key=body+leg+boot+skin; if(_nbCache[key]) return _nbCache[key];
+  var src=bodyTinted(body,leg,boot,skin), w=BODY_SPR.w, h=BODY_SPR.h;
+  function poly(g,pts){ g.beginPath(); g.moveTo(pts[0][0],pts[0][1]); for(var i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]); g.closePath(); }
+  function cut(inc,exc){
+    var c=document.createElement('canvas'); c.width=w; c.height=h; var g=c.getContext('2d');
+    g.save(); if(inc){ poly(g,inc); g.clip(); } g.drawImage(src,0,0); g.restore();
+    if(exc){ g.globalCompositeOperation='destination-out'; for(var i=0;i<exc.length;i++){ poly(g,exc[i]); g.fill(); } }
+    return _shrunk(c,100);
+  }
+  var R=NB_RIG, P={torso:cut(null,[R.cutArmL,R.cutArmR,R.cutLeg]), al:cut(R.armL), ar:cut(R.armR), ll:cut(R.legL), lr:cut(R.legR)};
+  if(++_nbCacheN>6){ _nbCache={}; _nbCacheN=1; }
+  return (_nbCache[key]=P);
+}
+// プレイヤーを新しい体で描く（drawStick から呼ぶ）。描けなかったら false を返して今の描き方に任せる
+//   大きさは drawCharPreview の単位×1.1（今のゲーム中の頭 HR=11 と同じ大きさになる）。当たり判定は変えない
+function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
+  var cid=selectedChar, c=CHARS[cid];
+  if(!c || !HEAD_READY[cid]) return false;
+  // 色：キャラ選択・そうび画面と同じ（LVで服の色を暗くしない）。ショップの服はそうび画面と同じ塗り方。ブリギッタは専用の服なので変えない
+  var body=c.body[0], leg=c.leg[0], boot=c.boot[0], of=eqOutfit();
+  if(of && of.body && cid!=='women_3'){ var tn=of.body[3]; body=of.body[1]; leg=_blendHex(c.leg[0],tn,0.65); boot=_blendHex(c.boot[0],tn,0.75); }
+  var P=_nbParts(body,leg,boot,c.skin);
+  // ── 動き（hop＝全身を浮かす／up＝上半身だけ沈める）──
+  var hop=0, up=0, lean=0, aL=0, aR=0, lL=0, lR=0, sw=0.35, back=false, slash=null;
+  if(st==='run'){ var cyc=Math.sin((p.af+(p.at||0)/8)*Math.PI*0.5);   // 今の4コマ（8フレームごと）を滑らかにつなぐ
+    hop=-Math.abs(cyc)*1.4; lean=0.08; lL=cyc*0.32; lR=-cyc*0.32; aL=-cyc*0.24; aR=cyc*0.24; }
+  else if(st==='jump'){ lL=0.22; lR=-0.12; aL=0.5; aR=-0.5; lean=0.05; }
+  else if(st==='atk'){
+    var t=1-(atkT||0)/14;   // 今と同じ3段：ふりかぶる→振りぬく→戻す
+    if(t<0.2){ var w=1-(1-t/0.2)*(1-t/0.2); aR=-1.0*w; sw=0.35-0.95*w; lean=-0.04*w; back=true; }
+    else if(t<0.6){ var u=1-Math.pow(1-(t-0.2)/0.4,3); aR=-1.0+1.5*u; sw=-0.6+2.5*u; lean=-0.04+0.16*u; slash=1-u*0.6; back=(u<0.38); }
+    else { var v=1-(1-(t-0.6)/0.4)*(1-(t-0.6)/0.4); aR=0.5-0.5*v; sw=1.9-1.55*v; lean=0.12*(1-v*0.6); }
+    lL=0.18; lR=-0.12;
+  }
+  else if(st==='guard'){ aL=-0.6; lL=0.14; lR=-0.14; up=0.8; }
+  else { up=Math.sin(fr*0.07)*0.6; }   // 立っているときの呼吸
+  var S=1.1, bk=25.6/(BODY_SPR.soleY-BODY_SPR.chinY), shouldY=-27.6;
+  var ox=-BODY_SPR.cx*bk, oy=-BODY_SPR.soleY*bk, W=BODY_SPR.w*bk, Hh=BODY_SPR.h*bk, R=NB_RIG;
+  ctx.save(); ctx.translate(cx,cy); ctx.scale(dir*S,S); if(hop) ctx.translate(0,hop); if(lean) ctx.rotate(lean);
+  if(hasSk(5) && (ifrm>0||p.invTimer>0)){ ctx.shadowColor='#ffe44d'; ctx.shadowBlur=20*_blurK; }   // 無敵の光（今と同じ）
+  function part(cv,piv,ang,dy){
+    if(!ang){ ctx.drawImage(cv,ox,oy+dy,W,Hh); return; }
+    var px=ox+piv[0]*bk, py=oy+piv[1]*bk+dy;
+    ctx.save(); ctx.translate(px,py); ctx.rotate(ang); ctx.translate(-px,-py); ctx.drawImage(cv,ox,oy+dy,W,Hh); ctx.restore();
+  }
+  function hand(right,ang){ var pv=right?R.piv.ar:R.piv.al, hd=right?BODY_SPR.handR:BODY_SPR.handL, hx=hd[0]-pv[0], hy=hd[1]-pv[1], co=Math.cos(ang), si=Math.sin(ang);
+    return [ox+(pv[0]+hx*co-hy*si)*bk, oy+(pv[1]+hx*si+hy*co)*bk+up]; }
+  part(P.ll,R.piv.ll,lL,0); part(P.lr,R.piv.lr,lR,0);
+  part(P.torso,null,0,up);
+  part(P.al,R.piv.al,aL,up); part(P.ar,R.piv.ar,aR,up);
+  // 盾：盾スキルを取ってから（今と同じ）。ふだんは左手、ガードは体の前に大きく
+  if(hasSk(3)){
+    ctx.save();
+    if(st==='guard'){ ctx.translate(-2,-16+up); ctx.scale(1.25,1.25); } else { var hL=hand(false,aL); ctx.translate(hL[0]-2,hL[1]-1); }
+    _frontShield(ctx,eqShield().id||'normal',null,80);
+    ctx.restore();
+  }
+  // 剣：剣スキルの前は短め（今の 30/44 と同じ比）。ロングソード中は1.9倍。ふりかぶっている間は頭のうしろ
+  var swd=eqSword(), sk=(hasSk(2)?1:0.68)*((p.longT>0)?1.9:1), hR=hand(true,aR);
+  function sword(){ ctx.save(); ctx.translate(hR[0],hR[1]); ctx.rotate(sw); if(sk!==1) ctx.scale(sk,sk); _frontSword(ctx,swd,128); ctx.restore(); }
+  if(back) sword();
+  var hd=HEAD[cid], hm=HEAD_META[cid], hc=HEADCFG[cid]||{s:1,oy:0}, k=10*3.4*(hc.s||1)/hm.h;
+  ctx.drawImage(hd,-hm.cx*k,(shouldY+2+up)-hm.chinY*k+(hc.oy||0),hm.w*k,hm.h*k);
+  // 斬撃の軌跡（今と同じ白い扇。剣先のうしろに伸びる）
+  if(slash){
+    var sr=(ITEM_SPR.swordLen[swd.id]||42)*sk*0.95, a1=sw-Math.PI/2;
+    ctx.save(); ctx.shadowBlur=0; ctx.translate(hR[0],hR[1]);
+    ctx.fillStyle=gradR(ctx,0,0,sr*0.3,0,0,sr,[0,'rgba(255,255,255,0)',0.72,'rgba(255,255,255,'+(0.30*slash).toFixed(3)+')',1,'rgba(190,235,255,'+(0.55*slash).toFixed(3)+')']);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,sr,a1-1.15,a1); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,'+(0.75*slash).toFixed(3)+')'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.arc(0,0,sr-1.5,a1-0.85,a1); ctx.stroke();
+    ctx.restore();
+  }
+  if(!back) sword();
+  ctx.restore();
+  return true;
 }
 // capeCol: ★v310 マントの色。渡したときだけ（金オーラ無しで）マントを描く。
 //   heroic のマントは赤固定なので、マイヒーローのきせかえで選んだ色を見せる手段が無かった。
@@ -6511,6 +6615,8 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
   //   通常＝4フレームごと（速い）／穴落ちフリーズ後半＝10フレームごと（ゆっくり＝復帰予告）
   var _bd=(typeof _fallBlinkSlow!=='undefined' && _fallBlinkSlow)?10:4;
   if(ifrm>0 && p.guardEffect<=0 && (p.graceInv||0)<=0 && Math.floor(fr/_bd)%2===1)return;
+  // ★v334 テスト版はゲーム中も新しい体（_drawPlayerNB）。マント・LVごとの飾りは新しい体では出さない。本番は下の今の描き方のまま
+  if(NEW_BODY_ON && BODY_READY && !_previewFront && _drawPlayerNB(cx,cy,dir,st,ifrm,atkT)) return;
 
   // ── サイズ（やや頭身を上げたRPG風プロポーション）──
   var HR=11,   // 頭半径（チビ頭身＝フィギュア感）
