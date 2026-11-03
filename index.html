@@ -1571,7 +1571,7 @@ var SWORD_SKINS=[
 var OUTFIT_SKINS=[
   {id:'default', name:'いつもの服', icon:'👕', price:0,     body:null, desc:'ふつうの服'},
   {id:'gold',    name:'黄金の鎧',   icon:'🥇', price:2800,  body:['#fff0a0','#ffd24a','#e0a820','#c89010','#a87808','#886008'], desc:'被ダメージ -10%', dmgCut:0.10},
-  {id:'dark',    name:'漆黒の鎧',   icon:'🖤', price:7000,  body:['#5a5a66','#44444e','#33333a','#26262c','#1a1a20','#101014'], desc:'被ダメージ -20%', dmgCut:0.20},
+  {id:'darkarmor', name:'漆黒の鎧',   icon:'🖤', price:7000,  body:['#5a5a66','#44444e','#33333a','#26262c','#1a1a20','#101014'], desc:'被ダメージ -20%', dmgCut:0.20},
   {id:'royal',   name:'王者のローブ',icon:'👑', price:14000, body:['#c890e8','#a860d8','#8e44c8','#7430b0','#5e2498','#4a1880'], desc:'最大HP +30', hpBonus:30},
   {id:'herosuit', name:'ヒーロースーツ', icon:'🦸', price:16000, body:['#ff8a8a','#f05555','#d83838','#c02828','#a01c1c','#801414'], desc:'HP+20・被ダメ-15%・マント付き', hpBonus:20, dmgCut:0.15, cape:true, hero:true}
 ];
@@ -1585,6 +1585,15 @@ var equippedBG=store.get('yk_bg')||'grass';
 var equippedShield=store.get('yk_shield')||'normal';
 var equippedSword=store.get('yk_sword')||'silver';
 var equippedOutfit=store.get('yk_outfit')||'default';
+// ★v333 漆黒の鎧の id を 'dark' → 'darkarmor' に変えた（闇の剣と同じ 'dark' で、持ち物 ownedItems は
+//   剣・盾・服の共通リストなので、片方を買うともう片方も「持っている」扱いになっていた）。
+//   古いセーブの 'dark' はどちらを買ったか区別できないので、今まで通り両方持っている扱いにする（損をさせない）。
+//   1回だけ実行する（yk_mig_dk）。毎回やると、直したあとに闇の剣だけ買った人にも鎧が付いてしまう。
+if(!store.get('yk_mig_dk')){
+  if(ownedItems.indexOf('dark')>=0 && ownedItems.indexOf('darkarmor')<0){ ownedItems.push('darkarmor'); store.set('yk_owned',JSON.stringify(ownedItems)); }
+  if(equippedOutfit==='dark'){ equippedOutfit='darkarmor'; store.set('yk_outfit','darkarmor'); }
+  store.set('yk_mig_dk','1');
+}
 function getBGTheme(){ for(var i=0;i<BG_THEMES.length;i++){ if(BG_THEMES[i].id===equippedBG) return BG_THEMES[i]; } return BG_THEMES[0]; }
 function getShieldSkin(){ for(var i=0;i<SHIELD_SKINS.length;i++){ if(SHIELD_SKINS[i].id===equippedShield) return SHIELD_SKINS[i]; } return SHIELD_SKINS[0]; }
 function getSwordSkin(){ for(var i=0;i<SWORD_SKINS.length;i++){ if(SWORD_SKINS[i].id===equippedSword) return SWORD_SKINS[i]; } return SWORD_SKINS[0]; }
@@ -7033,7 +7042,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
 
   // ═══ v199 ③: 服ごとの装飾（色替えだけでなくシルエット/装飾で見た目を大きく変える）═══
   var _ofId=(typeof eqOutfit==='function')?(eqOutfit().id||'default'):'default';
-  if(_ofId==='gold'||_ofId==='dark'){
+  if(_ofId==='gold'||_ofId==='darkarmor'){
     var _pcol=_ofId==='gold'?'#ffe488':'#54545f';
     var _pdk =_ofId==='gold'?'#b8860b':'#24242a';
     [-1,1].forEach(function(sg){
@@ -7046,7 +7055,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
         ctx.quadraticCurveTo(sg*(BW+1.5),shouldY+bobY+8,sg*BW*0.5,shouldY+bobY+7);
         ctx.closePath();
       },pg);
-      if(_ofId==='dark'){ // 肩のトゲ
+      if(_ofId==='darkarmor'){ // 肩のトゲ
         ctx.fillStyle='#3a3a44';
         ctx.beginPath();
         ctx.moveTo(sg*(BW+2),shouldY+bobY-1);
@@ -7067,7 +7076,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
       ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(-BW*0.5,shouldY+bobY+2);ctx.lineTo(-BW*0.2,shouldY+bobY+6);ctx.stroke();
     }
-    if(_ofId==='dark'){
+    if(_ofId==='darkarmor'){
       // ★v199(shop①): 漆黒の鎧が「ノーマルと変わらない」との声を受け、大型胸プレート＋縦リブで
       //   重厚な装甲シルエットを明確化（肩アーマー/トゲだけだと差が伝わりにくかったため）。
       var _dg=gradL(ctx,0,shouldY+bobY+2,0,shouldY+bobY+TH*0.75,[0,'#3a3a44',0.5,'#1c1c22',1,'#0c0c10']);
