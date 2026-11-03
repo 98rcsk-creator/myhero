@@ -276,6 +276,22 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
   animation:csShine 3.4s ease-in-out infinite;}
 .csSel{animation:csSelPulse 1.6s ease-in-out infinite;}
 .csBobber{animation:csBob 2.2s ease-in-out infinite;}
+/* ★v332 そうびを えらぼう（showLoadout）。アニメなし。選択中＝金の枠（キャラ選択のカードと同じ合図） */
+.loSlot{width:60px;height:60px;border-radius:12px;background:linear-gradient(180deg,#1d63b4,#123c78);border:2px solid rgba(120,190,255,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;}
+.loSlot.on{border:3px solid #ffe44d;background:linear-gradient(180deg,rgba(255,228,77,0.35),rgba(150,105,20,0.5));box-shadow:0 0 12px rgba(255,214,90,0.5);}
+.loSlot .loSn{font-size:11px;font-weight:bold;color:#fff;}
+.loSlot.on .loSn{color:#ffe44d;}
+.loChip{width:24px;height:24px;border-radius:8px;border:2px solid rgba(255,255,255,0.6);box-sizing:border-box;}
+.loTile{width:58px;border-radius:10px;background:rgba(255,255,255,0.07);border:2px solid rgba(255,255,255,0.18);display:flex;flex-direction:column;align-items:center;box-sizing:border-box;padding:3px 1px 3px;cursor:pointer;}
+.loTile.on{border:3px solid #ffe44d;background:rgba(255,228,77,0.18);}
+.loTile.lock,.loTile.dis{opacity:0.45;}
+.loTile img{height:46px;}
+.loTile .loTn{font-size:9px;font-weight:bold;color:#fff;line-height:1.15;text-align:center;}
+.loTile .loTs{font-size:8px;color:#ffd966;white-space:nowrap;margin-top:1px;}
+.loSw{height:26px;border-radius:9px;border:2px solid rgba(255,255,255,0.25);box-sizing:border-box;cursor:pointer;}
+.loSw.on{border:3px solid #ffe44d;}
+.loSec{color:#9fe4ff;font-size:12px;font-weight:bold;margin:0 0 4px;text-align:center;}
+.loNote{color:#8fa8c0;font-size:10.5px;line-height:1.5;text-align:center;margin-top:4px;}
 .csSpark{position:absolute;pointer-events:none;font-size:13px;animation:csFloat 3.6s linear infinite;
   filter:drop-shadow(0 1px 2px rgba(0,0,0,0.55));}
 /* ★v209(①): ホーム画面のリッチ化（デザインは維持し演出のみ追加） */
@@ -3494,7 +3510,7 @@ function _showFaceStep(){
     // ★v284 背景に草地の絵を敷いたので、黒い帯は出さない（絵とぶつかる）
     +'<div class="csBtnRow" style="display:flex;gap:14px;align-items:center;position:sticky;bottom:-140px;z-index:5;padding:8px 0 12px;margin-top:-2px">'
     +'<div class="menuBtnSub" id="backBtn" style="width:110px;font-size:14px">◀ 戻る</div>'
-    +'<div class="menuBtnMain" id="startBtn" style="margin-top:0;width:180px;padding:13px 0;font-size:18px">スタート <span style="display:inline-block;animation:csArrow 0.9s ease-in-out infinite">▶</span></div>'
+    +'<div class="menuBtnMain" id="startBtn" style="margin-top:0;width:180px;padding:13px 0;font-size:18px">'+(NEW_BODY_ON?'つぎへ':'スタート')+' <span style="display:inline-block;animation:csArrow 0.9s ease-in-out infinite">▶</span></div>'
     +'</div>'+navHTML('char');
   ov.className='scrollable hasnav csbg';
   ov.innerHTML=html;
@@ -3522,6 +3538,8 @@ function _showFaceStep(){
       SELECT_STEP=1; _showGenderStep(); });
     _csTap(document.getElementById('startBtn'),function(){
       selectedChar=selectedGender+'_'+selectedFace; saveData();
+      // ★v332 テスト版はゲームの前に「そうびを えらぼう」（プリセットは服の色が決まっているので剣から）
+      if(NEW_BODY_ON){ showLoadout({cid:selectedChar, tab:'sword', back:function(){ _showFaceStep(); }}); return; }
       doStart(); });
   },50);
 }
@@ -4308,6 +4326,123 @@ function _showCustomList(){
   },50);
 }
 
+// ★v332 そうびを えらぼう（テスト版＝新しい体だけ）。キャラ選択のあと、ゲームを始める前に1画面で服の色・剣・盾を選ぶ。
+//   ユーザーのイメージはモンハンの装備画面（静止画の見本で「合ってる」と確認済み）：上に大きいキャラ、真ん中に5つのボタン
+//   （トップス・ボトムス・シューズ・剣・盾＝ユーザー指定のアパレル風の呼び方）、下にそのボタンの選択肢。選ぶとすぐキャラに出る。
+//   スタートは下、もどるは最下段（CLAUDE.md §10-5）。
+//   服の色はマイヒーローだけ（プリセットは色が決まっている）。剣・盾・ショップの服は全員、持っているものから選ぶ。
+//   剣と盾の色付けはしない（ユーザー指定）＝マイヒーローの「たて」の色（acc）はここで消して保存しない。
+//   選び直すたびにボタン列と選択肢だけを書き換える（画面ごと作り直すとスクロールが一番上に戻る §2-14）。
+//   o = {cid, tab, back:function, mh:{isNew,hero,name,cur,before}（マイヒーローのときだけ）}
+var LO_TABS=[{k:'top',name:'トップス',col:'body'},{k:'bottom',name:'ボトムス',col:'leg'},{k:'shoes',name:'シューズ',col:'boot'},{k:'sword',name:'剣'},{k:'shield',name:'盾'}];
+function showLoadout(o){
+  var isMH=(o.cid==='custom'), mh=o.mh, cur=isMH?mh.cur:null, tab=o.tab||'top';
+  if(isMH){ delete cur.acc; applyCustomColors(cur); }
+  function find(list,id){ for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i]; return list[0]; }
+  function listOf(kind){ return kind==='sword'?SWORD_SKINS:(kind==='shield'?SHIELD_SKINS:OUTFIT_SKINS); }
+  function usable(it){ return !it.hero || isMH; }   // ⭐マイヒーロー専用はプリセットでは使えない（eqSword などと同じ決まり）
+  function nowItem(kind){
+    var list=listOf(kind), it=find(list, kind==='sword'?equippedSword:(kind==='shield'?equippedShield:equippedOutfit));
+    return usable(it)?it:list[0];
+  }
+  // ショップの服（鎧など）を着ているか。ブリギッタは専用の服なので、ゲーム中と同じく見た目は変えない
+  function armor(){ var of=nowItem('outfit'); return (of.body && o.cid!=='women_3')?of:null; }
+  function baseCol(k){ var c=CHARS[o.cid]; return c[k][0]; }
+  function chipCol(t){
+    var of=armor(); if(of) return t.col==='body'?of.body[1]:of.body[3];
+    return (isMH && cur[t.col])||baseCol(t.col);
+  }
+  function itemImg(kind,id){ return kind==='sword'?ITEM_SPR.sword[id]:ITEM_SPR.shield[id]; }
+  function draw(){
+    var cv=document.getElementById('loPrev'); if(!cv) return;
+    var g=_hiDpiCanvas(cv); g.clearRect(0,0,200,145);
+    var opt={sword:nowItem('sword'), shield:nowItem('shield')}, of=armor();
+    if(of){ var c0=CHARS[o.cid], t=of.body[3]; opt.body=of.body[1]; opt.leg=_blendHex(c0.leg[0],t,0.65); opt.boot=_blendHex(c0.boot[0],t,0.75); }   // ショップの試着と同じ塗り方
+    var ob=_blurK; _blurK=cv._r||1;   // 剣・盾の光のぼかしを端末の倍率に合わせる（ショップと同じ）
+    drawCharPreview(g,100,139,o.cid,false,2.1,false,false,null,opt);
+    _blurK=ob;
+  }
+  function tile(kind,it,on){
+    var own=ownedItems.indexOf(it.id)>=0, ok=own&&usable(it);
+    var st=on?'そうびちゅう':(!own?'🔒 '+it.price+'G':(!usable(it)?'⭐専用':'もってる'));   // ⭐専用＝マイヒーロー専用（タップで説明）
+    var pic=(kind==='outfit')?'<div style="font-size:20px;height:26px;line-height:26px">'+it.icon+'</div>':'<img src="'+itemImg(kind,it.id)+'">';
+    return '<div class="loTile'+(on?' on':'')+(!own?' lock':(!ok?' dis':''))+'" data-kind="'+kind+'" data-id="'+it.id+'">'+pic
+      +'<div class="loTn">'+it.name+'</div><div class="loTs">'+st+'</div></div>';
+  }
+  function tiles(kind){
+    var eq=nowItem(kind).id, h='<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">';
+    listOf(kind).forEach(function(it){ h+=tile(kind,it,it.id===eq); });
+    return h+'</div>';
+  }
+  function panelHTML(){
+    var h='';
+    if(tab==='sword'||tab==='shield'){
+      h+='<div class="loSec">'+(tab==='sword'?'剣':'盾')+'を えらんでね</div>'+tiles(tab);
+    } else {
+      var t=null; LO_TABS.forEach(function(x){ if(x.k===tab) t=x; });
+      if(tab==='top') h+='<div class="loSec">ふく</div>'+tiles('outfit')+'<div style="height:6px"></div>';
+      h+='<div class="loSec">'+t.name+'の色</div>';
+      if(!isMH) h+='<div class="loNote">服の色は マイヒーローだけ かえられるよ</div>';
+      else if(armor()) h+='<div class="loNote">ショップの服を きているときは 色を かえられないよ</div>';
+      else {
+        h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">';
+        MH_PALETTE.forEach(function(c){ h+='<div class="loSw'+(cur[t.col]===c.hex?' on':'')+'" data-hex="'+c.hex+'" title="'+c.name+'" style="background:'+c.hex+'"></div>'; });
+        h+='</div>';
+      }
+    }
+    return h+'<div id="loMsg" class="loNote"></div>';
+  }
+  function slotsHTML(){
+    return LO_TABS.map(function(t){
+      var ic=t.col?'<div class="loChip" style="background:'+chipCol(t)+'"></div>'
+                 :'<img src="'+itemImg(t.k,nowItem(t.k).id)+'" style="height:'+(t.k==='sword'?34:28)+'px">';
+      return '<div class="loSlot'+(t.k===tab?' on':'')+'" data-k="'+t.k+'"><div style="height:34px;display:flex;align-items:center">'+ic+'</div><div class="loSn">'+t.name+'</div></div>';
+    }).join('');
+  }
+  function msg(t){ var m=document.getElementById('loMsg'); if(m) m.textContent=t; }
+  function refresh(){
+    var sl=document.getElementById('loSlots'), pn=document.getElementById('loPanel'); if(!sl||!pn) return;
+    sl.innerHTML=slotsHTML(); pn.innerHTML=panelHTML();
+    sl.querySelectorAll('.loSlot').forEach(function(el){ _csTap(el,function(){ tab=el.dataset.k; refresh(); }); });
+    pn.querySelectorAll('.loTile').forEach(function(el){ _csTap(el,function(){
+      var kind=el.dataset.kind, it=find(listOf(kind),el.dataset.id);
+      if(ownedItems.indexOf(it.id)<0){ msg('🔒 ショップで かえるよ（'+it.price+'G）'); return; }
+      if(!usable(it)){ msg('⭐ マイヒーローで つかえるよ'); return; }
+      if(nowItem(kind).id===it.id) return;
+      equipItem(it.id,kind); if(SFX.coin) SFX.coin();
+      refresh(); draw();
+    }); });
+    pn.querySelectorAll('.loSw').forEach(function(el){ _csTap(el,function(){
+      var t=null; LO_TABS.forEach(function(x){ if(x.k===tab) t=x; });
+      cur[t.col]=el.dataset.hex; applyCustomColors(cur);
+      refresh(); draw();
+    }); });
+  }
+  var nm=isMH?(mh.name||''):(CHAR_NAMES[o.cid]||'');
+  var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
+    +'<div class="title-logo" style="font-size:20px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6);margin-bottom:0">そうびを えらぼう</div>'
+    +'<div style="color:#9fc4e6;font-size:11px;margin-bottom:2px">'+_escHtml(nm)+'</div>'
+    +'<div style="position:relative;width:200px;height:145px">'
+      +'<div style="position:absolute;left:50%;bottom:3px;transform:translateX(-50%);width:110px;height:20px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(255,225,120,0.75),rgba(200,150,30,0.25) 70%,rgba(0,0,0,0) 100%)"></div>'
+      +'<canvas id="loPrev" width="200" height="145" style="position:relative;display:block"></canvas></div>'
+    +'<div id="loSlots" style="display:flex;gap:5px;margin-top:4px"></div>'
+    +'<div id="loPanel" style="width:100%;max-width:358px;margin-top:8px;background:rgba(10,28,60,0.7);border:1px solid rgba(140,200,255,0.35);border-radius:14px;padding:6px;box-sizing:border-box"></div>'
+    +'<div class="menuBtnMain" id="loStart" style="margin-top:10px;font-size:18px">▶ これで スタート！</div>'
+    +'<div class="uiBtn info" id="loBack" style="font-size:14px;margin-top:8px">◀ もどる</div>';
+  ov.className='scrollable mhbg';
+  ov.innerHTML=html;
+  ov.style.display='flex';
+  ov.scrollTop=0;
+  setTimeout(function(){
+    refresh(); draw();
+    _csTap(document.getElementById('loStart'),function(){
+      if(isMH){ _mhFinish({isNew:mh.isNew, hero:mh.hero, name:mh.name, cur:cur}); return; }   // 保存してスタート（色えらびと同じ）
+      doStart();
+    });
+    _csTap(document.getElementById('loBack'),function(){ if(o.back) o.back(); });
+  },30);
+}
+
 // ★v310 ふくの いろを 1部位ずつ えらぶ（からだ→あし→くつ→マント→スタート）。
 // v309 は4部位×12色を1ページに並べ、確認画面の小さいボタンから入る作りだった。
 // 実機で「ボタンがわかりにくい。一個ずつ選択してスタートする行程がいい」と指摘されたので、
@@ -4431,7 +4566,8 @@ function _showCustomConfirm(isNew, editHero){
     // ★v314 既存ヒーローは「色を選ぶ」をプレビューのすぐ下・緑の大ボタンにする（CLAUDE.md §10-5）。
     //   v310 はスタート（緑・大）の下に置いていて、実機で「ついスタートを押して色の選択を忘れる」と指摘された。
     //   スタートは押さないと遊べない＝自分で探すので、下の青ボタンで足りる。
-    +(isNew?'':'<div class="menuBtnMain" id="ccColorBtn" style="margin:4px 0 16px;font-size:17px">🎨 ふくの いろを えらぶ</div>')
+    // ★v332 テスト版は色も剣も盾も「そうびを えらぼう」で選ぶので、色だけのボタンは出さない
+    +((isNew||NEW_BODY_ON)?'':'<div class="menuBtnMain" id="ccColorBtn" style="margin:4px 0 16px;font-size:17px">🎨 ふくの いろを えらぶ</div>')
     +(isNew
       ? (_ccPendingSilhouette
           ? '<div style="color:#9fe4ff;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">✅ はいけいを きれいに けせたよ</div>'
@@ -4445,8 +4581,9 @@ function _showCustomConfirm(isNew, editHero){
     // ★v310 新規は「スタート」の代わりに色えらびへ進む（最後の色の画面からスタートする）。
     // ★v314 既存ヒーローのスタートは青の普通ボタン（色えらびは上へ移した）。もどるは最下段のまま。
     +(isNew
-      ?'<div class="menuBtnMain" id="ccNextBtn" style="margin-top:0;font-size:18px">つぎへ：ふくの いろ ▶</div>'
-      :'<div class="uiBtn info" id="ccUseBtn" style="width:240px;font-size:16px">▶ この顔でスタート</div>')
+      ?'<div class="menuBtnMain" id="ccNextBtn" style="margin-top:0;font-size:18px">'+(NEW_BODY_ON?'つぎへ：そうびを えらぶ ▶':'つぎへ：ふくの いろ ▶')+'</div>'
+      :(NEW_BODY_ON?'<div class="menuBtnMain" id="ccUseBtn" style="margin-top:0;font-size:18px">つぎへ：そうびを えらぶ ▶</div>'   // ★v332
+                   :'<div class="uiBtn info" id="ccUseBtn" style="width:240px;font-size:16px">▶ この顔でスタート</div>'))
     +'<div class="menuRow">'
     +(isNew?'<div class="uiBtn info" id="ccRedoBtn" style="font-size:14px">🖼️ 選び直す</div>':'')
     +'<div class="uiBtn info" id="ccBackBtn2" style="font-size:14px">◀ もどる</div>'
@@ -4472,7 +4609,10 @@ function _showCustomConfirm(isNew, editHero){
     }
     var nb=document.getElementById('ccNextBtn');
     if(nb) tap(nb,function(){
-      _showColorStep({isNew:true, hero:null, name:nameNow(defaultName), cur:_ccPendingCol||{}, step:0, before:null});
+      var st0={isNew:true, hero:null, name:nameNow(defaultName), cur:_ccPendingCol||{}, step:0, before:null};
+      // ★v332 テスト版は1部位ずつの色えらびの代わりに「そうびを えらぼう」。もどったら名前と色を覚えたまま顔の確認へ
+      if(NEW_BODY_ON){ showLoadout({cid:'custom', tab:'top', mh:st0, back:function(){ _ccPendingCol=st0.cur; _ccPendingName=st0.name; _showCustomConfirm(true); }}); return; }
+      _showColorStep(st0);
     });
     var ub=document.getElementById('ccUseBtn');
     if(ub) tap(ub,function(){
@@ -4482,6 +4622,13 @@ function _showCustomConfirm(isNew, editHero){
         var cur=loadCustomList();
         for(var i=0;i<cur.length;i++){ if(cur[i].id===editHero.id){ cur[i].name=nm; break; } }
         saveCustomList(cur);
+      }
+      // ★v332 テスト版はスタートの前に「そうびを えらぼう」。もどったら触る前の色に戻して顔の確認へ（保存しない）
+      if(NEW_BODY_ON){
+        var c0=(editHero?editHero.col:loadActiveColors())||{};
+        var st1={isNew:false, hero:editHero||null, name:editHero?nameNow(editHero.name):'', cur:{body:c0.body,leg:c0.leg,boot:c0.boot}, before:(editHero?editHero.col:c0)||null};
+        showLoadout({cid:'custom', tab:'top', mh:st1, back:function(){ applyCustomColors(st1.before); _showCustomConfirm(false, editHero); }});
+        return;
       }
       _ccImg=null;   // ★v307 作成フローを抜けるのでここで解放
       selectedChar='custom'; saveData(); doStart();
