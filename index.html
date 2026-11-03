@@ -9972,8 +9972,14 @@ function showShop(tab){
         tapEv(btn,function(){
           var owned=ownedItems.indexOf(it.id)>=0;
           if(equipped===it.id) return; // 装備中は何もしない
+          // ★v331 ボタンを押したアイテムは必ず試着の絵に出す（ショップは試着の場所）。
+          //   以前は行のタップだけが試着で、マイヒーロー専用の装備を「装備する」で押しても絵が変わらず、
+          //   実機で「ヒーローを選んでいないとヒーロー用の盾と剣が見られない」と報告された。
+          //   ふつうの装備でも、前に行をタップした別のアイテムの絵が残っていた。
+          _shopPrevSel[kind]=it.id;
           // ★マイヒーロー専用装備：custom選択中のみ装備できる（購入は誰でも可）
           if(it.hero && selectedChar!=='custom' && owned){
+            renderShopPreview(kind);   // ★v331 装備はできなくても、絵には出す
             btn.textContent='マイヒーロー専用';
             btn.style.background='#cc8822';
             setTimeout(function(){ showShop(tab); },1400);
