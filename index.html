@@ -1505,7 +1505,7 @@ function statSet(k,v){ stats[k]=v; store.set('yk_stats',JSON.stringify(stats)); 
 var ACHIEVEMENTS=[
   {id:'first_clear', icon:'🎌', name:'はじめの一歩',  desc:'ステージを初クリア',        gold:50,  chk:function(){return statGet('clears')>=1;}},
   {id:'nodamage',    icon:'🛡️', name:'無傷の勇者',    desc:'ノーダメージでクリア',     gold:100, chk:function(){return statGet('nodmgClears')>=1;}},
-  {id:'coin100',     icon:'🪙', name:'コイン集め',    desc:'累計100コイン獲得',       gold:50,  chk:function(){return statGet('totalCoins')>=100;}},
+  {id:'coin100',     get icon(){ return coinIconHTML(); }, name:'コイン集め',    desc:'累計100コイン獲得',       gold:50,  chk:function(){return statGet('totalCoins')>=100;}},
   {id:'coin1000',    icon:'💰', name:'コイン王',      desc:'累計1000コイン獲得',      gold:150, chk:function(){return statGet('totalCoins')>=1000;}},
   {id:'dragon',      icon:'🐉', name:'魔王討伐',      desc:'ボスドラゴンを撃破',       gold:150, chk:function(){return statGet('bossKills')>=1;}},
   {id:'score5k',     icon:'⭐', name:'スコアラー',    desc:'5000点を突破',           gold:100, chk:function(){return statGet('bestScore')>=5000;}},
@@ -1571,9 +1571,9 @@ var SWORD_SKINS=[
 var OUTFIT_SKINS=[
   {id:'default', name:'いつもの服', icon:'👕', price:0,     body:null, desc:'ふつうの服'},
   {id:'gold',    name:'黄金の鎧',   icon:'🥇', price:2800,  body:['#fff0a0','#ffd24a','#e0a820','#c89010','#a87808','#886008'], desc:'被ダメージ -10%', dmgCut:0.10},
-  {id:'dark',    name:'漆黒の鎧',   icon:'🖤', price:7000,  body:['#5a5a66','#44444e','#33333a','#26262c','#1a1a20','#101014'], desc:'被ダメージ -20%', dmgCut:0.20},
+  {id:'darkarmor', name:'漆黒の鎧',   icon:'🖤', price:7000,  body:['#5a5a66','#44444e','#33333a','#26262c','#1a1a20','#101014'], desc:'被ダメージ -20%', dmgCut:0.20},
   {id:'royal',   name:'王者のローブ',icon:'👑', price:14000, body:['#c890e8','#a860d8','#8e44c8','#7430b0','#5e2498','#4a1880'], desc:'最大HP +30', hpBonus:30},
-  {id:'herosuit', name:'ヒーロースーツ', icon:'🦸', price:16000, body:['#ff8a8a','#f05555','#d83838','#c02828','#a01c1c','#801414'], desc:'HP+20・被ダメ-15%・マント付き', hpBonus:20, dmgCut:0.15, cape:true, hero:true}
+  {id:'herosuit', name:'ヒーロースーツ', icon:'🦸', price:16000, body:['#ff8a8a','#f05555','#d83838','#c02828','#a01c1c','#801414'], desc:NEW_BODY_ON?'HP+20・被ダメ-15%':'HP+20・被ダメ-15%・マント付き', hpBonus:20, dmgCut:0.15, cape:true, hero:true}
 ];
 // 購入済みアイテムID
 var ownedItems=(function(){
@@ -1585,6 +1585,15 @@ var equippedBG=store.get('yk_bg')||'grass';
 var equippedShield=store.get('yk_shield')||'normal';
 var equippedSword=store.get('yk_sword')||'silver';
 var equippedOutfit=store.get('yk_outfit')||'default';
+// ★v333 漆黒の鎧の id を 'dark' → 'darkarmor' に変えた（闇の剣と同じ 'dark' で、持ち物 ownedItems は
+//   剣・盾・服の共通リストなので、片方を買うともう片方も「持っている」扱いになっていた）。
+//   古いセーブの 'dark' はどちらを買ったか区別できないので、今まで通り両方持っている扱いにする（損をさせない）。
+//   1回だけ実行する（yk_mig_dk）。毎回やると、直したあとに闇の剣だけ買った人にも鎧が付いてしまう。
+if(!store.get('yk_mig_dk')){
+  if(ownedItems.indexOf('dark')>=0 && ownedItems.indexOf('darkarmor')<0){ ownedItems.push('darkarmor'); store.set('yk_owned',JSON.stringify(ownedItems)); }
+  if(equippedOutfit==='dark'){ equippedOutfit='darkarmor'; store.set('yk_outfit','darkarmor'); }
+  store.set('yk_mig_dk','1');
+}
 function getBGTheme(){ for(var i=0;i<BG_THEMES.length;i++){ if(BG_THEMES[i].id===equippedBG) return BG_THEMES[i]; } return BG_THEMES[0]; }
 function getShieldSkin(){ for(var i=0;i<SHIELD_SKINS.length;i++){ if(SHIELD_SKINS[i].id===equippedShield) return SHIELD_SKINS[i]; } return SHIELD_SKINS[0]; }
 function getSwordSkin(){ for(var i=0;i<SWORD_SKINS.length;i++){ if(SWORD_SKINS[i].id===equippedSword) return SWORD_SKINS[i]; } return SWORD_SKINS[0]; }
@@ -4786,25 +4795,129 @@ function _hiDpiCanvas(cv){
 // ★v326 新しい体（正面向き）に持たせる盾と剣。ショップの試着とマイヒーローの色えらび「たて」で使う。
 // ★v327 盾は ChatGPT の絵（ITEM_SPR）。見せ方はユーザーが選んだ「B」：少し斜めに構える・体に落ちる影。
 //   id＝SHIELD_SKINS の id。tint＝まるガードの金属に塗る色（マイヒーローの「たて」の色。渡さなければ絵のままのグレー）
-function _frontShield(g,id,tint){
+function _frontShield(g,id,tint,sm){
   var base=ITEM_IMG['sh_'+id]; if(!base) return;   // 読み込み前は描かない（起動時に読むので、画面を開く頃には済んでいる）
-  var im=(id==='normal' && tint)?shieldTinted(tint):base;
+  var im=(id==='normal' && tint)?shieldTinted(tint):base, sh=_itemShadow(base);
+  if(sm){ im=_shrunk(im,sm); sh=_shrunk(sh,sm); }   // ★v334 ゲーム中は前もって縮めた絵（毎フレーム大きい絵を縮めると重い・ちらつく）
   var H=ITEM_SPR.shieldH[id]||25, W=H*base.width/base.height;
   g.save(); g.rotate(-0.14); g.scale(0.9,1);
-  g.globalAlpha=0.28; g.drawImage(_itemShadow(base),-W/2+1.8,-H/2+1.6,W,H); g.globalAlpha=1;   // 体に落ちる影
+  g.globalAlpha=0.28; g.drawImage(sh,-W/2+1.8,-H/2+1.6,W,H); g.globalAlpha=1;   // 体に落ちる影
   if(id==='heroshield'){ g.shadowColor='rgba(120,180,255,0.9)'; g.shadowBlur=14*_blurK; }      // いちばん特別な盾だけ光る（今のゲームと同じ）
   g.drawImage(im,-W/2,-H/2,W,H);
   g.restore();
 }
 // ★v328 剣は5本とも ChatGPT の絵。原点＝握る所。光は今のゲームと同じ装備の色（SWORD_SKINS の aura）、
 //   ヒーローソードだけ絵の金と白に合わせた金色（今のゲームのピンクの光は横向きのコードの剣用）。銀の剣は光らない
-function _frontSword(g,sw){
+function _frontSword(g,sw,sm){
   var id=(sw&&sw.id)||'silver', im=ITEM_IMG['sw_'+id]; if(!im) return;   // 読み込み前は描かない
   var k=ITEM_SPR.swordLen[id]/im.height, gp=ITEM_SPR.swordGrip[id];
   var glow=(id==='herosword')?'rgba(255,230,140,0.9)':((sw&&sw.aura)?sw.aura.replace(/[\d.]+\)$/,'0.9)'):null);
   g.save(); if(glow){ g.shadowColor=glow; g.shadowBlur=11*_blurK; }
-  g.drawImage(im,-gp[0]*k,-gp[1]*k,im.width*k,im.height*k);
+  g.drawImage(sm?_shrunk(im,sm):im,-gp[0]*k,-gp[1]*k,im.width*k,im.height*k);   // ★v334 sm＝ゲーム中用に縮めた絵
   g.restore();
+}
+// ★v334 絵を高さ h まで縮めた canvas（半分ずつ縮めてから仕上げる＝細い線がつぶれにくい）。絵ごとに1回だけ作る
+function _shrunk(im,h){
+  var c=im._sm||(im._sm={}); if(c[h]) return c[h];
+  var cur=im, cw=im.width, ch=im.height;
+  while(ch>h*2){ var t=document.createElement('canvas'); t.width=Math.max(1,Math.round(cw/2)); t.height=Math.max(1,Math.round(ch/2));
+    var tg=t.getContext('2d'); tg.imageSmoothingQuality='high'; tg.drawImage(cur,0,0,t.width,t.height); cur=t; cw=t.width; ch=t.height; }
+  var o=document.createElement('canvas'); o.height=h; o.width=Math.max(1,Math.round(cw*h/ch));
+  var og=o.getContext('2d'); og.imageSmoothingQuality='high'; og.drawImage(cur,0,0,o.width,o.height);
+  return (c[h]=o);
+}
+// ★v334 ゲーム中の新しい体（テスト版）。体の絵を腕・脚・胴に切り分けて、関節で回して動かす（ユーザーが2案からBを選択）。
+//   切り分け方は「体の絵（357x360）の画素」の多角形。腕は肩の少し上から、脚は股の少し上から切って胴と重ねる（回しても隙間が出ない）。
+//   線は塗り分けの地図で測って引いた：手（肌）は x≦62・x≧294 で y≦220、ズボンは x85〜273、靴は x50〜307 まで広がる。
+//   腕の部品にズボンが、脚の部品に手が入らないこと・腰より下が胴に残らないことを全画素で確認済み（重なり0・取りこぼし0）。
+//   ⚠ 長方形で切ると、靴のつま先が胴に残り・手の端が脚に入って、走ると点が残る（最初の試作で実際に出た）。
+//   piv＝回す中心（肩・股）。手の位置は BODY_SPR.handL/handR。鎧の絵を入れるときも、体と同じ形なら同じ切り方で動く。
+var NB_RIG={
+  armL:[[0,96],[108,96],[96,150],[90,196],[80,224],[0,224]],     armR:[[357,96],[249,96],[261,150],[267,196],[277,224],[357,224]],
+  legL:[[72,204],[178,204],[178,360],[30,360],[30,226],[72,226]], legR:[[178,204],[286,204],[286,226],[330,226],[330,360],[178,360]],
+  cutArmL:[[0,128],[100,128],[93,150],[90,196],[80,224],[0,224]], cutArmR:[[357,128],[257,128],[264,150],[267,196],[277,224],[357,224]],   // 胴から抜く所（腕の下半分）
+  cutLeg:[[72,214],[286,214],[286,226],[330,226],[330,360],[30,360],[30,226],[72,226]],                                                   // 胴から抜く所（脚）
+  piv:{al:[100,112], ar:[257,112], ll:[136,210], lr:[221,210]}
+};
+var _nbCache={}, _nbCacheN=0;
+// 色を塗った体を部品に切って、ゲーム中の大きさの2倍強（高さ100px）に縮めておく。色の組み合わせごとに1回だけ
+function _nbParts(body,leg,boot,skin){
+  var key=body+leg+boot+skin; if(_nbCache[key]) return _nbCache[key];
+  var src=bodyTinted(body,leg,boot,skin), w=BODY_SPR.w, h=BODY_SPR.h;
+  function poly(g,pts){ g.beginPath(); g.moveTo(pts[0][0],pts[0][1]); for(var i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]); g.closePath(); }
+  function cut(inc,exc){
+    var c=document.createElement('canvas'); c.width=w; c.height=h; var g=c.getContext('2d');
+    g.save(); if(inc){ poly(g,inc); g.clip(); } g.drawImage(src,0,0); g.restore();
+    if(exc){ g.globalCompositeOperation='destination-out'; for(var i=0;i<exc.length;i++){ poly(g,exc[i]); g.fill(); } }
+    return _shrunk(c,100);
+  }
+  var R=NB_RIG, P={torso:cut(null,[R.cutArmL,R.cutArmR,R.cutLeg]), al:cut(R.armL), ar:cut(R.armR), ll:cut(R.legL), lr:cut(R.legR)};
+  if(++_nbCacheN>6){ _nbCache={}; _nbCacheN=1; }
+  return (_nbCache[key]=P);
+}
+// プレイヤーを新しい体で描く（drawStick から呼ぶ）。描けなかったら false を返して今の描き方に任せる
+//   大きさは drawCharPreview の単位×1.1（今のゲーム中の頭 HR=11 と同じ大きさになる）。当たり判定は変えない
+function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
+  var cid=selectedChar, c=CHARS[cid];
+  if(!c || !HEAD_READY[cid]) return false;
+  // 色：キャラ選択・そうび画面と同じ（LVで服の色を暗くしない）。ショップの服はそうび画面と同じ塗り方。ブリギッタは専用の服なので変えない
+  var body=c.body[0], leg=c.leg[0], boot=c.boot[0], of=eqOutfit();
+  if(of && of.body && cid!=='women_3'){ var tn=of.body[3]; body=of.body[1]; leg=_blendHex(c.leg[0],tn,0.65); boot=_blendHex(c.boot[0],tn,0.75); }
+  var P=_nbParts(body,leg,boot,c.skin);
+  // ── 動き（hop＝全身を浮かす／up＝上半身だけ沈める）──
+  var hop=0, up=0, lean=0, aL=0, aR=0, lL=0, lR=0, sw=0.35, back=false, slash=null;
+  if(st==='run'){ var cyc=Math.sin((p.af+(p.at||0)/8)*Math.PI*0.5);   // 今の4コマ（8フレームごと）を滑らかにつなぐ
+    hop=-Math.abs(cyc)*1.4; lean=0.08; lL=cyc*0.32; lR=-cyc*0.32; aL=-cyc*0.24; aR=cyc*0.24; }
+  else if(st==='jump'){ lL=0.22; lR=-0.12; aL=0.5; aR=-0.5; lean=0.05; }
+  else if(st==='atk'){
+    var t=1-(atkT||0)/14;   // 今と同じ3段：ふりかぶる→振りぬく→戻す
+    if(t<0.2){ var w=1-(1-t/0.2)*(1-t/0.2); aR=-1.0*w; sw=0.35-0.95*w; lean=-0.04*w; back=true; }
+    else if(t<0.6){ var u=1-Math.pow(1-(t-0.2)/0.4,3); aR=-1.0+1.5*u; sw=-0.6+2.5*u; lean=-0.04+0.16*u; slash=1-u*0.6; back=(u<0.38); }
+    else { var v=1-(1-(t-0.6)/0.4)*(1-(t-0.6)/0.4); aR=0.5-0.5*v; sw=1.9-1.55*v; lean=0.12*(1-v*0.6); }
+    lL=0.18; lR=-0.12;
+  }
+  else if(st==='guard'){ aL=-0.6; lL=0.14; lR=-0.14; up=0.8; }
+  else { up=Math.sin(fr*0.07)*0.6; }   // 立っているときの呼吸
+  var S=1.1, bk=25.6/(BODY_SPR.soleY-BODY_SPR.chinY), shouldY=-27.6;
+  var ox=-BODY_SPR.cx*bk, oy=-BODY_SPR.soleY*bk, W=BODY_SPR.w*bk, Hh=BODY_SPR.h*bk, R=NB_RIG;
+  ctx.save(); ctx.translate(cx,cy); ctx.scale(dir*S,S); if(hop) ctx.translate(0,hop); if(lean) ctx.rotate(lean);
+  if(hasSk(5) && (ifrm>0||p.invTimer>0)){ ctx.shadowColor='#ffe44d'; ctx.shadowBlur=20*_blurK; }   // 無敵の光（今と同じ）
+  function part(cv,piv,ang,dy){
+    if(!ang){ ctx.drawImage(cv,ox,oy+dy,W,Hh); return; }
+    var px=ox+piv[0]*bk, py=oy+piv[1]*bk+dy;
+    ctx.save(); ctx.translate(px,py); ctx.rotate(ang); ctx.translate(-px,-py); ctx.drawImage(cv,ox,oy+dy,W,Hh); ctx.restore();
+  }
+  function hand(right,ang){ var pv=right?R.piv.ar:R.piv.al, hd=right?BODY_SPR.handR:BODY_SPR.handL, hx=hd[0]-pv[0], hy=hd[1]-pv[1], co=Math.cos(ang), si=Math.sin(ang);
+    return [ox+(pv[0]+hx*co-hy*si)*bk, oy+(pv[1]+hx*si+hy*co)*bk+up]; }
+  part(P.ll,R.piv.ll,lL,0); part(P.lr,R.piv.lr,lR,0);
+  part(P.torso,null,0,up);
+  part(P.al,R.piv.al,aL,up); part(P.ar,R.piv.ar,aR,up);
+  // 盾：盾スキルを取ってから（今と同じ）。ふだんは左手、ガードは体の前に大きく
+  if(hasSk(3)){
+    ctx.save();
+    if(st==='guard'){ ctx.translate(-2,-16+up); ctx.scale(1.25,1.25); } else { var hL=hand(false,aL); ctx.translate(hL[0]-2,hL[1]-1); }
+    _frontShield(ctx,eqShield().id||'normal',null,80);
+    ctx.restore();
+  }
+  // 剣：剣スキルの前は短め（今の 30/44 と同じ比）。ロングソード中は1.9倍。ふりかぶっている間は頭のうしろ
+  var swd=eqSword(), sk=(hasSk(2)?1:0.68)*((p.longT>0)?1.9:1), hR=hand(true,aR);
+  function sword(){ ctx.save(); ctx.translate(hR[0],hR[1]); ctx.rotate(sw); if(sk!==1) ctx.scale(sk,sk); _frontSword(ctx,swd,128); ctx.restore(); }
+  if(back) sword();
+  var hd=HEAD[cid], hm=HEAD_META[cid], hc=HEADCFG[cid]||{s:1,oy:0}, k=10*3.4*(hc.s||1)/hm.h;
+  ctx.drawImage(hd,-hm.cx*k,(shouldY+2+up)-hm.chinY*k+(hc.oy||0),hm.w*k,hm.h*k);
+  // 斬撃の軌跡（今と同じ白い扇。剣先のうしろに伸びる）
+  if(slash){
+    var sr=(ITEM_SPR.swordLen[swd.id]||42)*sk*0.95, a1=sw-Math.PI/2;
+    ctx.save(); ctx.shadowBlur=0; ctx.translate(hR[0],hR[1]);
+    ctx.fillStyle=gradR(ctx,0,0,sr*0.3,0,0,sr,[0,'rgba(255,255,255,0)',0.72,'rgba(255,255,255,'+(0.30*slash).toFixed(3)+')',1,'rgba(190,235,255,'+(0.55*slash).toFixed(3)+')']);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,sr,a1-1.15,a1); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,'+(0.75*slash).toFixed(3)+')'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.arc(0,0,sr-1.5,a1-0.85,a1); ctx.stroke();
+    ctx.restore();
+  }
+  if(!back) sword();
+  ctx.restore();
+  return true;
 }
 // capeCol: ★v310 マントの色。渡したときだけ（金オーラ無しで）マントを描く。
 //   heroic のマントは赤固定なので、マイヒーローのきせかえで選んだ色を見せる手段が無かった。
@@ -6502,6 +6615,8 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
   //   通常＝4フレームごと（速い）／穴落ちフリーズ後半＝10フレームごと（ゆっくり＝復帰予告）
   var _bd=(typeof _fallBlinkSlow!=='undefined' && _fallBlinkSlow)?10:4;
   if(ifrm>0 && p.guardEffect<=0 && (p.graceInv||0)<=0 && Math.floor(fr/_bd)%2===1)return;
+  // ★v334 テスト版はゲーム中も新しい体（_drawPlayerNB）。マント・LVごとの飾りは新しい体では出さない。本番は下の今の描き方のまま
+  if(NEW_BODY_ON && BODY_READY && !_previewFront && _drawPlayerNB(cx,cy,dir,st,ifrm,atkT)) return;
 
   // ── サイズ（やや頭身を上げたRPG風プロポーション）──
   var HR=11,   // 頭半径（チビ頭身＝フィギュア感）
@@ -7033,7 +7148,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
 
   // ═══ v199 ③: 服ごとの装飾（色替えだけでなくシルエット/装飾で見た目を大きく変える）═══
   var _ofId=(typeof eqOutfit==='function')?(eqOutfit().id||'default'):'default';
-  if(_ofId==='gold'||_ofId==='dark'){
+  if(_ofId==='gold'||_ofId==='darkarmor'){
     var _pcol=_ofId==='gold'?'#ffe488':'#54545f';
     var _pdk =_ofId==='gold'?'#b8860b':'#24242a';
     [-1,1].forEach(function(sg){
@@ -7046,7 +7161,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
         ctx.quadraticCurveTo(sg*(BW+1.5),shouldY+bobY+8,sg*BW*0.5,shouldY+bobY+7);
         ctx.closePath();
       },pg);
-      if(_ofId==='dark'){ // 肩のトゲ
+      if(_ofId==='darkarmor'){ // 肩のトゲ
         ctx.fillStyle='#3a3a44';
         ctx.beginPath();
         ctx.moveTo(sg*(BW+2),shouldY+bobY-1);
@@ -7067,7 +7182,7 @@ function drawStick(cx,cy,dir,st,af,ifrm,skillLv,atkT,guardOn){
       ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(-BW*0.5,shouldY+bobY+2);ctx.lineTo(-BW*0.2,shouldY+bobY+6);ctx.stroke();
     }
-    if(_ofId==='dark'){
+    if(_ofId==='darkarmor'){
       // ★v199(shop①): 漆黒の鎧が「ノーマルと変わらない」との声を受け、大型胸プレート＋縦リブで
       //   重厚な装甲シルエットを明確化（肩アーマー/トゲだけだと差が伝わりにくかったため）。
       var _dg=gradL(ctx,0,shouldY+bobY+2,0,shouldY+bobY+TH*0.75,[0,'#3a3a44',0.5,'#1c1c22',1,'#0c0c10']);
@@ -8463,31 +8578,9 @@ function draw(){
     var by=Math.sin(fr*.1+c.bob)*4;
     // コインの回転アニメ（xScaleで扁平→丸→扁平を繰り返す）
     var spin=Math.abs(Math.cos(fr*.08+c.bob));// 0〜1
-    var coinW=Math.max(2,9*spin); // 回転で幅が変わる
-    var coinH=11;
     ctx.save();
     ctx.translate(cx2+7, c.y+7+by);
-    // グロー
-    ctx.shadowColor='#ffe44d';ctx.shadowBlur=8;
-    // コイン本体（楕円で3D感）
-    ctx.fillStyle='#ffe44d';
-    ctx.beginPath();ctxEllipse(ctx,0,0,coinW,coinH,0,0,Math.PI*2);ctx.fill();
-    // 側面（回転中）
-    if(spin>0.15){
-      ctx.fillStyle='#f0b800';
-      ctx.beginPath();ctxEllipse(ctx,0,0,coinW*0.6,coinH,0,0,Math.PI*2);ctx.fill();
-      // ハイライト
-      ctx.fillStyle='#fff8aa';
-      ctx.beginPath();ctxEllipse(ctx,-coinW*0.25,-coinH*0.3,coinW*0.25,coinH*0.3,0,0,Math.PI*2);ctx.fill();
-    }
-    // 正面向き時は「$」マーク
-    if(spin>0.6){
-      ctx.fillStyle='#c8a800';
-      ctx.font='bold '+(coinH*0.9)+'px monospace';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('$',0,1);
-    }
-    ctx.shadowBlur=0;
+    _drawCoin(ctx,spin);   // ★v335 絵は _coinFace（クリア画面・実績と同じ）
     ctx.restore();
   }
 
@@ -9788,7 +9881,7 @@ function showStageClear(star, scoreRate){
     +'<div class="scDiv"><b></b></div>'
     +'<div style="display:flex;gap:8px;width:324px;max-width:94%;margin:0 auto">'
       +_tile('👾',_hasE?stageEnemyKilled+_sub('/'+stageEnemyTotal):'—','倒した敵')
-      +_tile('🪙',_hasC?stageCoinGot+_sub('/'+stageCoinTotal):'—','取ったコイン')
+      +_tile(coinIconHTML(),_hasC?stageCoinGot+_sub('/'+stageCoinTotal):'—','取ったコイン')
       +(_dOK?_tile('❤️','<span style="color:#ffe9a8">0</span>','ダメージ'):_tile('❤️',_hPct+_sub('%'),'残り体力'))
     +'</div>'
     // ごほうび（この画面の主役）。スコアと所持金は下に小さく
@@ -9834,11 +9927,48 @@ function showStageClear(star, scoreRate){
 // ctx(グローバル)を一時的にプレビューキャンバスへ差し替え、装備・スキル状態も一時上書き→復元。
 var _shopPrevSel={sword:null,outfit:null,shield:null}; // タブごとの試着中アイテム(null=装備中のもの)
 // ═══ v199 ⑥ 固有スキルの「強さ」を小さなアニメで見せる（30x30ループ描画）═══
-function _coinDot(c,x,y,r){
-  var g=gradR(c,x-r*0.3,y-r*0.3,r*0.2,x,y,r,[0,'#fff6c0',0.5,'#ffd24a',1,'#e0a020']);
-  c.fillStyle=g; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
-  c.strokeStyle='rgba(180,120,20,0.7)'; c.lineWidth=0.6; c.stroke();
+// ★v335 コインの絵をひとつに（ユーザーが3案から選択：ふち付き＋★・黄色ベース）。
+//   以前はゲーム中＝黄色の楕円に「$」／クリア画面と実績＝絵文字🪙（iPhoneでは銀色）／ここ＝$なしの黄色い丸、とバラバラだった。
+//   光は左上から：ふち（外の輪）→ くぼんだ面（段差の影と光）→ 浮き彫りの★ → つや。R＝半径
+function _coinFace(g,R){
+  var rim=g.createLinearGradient(-R,-R,R,R); rim.addColorStop(0,'#fff3a6'); rim.addColorStop(0.45,'#ffd23a'); rim.addColorStop(1,'#c47f06');
+  g.fillStyle=rim; g.beginPath(); g.arc(0,0,R,0,Math.PI*2); g.fill();
+  g.strokeStyle='rgba(140,85,0,0.85)'; g.lineWidth=Math.max(0.6,R*0.07); g.stroke();
+  var ri=R*0.76, face=g.createRadialGradient(-ri*0.3,-ri*0.35,ri*0.1,0,0,ri);
+  face.addColorStop(0,'#ffec8a'); face.addColorStop(0.6,'#ffd02e'); face.addColorStop(1,'#eaa915');
+  g.fillStyle=face; g.beginPath(); g.arc(0,0,ri,0,Math.PI*2); g.fill();
+  g.lineWidth=Math.max(0.5,R*0.06);
+  g.strokeStyle='rgba(150,90,0,0.75)'; g.beginPath(); g.arc(0,0,ri,Math.PI*0.75,Math.PI*1.75); g.stroke();
+  g.strokeStyle='rgba(255,250,210,0.9)'; g.beginPath(); g.arc(0,0,ri,-Math.PI*0.25,Math.PI*0.75); g.stroke();
+  function star(col,dx,dy){ g.fillStyle=col; g.beginPath();
+    for(var i=0;i<10;i++){ var a=-Math.PI/2+i*Math.PI/5, rr=(i%2?0.24:0.55)*R; if(i) g.lineTo(dx+Math.cos(a)*rr,dy+Math.sin(a)*rr); else g.moveTo(dx+Math.cos(a)*rr,dy+Math.sin(a)*rr); }
+    g.closePath(); g.fill(); }
+  var o=Math.max(0.5,R*0.06); star('rgba(255,250,215,0.95)',o,o); star('#b37400',0,0);   // 明るい★を右下にずらして浮き彫りに
+  g.fillStyle='rgba(255,255,255,0.55)'; g.beginPath(); ctxEllipse(g,-R*0.42,-R*0.42,R*0.16,R*0.09,-0.78,0,Math.PI*2); g.fill();
 }
+// コインの絵を焼いた canvas（大きさごとに1回だけ作る）。px＝コインの直径（画素）、glow＝まわりの光も焼き込む（ゲーム中用）
+var _coinCvs={}, _coinURL='';
+function _coinCv(px,glow){
+  var k=px+(glow?'g':''); if(_coinCvs[k]) return _coinCvs[k];
+  var pad=glow?Math.ceil(px*0.45):1, c=document.createElement('canvas'); c.width=c.height=px+pad*2;
+  var g=c.getContext('2d'); g.translate(c.width/2,c.height/2);
+  if(glow){ g.save(); g.shadowColor='#ffe44d'; g.shadowBlur=px*0.3; g.fillStyle='#ffd23a'; g.beginPath(); g.arc(0,0,px/2-0.5,0,Math.PI*2); g.fill(); g.restore(); }   // 以前の shadowBlur 8 と同じくらいの光
+  _coinFace(g,px/2-0.5);
+  return (_coinCvs[k]=c);
+}
+// ゲーム中のコイン。焼いた絵（光ごと）を回転に合わせて横に縮めて貼り、厚みのふちだけ毎回描く。
+//   以前は1枚ずつ毎フレーム光をぼかして（shadowBlur）楕円3つと「$」の文字を描いていた
+function _drawCoin(g,spin){
+  var R=10.5, w=Math.max(0.12,spin), cs=_coinCv(56,true), cr=R*cs.width/56;
+  g.fillStyle='#b77806'; g.beginPath(); ctxEllipse(g,R*0.16*Math.sqrt(1-w*w),0,R*w,R,0,0,Math.PI*2); g.fill();   // 横を向くほど厚みが見える
+  g.drawImage(cs,-cr*w,-cr,2*cr*w,2*cr);
+}
+// 画面の文字の中に置くコイン（クリア画面のマス・実績）。まわりの文字の大きさに合わせる
+function coinIconHTML(){
+  if(!_coinURL){ try{ _coinURL=_coinCv(72,false).toDataURL(); }catch(e){ return '🪙'; } }
+  return '<img src="'+_coinURL+'" alt="" style="display:inline-block;width:1.1em;height:1.1em;margin:-0.05em 0;vertical-align:top">';   // 負のマージン＝行の高さを押し広げない（隣のマスと数字の高さがそろう）
+}
+function _coinDot(c,x,y,r){ var cs=_coinCv(24,false), s=r*cs.width/24; c.drawImage(cs,x-s,y-s,2*s,2*s); }
 function drawPerkDemo(c,id,t){
   if(id==='magnet'){
     // U字マグネット＋吸い込まれるコイン
