@@ -1505,7 +1505,7 @@ function statSet(k,v){ stats[k]=v; store.set('yk_stats',JSON.stringify(stats)); 
 var ACHIEVEMENTS=[
   {id:'first_clear', icon:'🎌', name:'はじめの一歩',  desc:'ステージを初クリア',        gold:50,  chk:function(){return statGet('clears')>=1;}},
   {id:'nodamage',    icon:'🛡️', name:'無傷の勇者',    desc:'ノーダメージでクリア',     gold:100, chk:function(){return statGet('nodmgClears')>=1;}},
-  {id:'coin100',     icon:'🪙', name:'コイン集め',    desc:'累計100コイン獲得',       gold:50,  chk:function(){return statGet('totalCoins')>=100;}},
+  {id:'coin100',     get icon(){ return coinIconHTML(); }, name:'コイン集め',    desc:'累計100コイン獲得',       gold:50,  chk:function(){return statGet('totalCoins')>=100;}},
   {id:'coin1000',    icon:'💰', name:'コイン王',      desc:'累計1000コイン獲得',      gold:150, chk:function(){return statGet('totalCoins')>=1000;}},
   {id:'dragon',      icon:'🐉', name:'魔王討伐',      desc:'ボスドラゴンを撃破',       gold:150, chk:function(){return statGet('bossKills')>=1;}},
   {id:'score5k',     icon:'⭐', name:'スコアラー',    desc:'5000点を突破',           gold:100, chk:function(){return statGet('bestScore')>=5000;}},
@@ -8578,31 +8578,9 @@ function draw(){
     var by=Math.sin(fr*.1+c.bob)*4;
     // コインの回転アニメ（xScaleで扁平→丸→扁平を繰り返す）
     var spin=Math.abs(Math.cos(fr*.08+c.bob));// 0〜1
-    var coinW=Math.max(2,9*spin); // 回転で幅が変わる
-    var coinH=11;
     ctx.save();
     ctx.translate(cx2+7, c.y+7+by);
-    // グロー
-    ctx.shadowColor='#ffe44d';ctx.shadowBlur=8;
-    // コイン本体（楕円で3D感）
-    ctx.fillStyle='#ffe44d';
-    ctx.beginPath();ctxEllipse(ctx,0,0,coinW,coinH,0,0,Math.PI*2);ctx.fill();
-    // 側面（回転中）
-    if(spin>0.15){
-      ctx.fillStyle='#f0b800';
-      ctx.beginPath();ctxEllipse(ctx,0,0,coinW*0.6,coinH,0,0,Math.PI*2);ctx.fill();
-      // ハイライト
-      ctx.fillStyle='#fff8aa';
-      ctx.beginPath();ctxEllipse(ctx,-coinW*0.25,-coinH*0.3,coinW*0.25,coinH*0.3,0,0,Math.PI*2);ctx.fill();
-    }
-    // 正面向き時は「$」マーク
-    if(spin>0.6){
-      ctx.fillStyle='#c8a800';
-      ctx.font='bold '+(coinH*0.9)+'px monospace';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('$',0,1);
-    }
-    ctx.shadowBlur=0;
+    _drawCoin(ctx,spin);   // ★v335 絵は _coinFace（クリア画面・実績と同じ）
     ctx.restore();
   }
 
@@ -9903,7 +9881,7 @@ function showStageClear(star, scoreRate){
     +'<div class="scDiv"><b></b></div>'
     +'<div style="display:flex;gap:8px;width:324px;max-width:94%;margin:0 auto">'
       +_tile('👾',_hasE?stageEnemyKilled+_sub('/'+stageEnemyTotal):'—','倒した敵')
-      +_tile('🪙',_hasC?stageCoinGot+_sub('/'+stageCoinTotal):'—','取ったコイン')
+      +_tile(coinIconHTML(),_hasC?stageCoinGot+_sub('/'+stageCoinTotal):'—','取ったコイン')
       +(_dOK?_tile('❤️','<span style="color:#ffe9a8">0</span>','ダメージ'):_tile('❤️',_hPct+_sub('%'),'残り体力'))
     +'</div>'
     // ごほうび（この画面の主役）。スコアと所持金は下に小さく
@@ -9949,11 +9927,48 @@ function showStageClear(star, scoreRate){
 // ctx(グローバル)を一時的にプレビューキャンバスへ差し替え、装備・スキル状態も一時上書き→復元。
 var _shopPrevSel={sword:null,outfit:null,shield:null}; // タブごとの試着中アイテム(null=装備中のもの)
 // ═══ v199 ⑥ 固有スキルの「強さ」を小さなアニメで見せる（30x30ループ描画）═══
-function _coinDot(c,x,y,r){
-  var g=gradR(c,x-r*0.3,y-r*0.3,r*0.2,x,y,r,[0,'#fff6c0',0.5,'#ffd24a',1,'#e0a020']);
-  c.fillStyle=g; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();
-  c.strokeStyle='rgba(180,120,20,0.7)'; c.lineWidth=0.6; c.stroke();
+// ★v335 コインの絵をひとつに（ユーザーが3案から選択：ふち付き＋★・黄色ベース）。
+//   以前はゲーム中＝黄色の楕円に「$」／クリア画面と実績＝絵文字🪙（iPhoneでは銀色）／ここ＝$なしの黄色い丸、とバラバラだった。
+//   光は左上から：ふち（外の輪）→ くぼんだ面（段差の影と光）→ 浮き彫りの★ → つや。R＝半径
+function _coinFace(g,R){
+  var rim=g.createLinearGradient(-R,-R,R,R); rim.addColorStop(0,'#fff3a6'); rim.addColorStop(0.45,'#ffd23a'); rim.addColorStop(1,'#c47f06');
+  g.fillStyle=rim; g.beginPath(); g.arc(0,0,R,0,Math.PI*2); g.fill();
+  g.strokeStyle='rgba(140,85,0,0.85)'; g.lineWidth=Math.max(0.6,R*0.07); g.stroke();
+  var ri=R*0.76, face=g.createRadialGradient(-ri*0.3,-ri*0.35,ri*0.1,0,0,ri);
+  face.addColorStop(0,'#ffec8a'); face.addColorStop(0.6,'#ffd02e'); face.addColorStop(1,'#eaa915');
+  g.fillStyle=face; g.beginPath(); g.arc(0,0,ri,0,Math.PI*2); g.fill();
+  g.lineWidth=Math.max(0.5,R*0.06);
+  g.strokeStyle='rgba(150,90,0,0.75)'; g.beginPath(); g.arc(0,0,ri,Math.PI*0.75,Math.PI*1.75); g.stroke();
+  g.strokeStyle='rgba(255,250,210,0.9)'; g.beginPath(); g.arc(0,0,ri,-Math.PI*0.25,Math.PI*0.75); g.stroke();
+  function star(col,dx,dy){ g.fillStyle=col; g.beginPath();
+    for(var i=0;i<10;i++){ var a=-Math.PI/2+i*Math.PI/5, rr=(i%2?0.24:0.55)*R; if(i) g.lineTo(dx+Math.cos(a)*rr,dy+Math.sin(a)*rr); else g.moveTo(dx+Math.cos(a)*rr,dy+Math.sin(a)*rr); }
+    g.closePath(); g.fill(); }
+  var o=Math.max(0.5,R*0.06); star('rgba(255,250,215,0.95)',o,o); star('#b37400',0,0);   // 明るい★を右下にずらして浮き彫りに
+  g.fillStyle='rgba(255,255,255,0.55)'; g.beginPath(); ctxEllipse(g,-R*0.42,-R*0.42,R*0.16,R*0.09,-0.78,0,Math.PI*2); g.fill();
 }
+// コインの絵を焼いた canvas（大きさごとに1回だけ作る）。px＝コインの直径（画素）、glow＝まわりの光も焼き込む（ゲーム中用）
+var _coinCvs={}, _coinURL='';
+function _coinCv(px,glow){
+  var k=px+(glow?'g':''); if(_coinCvs[k]) return _coinCvs[k];
+  var pad=glow?Math.ceil(px*0.45):1, c=document.createElement('canvas'); c.width=c.height=px+pad*2;
+  var g=c.getContext('2d'); g.translate(c.width/2,c.height/2);
+  if(glow){ g.save(); g.shadowColor='#ffe44d'; g.shadowBlur=px*0.3; g.fillStyle='#ffd23a'; g.beginPath(); g.arc(0,0,px/2-0.5,0,Math.PI*2); g.fill(); g.restore(); }   // 以前の shadowBlur 8 と同じくらいの光
+  _coinFace(g,px/2-0.5);
+  return (_coinCvs[k]=c);
+}
+// ゲーム中のコイン。焼いた絵（光ごと）を回転に合わせて横に縮めて貼り、厚みのふちだけ毎回描く。
+//   以前は1枚ずつ毎フレーム光をぼかして（shadowBlur）楕円3つと「$」の文字を描いていた
+function _drawCoin(g,spin){
+  var R=10.5, w=Math.max(0.12,spin), cs=_coinCv(56,true), cr=R*cs.width/56;
+  g.fillStyle='#b77806'; g.beginPath(); ctxEllipse(g,R*0.16*Math.sqrt(1-w*w),0,R*w,R,0,0,Math.PI*2); g.fill();   // 横を向くほど厚みが見える
+  g.drawImage(cs,-cr*w,-cr,2*cr*w,2*cr);
+}
+// 画面の文字の中に置くコイン（クリア画面のマス・実績）。まわりの文字の大きさに合わせる
+function coinIconHTML(){
+  if(!_coinURL){ try{ _coinURL=_coinCv(72,false).toDataURL(); }catch(e){ return '🪙'; } }
+  return '<img src="'+_coinURL+'" alt="" style="display:inline-block;width:1.1em;height:1.1em;margin:-0.05em 0;vertical-align:top">';   // 負のマージン＝行の高さを押し広げない（隣のマスと数字の高さがそろう）
+}
+function _coinDot(c,x,y,r){ var cs=_coinCv(24,false), s=r*cs.width/24; c.drawImage(cs,x-s,y-s,2*s,2*s); }
 function drawPerkDemo(c,id,t){
   if(id==='magnet'){
     // U字マグネット＋吸い込まれるコイン
