@@ -4929,6 +4929,14 @@ function _nbParts(key,src,R){
   if(++_nbCacheN>6){ _nbCache={}; _nbCacheN=1; }
   return (_nbCache[key]=P);
 }
+// ★v338 背中の盾の位置（体の単位。x はうしろ側がマイナス・r は傾き・s は大きさ）。3案を描き比べて決めた：
+//   真後ろ（x0・傾き0）はほぼ体に隠れて見えない／少し斜め（x-5・-0.3）は小さくのぞく／この斜めがけはゲーム中の大きさでも「背中の盾」と分かる
+var NB_BACKSH={x:-8,y:-21,r:-0.5,s:1};
+function _backShield(g,id){   // 背中の盾：影も光も付けない（体のうしろなので）
+  var base=ITEM_IMG['sh_'+id]; if(!base) return;
+  var H=ITEM_SPR.shieldH[id]||25, W=H*base.width/base.height;
+  g.drawImage(_shrunk(base,80),-W/2,-H/2,W,H);
+}
 // プレイヤーを新しい体で描く（drawStick から呼ぶ）。描けなかったら false を返して今の描き方に任せる
 //   大きさは drawCharPreview の単位×1.1（今のゲーム中の頭 HR=11 と同じ大きさになる）。当たり判定は変えない
 function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
@@ -4965,18 +4973,21 @@ function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
   }
   function hand(right,ang){ var pv=right?R.piv.ar:R.piv.al, hd=right?(R.handR||BODY_SPR.handR):(R.handL||BODY_SPR.handL), hx=hd[0]-pv[0], hy=hd[1]-pv[1], co=Math.cos(ang), si=Math.sin(ang);
     return [ox+(pv[0]+hx*co-hy*si)*bk, oy+(pv[1]+hx*si+hy*co)*bk+up]; }
+  // ★v338 盾はふだん背中に背負う（ユーザー指定）。体のうしろに描くので、肩と体のわきから少しのぞく
+  var shOn=hasSk(3), shId=eqShield().id||'normal', B=NB_BACKSH;
+  if(shOn && st!=='guard'){ ctx.save(); ctx.translate(B.x,B.y+up); ctx.rotate(B.r); ctx.scale(B.s,B.s); _backShield(ctx,shId); ctx.restore(); }
   part(P.ll,R.piv.ll,lL*lk,0); part(P.lr,R.piv.lr,lR*lk,0);
   part(P.torso,null,0,up);
   part(P.al,R.piv.al,aL,up); part(P.ar,R.piv.ar,aR,up);
-  // 盾：盾スキルを取ってから（今と同じ）。ふだんは左手、ガードは体の前に大きく
-  if(hasSk(3)){
-    ctx.save();
-    if(st==='guard'){ ctx.translate(-2,-16+up); ctx.scale(1.25,1.25); } else { var hL=hand(false,aL); ctx.translate(hL[0]-2,hL[1]-1); }
-    _frontShield(ctx,eqShield().id||'normal',null,80);
+  // 盾：盾スキルを取ってから（今と同じ）。ガードのときだけ体の前に大きく構える（ふだんは上で背中に描いた）
+  if(shOn && st==='guard'){
+    ctx.save(); ctx.translate(-2,-16+up); ctx.scale(1.25,1.25);
+    _frontShield(ctx,shId,null,80);
     ctx.restore();
   }
   // 剣：剣スキルの前は短め（今の 30/44 と同じ比）。ロングソード中は1.9倍。ふりかぶっている間は頭のうしろ
-  var swd=eqSword(), sk=(hasSk(2)?1:0.68)*((p.longT>0)?1.9:1), hR=hand(true,aR);
+  //   ★v338 全体を1.3倍（ユーザー「剣小さすぎ」）。振りぬいた剣先が攻撃の当たり判定の端とそろう（体の中心から 49.6px→60.7px、当たり判定は58.5px）
+  var swd=eqSword(), sk=1.3*(hasSk(2)?1:0.68)*((p.longT>0)?1.9:1), hR=hand(true,aR);
   function sword(){ ctx.save(); ctx.translate(hR[0],hR[1]); ctx.rotate(sw); if(sk!==1) ctx.scale(sk,sk); _frontSword(ctx,swd,128); ctx.restore(); }
   if(back) sword();
   var hd=HEAD[cid], hm=HEAD_META[cid], hc=HEADCFG[cid]||{s:1,oy:0}, k=10*3.4*(hc.s||1)/hm.h;
