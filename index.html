@@ -292,6 +292,7 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 .loSw.on{border:3px solid #ffe44d;}
 .loSec{color:#9fe4ff;font-size:12px;font-weight:bold;margin:0 0 4px;text-align:center;}
 .loNote{color:#8fa8c0;font-size:10.5px;line-height:1.5;text-align:center;margin-top:4px;}
+.loReset{color:#9fe4ff;font-size:11px;text-align:center;margin-top:6px;text-decoration:underline;cursor:pointer;}
 .csSpark{position:absolute;pointer-events:none;font-size:13px;animation:csFloat 3.6s linear infinite;
   filter:drop-shadow(0 1px 2px rgba(0,0,0,0.55));}
 /* ★v209(①): ホーム画面のリッチ化（デザインは維持し演出のみ追加） */
@@ -3533,7 +3534,8 @@ function _showFaceStep(){
       if(i>=previews.length) return;
       var cv2=previews[i];
       // ★v324 新しい体（テスト版）はキャラだけ（剣・金の光なし。ユーザー指定）。剣のぶん左へ寄せていたのも台座の真ん中(38)へ
-      try{ drawCharPreview(_hiDpiCanvas(cv2),NEW_BODY_ON?38:36,92,cv2.dataset.cid,false,1.35,!NEW_BODY_ON); }catch(err){}   // ★v320
+      var _cc=cv2.dataset.cid;   // ★v340 テスト版はえらんだ服の色で
+      try{ drawCharPreview(_hiDpiCanvas(cv2),NEW_BODY_ON?38:36,92,_cc,false,1.35,!NEW_BODY_ON,false,null,NEW_BODY_ON?{body:presetCol(_cc,'body'),leg:presetCol(_cc,'leg'),boot:presetCol(_cc,'boot')}:null); }catch(err){}   // ★v320
       requestAnimationFrame(function(){ drawNext(i+1); });
     })(0);
     // ★v276 STEP①と同じく touchstart の preventDefault をやめる（iOSでスクロールが死ぬ）
@@ -4357,20 +4359,21 @@ function showLoadout(o){
   }
   // ショップの服（鎧など）を着ているか。ブリギッタは専用の服なので、ゲーム中と同じく見た目は変えない
   function armor(){ var of=nowItem('outfit'); return (of.body && o.cid!=='women_3')?of:null; }
-  function baseCol(k){ var c=CHARS[o.cid]; return c[k][0]; }
   function chipCol(t){
     var of=armor();
     if(of && ARMOR_SPR[of.id]) return t.col==='body'?nowTrim():ARMOR_SPR[of.id].chip[t.col==='leg'?0:1];   // ★v336 トップス＝ラインの色・ボトムスとシューズ＝鎧の絵の色
     if(of) return t.col==='body'?of.body[1]:of.body[3];
-    return (isMH && cur[t.col])||baseCol(t.col);
+    return (isMH && cur[t.col])||presetCol(o.cid,t.col);
   }
   function itemImg(kind,id){ return kind==='sword'?ITEM_SPR.sword[id]:ITEM_SPR.shield[id]; }
   function draw(){
     var cv=document.getElementById('loPrev'); if(!cv) return;
     var g=_hiDpiCanvas(cv); g.clearRect(0,0,200,145);
-    var opt={sword:nowItem('sword'), shield:nowItem('shield')}, of=armor();
+    // ★v339 服（トップス・ボトムス・シューズ）を選んでいる間は剣と盾を持たせない（ユーザー「剣と盾が邪魔でよくわからん」）
+    var opt=(tab==='sword'||tab==='shield')?{sword:nowItem('sword'), shield:nowItem('shield')}:{}, of=armor();
     if(of){ var c0=CHARS[o.cid], t=of.body[3]; opt.body=of.body[1]; opt.leg=_blendHex(c0.leg[0],t,0.65); opt.boot=_blendHex(c0.boot[0],t,0.75);   // ショップの試着と同じ塗り方（鎧の絵が読み込めていないとき）
       opt.armor=of.id; opt.trim=nowTrim(); }   // ★v336 鎧の絵とラインの色
+    else if(!isMH){ opt.body=presetCol(o.cid,'body'); opt.leg=presetCol(o.cid,'leg'); opt.boot=presetCol(o.cid,'boot'); }   // ★v340 えらんだ服の色
     var ob=_blurK; _blurK=cv._r||1;   // 剣・盾の光のぼかしを端末の倍率に合わせる（ショップと同じ）
     drawCharPreview(g,100,139,o.cid,false,2.1,false,false,null,opt);
     _blurK=ob;
@@ -4405,8 +4408,11 @@ function showLoadout(o){
       var of=armor();
       if(of && tab==='top') h+='<div class="loSec">ラインの色</div>'+pal('trim',nowTrim())+'<div class="loNote">'+(of.id==='royal'?'白いふちの色が変わるよ':'胸・肩・腰のラインの色が変わるよ')+'</div>';
       else if(of) h+='<div class="loSec">'+t.name+'の色</div><div class="loNote">鎧の色になるよ</div>';
-      else if(isMH) h+='<div class="loSec">'+t.name+'の色</div>'+pal(t.col,cur[t.col]);
-      else h+='<div class="loNote">'+(tab==='top'?'鎧を着ると、ラインの色を変えられるよ':'服の色はマイヒーローで変えられるよ')+'</div>';
+      else {   // ★v340 いつもの服は全員、トップス・ボトムス・シューズの色を選べる。ほかのキャラは「元の色に戻す」も
+        var pm=isMH?null:(_presetColMap[o.cid]||{});
+        h+='<div class="loSec">'+t.name+'の色</div>'+pal(t.col,isMH?cur[t.col]:pm[t.col]);
+        if(pm && pm[t.col]) h+='<div class="loReset" data-k="'+t.col+'">元の色に戻す</div>';
+      }
     }
     return h+'<div id="loMsg" class="loNote"></div>';
   }
@@ -4423,7 +4429,7 @@ function showLoadout(o){
     sl.innerHTML=slotsHTML(); pn.innerHTML=panelHTML();
     // ★v337 タイルの名前は1行。入りきらないときだけ文字を小さくする（「トケイガー／ド」のような変な改行をなくす）
     pn.querySelectorAll('.loTn').forEach(function(el){ var w=el.clientWidth, sw=el.scrollWidth; if(sw>w && w>0) el.style.fontSize=Math.max(7,10*w/sw).toFixed(1)+'px'; });
-    sl.querySelectorAll('.loSlot').forEach(function(el){ _csTap(el,function(){ tab=el.dataset.k; refresh(); }); });
+    sl.querySelectorAll('.loSlot').forEach(function(el){ _csTap(el,function(){ tab=el.dataset.k; refresh(); draw(); }); });   // ★v339 タブで剣と盾の有り無しが変わるので描き直す
     pn.querySelectorAll('.loTile').forEach(function(el){ _csTap(el,function(){
       var kind=el.dataset.kind, it=find(listOf(kind),el.dataset.id);
       if(ownedItems.indexOf(it.id)<0){ msg('🔒 ショップで買えるよ（'+it.price+'G）'); return; }
@@ -4435,7 +4441,12 @@ function showLoadout(o){
     pn.querySelectorAll('.loSw').forEach(function(el){ _csTap(el,function(){
       var k=el.dataset.k, hex=el.dataset.hex;
       if(k==='trim'){ if(isMH){ cur.trim=hex; applyCustomColors(cur); } else setTrim(o.cid,hex); }   // ★v336 ラインの色
-      else { cur[k]=hex; applyCustomColors(cur); }
+      else if(isMH){ cur[k]=hex; applyCustomColors(cur); }
+      else setPresetCol(o.cid,k,hex);   // ★v340
+      refresh(); draw();
+    }); });
+    pn.querySelectorAll('.loReset').forEach(function(el){ _csTap(el,function(){
+      setPresetCol(o.cid,el.dataset.k,null);
       refresh(); draw();
     }); });
   }
@@ -4898,6 +4909,11 @@ function armorTinted(id,hex){
 var _trimMap=(function(){ try{ var o=JSON.parse(store.get('yk_trim')||'{}'); return (o && typeof o==='object')?o:{}; }catch(e){ return {}; } })();
 function getTrim(cid){ return (cid==='custom'?CHARS.custom.trim:_trimMap[cid])||TRIM_WHITE; }
 function setTrim(cid,hex){ if(cid==='custom') return; _trimMap[cid]=hex; store.set('yk_trim',JSON.stringify(_trimMap)); }
+// ★v340 いつもの服の色（トップス・ボトムス・シューズ）も全員えらべる（ユーザー「普通の服のときは全体の色を変えれる認識」）。テスト版だけ
+//   マイヒーロー＝今まで通り色のセット（CHARS.custom）／ほかのキャラ＝キャラごとに yk_pcol（えらんでいない所はキャラの色）
+var _presetColMap=(function(){ try{ var o=JSON.parse(store.get('yk_pcol')||'{}'); return (o && typeof o==='object')?o:{}; }catch(e){ return {}; } })();
+function presetCol(cid,k){ var c=CHARS[cid]||CHARS.men_0; if(cid!=='custom' && NEW_BODY_ON){ var m=_presetColMap[cid]; if(m && m[k]) return m[k]; } return c[k][0]; }
+function setPresetCol(cid,k,hex){ if(cid==='custom') return; var m=_presetColMap[cid]||(_presetColMap[cid]={}); if(hex) m[k]=hex; else delete m[k]; store.set('yk_pcol',JSON.stringify(_presetColMap)); }
 // ★v334 ゲーム中の新しい体（テスト版）。体の絵を腕・脚・胴に切り分けて、関節で回して動かす（ユーザーが2案からBを選択）。
 //   切り分け方は「体の絵（357x360）の画素」の多角形。腕は肩の少し上から、脚は股の少し上から切って胴と重ねる（回しても隙間が出ない）。
 //   線は塗り分けの地図で測って引いた：手（肌）は x≦62・x≧294 で y≦220、ズボンは x85〜273、靴は x50〜307 まで広がる。
@@ -4943,7 +4959,7 @@ function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
   var cid=selectedChar, c=CHARS[cid];
   if(!c || !HEAD_READY[cid]) return false;
   // 色：キャラ選択・そうび画面と同じ（LVで服の色を暗くしない）。ショップの服はそうび画面と同じ塗り方。ブリギッタは専用の服なので変えない
-  var body=c.body[0], leg=c.leg[0], boot=c.boot[0], of=eqOutfit();
+  var body=presetCol(cid,'body'), leg=presetCol(cid,'leg'), boot=presetCol(cid,'boot'), of=eqOutfit();   // ★v340 えらんだ服の色
   if(of && of.body && cid!=='women_3'){ var tn=of.body[3]; body=of.body[1]; leg=_blendHex(c.leg[0],tn,0.65); boot=_blendHex(c.boot[0],tn,0.75); }
   // ★v336 鎧（絵がある4種）を着ていたら鎧の絵で描く。切り分け線・手の位置も鎧ごと。ラインの色は getTrim
   var arm=(of && of.body && cid!=='women_3' && armorReady(of.id))?of.id:null, tr=getTrim(cid), R=arm?ARMOR_SPR[arm].rig:NB_RIG;
