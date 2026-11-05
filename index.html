@@ -4368,7 +4368,8 @@ function showLoadout(o){
   function draw(){
     var cv=document.getElementById('loPrev'); if(!cv) return;
     var g=_hiDpiCanvas(cv); g.clearRect(0,0,200,145);
-    var opt={sword:nowItem('sword'), shield:nowItem('shield')}, of=armor();
+    // ★v339 服（トップス・ボトムス・シューズ）を選んでいる間は剣と盾を持たせない（ユーザー「剣と盾が邪魔でよくわからん」）
+    var opt=(tab==='sword'||tab==='shield')?{sword:nowItem('sword'), shield:nowItem('shield')}:{}, of=armor();
     if(of){ var c0=CHARS[o.cid], t=of.body[3]; opt.body=of.body[1]; opt.leg=_blendHex(c0.leg[0],t,0.65); opt.boot=_blendHex(c0.boot[0],t,0.75);   // ショップの試着と同じ塗り方（鎧の絵が読み込めていないとき）
       opt.armor=of.id; opt.trim=nowTrim(); }   // ★v336 鎧の絵とラインの色
     var ob=_blurK; _blurK=cv._r||1;   // 剣・盾の光のぼかしを端末の倍率に合わせる（ショップと同じ）
@@ -4423,7 +4424,7 @@ function showLoadout(o){
     sl.innerHTML=slotsHTML(); pn.innerHTML=panelHTML();
     // ★v337 タイルの名前は1行。入りきらないときだけ文字を小さくする（「トケイガー／ド」のような変な改行をなくす）
     pn.querySelectorAll('.loTn').forEach(function(el){ var w=el.clientWidth, sw=el.scrollWidth; if(sw>w && w>0) el.style.fontSize=Math.max(7,10*w/sw).toFixed(1)+'px'; });
-    sl.querySelectorAll('.loSlot').forEach(function(el){ _csTap(el,function(){ tab=el.dataset.k; refresh(); }); });
+    sl.querySelectorAll('.loSlot').forEach(function(el){ _csTap(el,function(){ tab=el.dataset.k; refresh(); draw(); }); });   // ★v339 タブで剣と盾の有り無しが変わるので描き直す
     pn.querySelectorAll('.loTile').forEach(function(el){ _csTap(el,function(){
       var kind=el.dataset.kind, it=find(listOf(kind),el.dataset.id);
       if(ownedItems.indexOf(it.id)<0){ msg('🔒 ショップで買えるよ（'+it.price+'G）'); return; }
