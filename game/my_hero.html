@@ -282,11 +282,11 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 .loSlot .loSn{font-size:11px;font-weight:bold;color:#fff;}
 .loSlot.on .loSn{color:#ffe44d;}
 .loChip{width:24px;height:24px;border-radius:8px;border:2px solid rgba(255,255,255,0.6);box-sizing:border-box;}
-.loTile{width:58px;border-radius:10px;background:rgba(255,255,255,0.07);border:2px solid rgba(255,255,255,0.18);display:flex;flex-direction:column;align-items:center;box-sizing:border-box;padding:3px 1px 3px;cursor:pointer;}
+.loTile{width:calc(20% - 4px);max-width:64px;border-radius:10px;background:rgba(255,255,255,0.07);border:2px solid rgba(255,255,255,0.18);display:flex;flex-direction:column;align-items:center;box-sizing:border-box;padding:3px 1px 3px;cursor:pointer;}
 .loTile.on{border:3px solid #ffe44d;background:rgba(255,228,77,0.18);}
 .loTile.lock,.loTile.dis{opacity:0.45;}
 .loTile img{height:46px;}
-.loTile .loTn{font-size:9px;font-weight:bold;color:#fff;line-height:1.15;text-align:center;}
+.loTile .loTn{font-size:10px;font-weight:bold;color:#fff;line-height:1.15;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;}
 .loTile .loTs{font-size:8px;color:#ffd966;white-space:nowrap;margin-top:1px;}
 .loSw{height:26px;border-radius:9px;border:2px solid rgba(255,255,255,0.25);box-sizing:border-box;cursor:pointer;}
 .loSw.on{border:3px solid #ffe44d;}
@@ -3549,7 +3549,7 @@ function _showFaceStep(){
     _csTap(document.getElementById('startBtn'),function(){
       selectedChar=selectedGender+'_'+selectedFace; saveData();
       // ★v332 テスト版はゲームの前に「そうびを えらぼう」（プリセットは服の色が決まっているので剣から）
-      if(NEW_BODY_ON){ showLoadout({cid:selectedChar, tab:'sword', back:function(){ _showFaceStep(); }}); return; }
+      if(NEW_BODY_ON){ showLoadout({cid:selectedChar, tab:'top', back:function(){ _showFaceStep(); }}); return; }   // ★v337 全員トップス（鎧とラインの色）から。剣タブからだと服が見つからなかった
       doStart(); });
   },50);
 }
@@ -4377,7 +4377,7 @@ function showLoadout(o){
   }
   function tile(kind,it,on){
     var own=ownedItems.indexOf(it.id)>=0, ok=own&&usable(it);
-    var st=on?'そうびちゅう':(!own?'🔒 '+it.price+'G':(!usable(it)?'⭐専用':'もってる'));   // ⭐専用＝マイヒーロー専用（タップで説明）
+    var st=on?'装備中':(!own?'🔒 '+it.price+'G':(!usable(it)?'⭐専用':'持ってる'));   // ⭐専用＝マイヒーロー専用（タップで説明）
     var pic=(kind==='outfit')?'<div style="font-size:20px;height:26px;line-height:26px">'+it.icon+'</div>':'<img src="'+itemImg(kind,it.id)+'">';
     return '<div class="loTile'+(on?' on':'')+(!own?' lock':(!ok?' dis':''))+'" data-kind="'+kind+'" data-id="'+it.id+'">'+pic
       +'<div class="loTn">'+it.name+'</div><div class="loTs">'+st+'</div></div>';
@@ -4396,17 +4396,17 @@ function showLoadout(o){
   function panelHTML(){
     var h='';
     if(tab==='sword'||tab==='shield'){
-      h+='<div class="loSec">'+(tab==='sword'?'剣':'盾')+'を えらんでね</div>'+tiles(tab);
+      h+='<div class="loSec">'+(tab==='sword'?'剣':'盾')+'</div>'+tiles(tab);
     } else {
       var t=null; LO_TABS.forEach(function(x){ if(x.k===tab) t=x; });
-      if(tab==='top') h+='<div class="loSec">ふく</div>'+tiles('outfit')+'<div style="height:6px"></div>';
+      if(tab==='top') h+='<div class="loSec">服</div>'+tiles('outfit')+'<div style="height:6px"></div>';
       // ★v336 鎧を着ているとき：トップスで「ラインの色」（全員えらべる）。ボトムス・シューズは鎧の色
       //   着ていないとき：マイヒーローは服の色。ほかのキャラは案内だけ（見出しを出すと「えらべるのにえらべない」ように見えた＝実機で指摘）
       var of=armor();
-      if(of && tab==='top') h+='<div class="loSec">ラインの色</div>'+pal('trim',nowTrim())+'<div class="loNote">'+(of.id==='royal'?'白い ふちの 色が かわるよ':'むね・かた・こしの ラインの 色が かわるよ')+'</div>';
-      else if(of) h+='<div class="loSec">'+t.name+'の色</div><div class="loNote">鎧を きているときは 鎧の 色に なるよ</div>';
+      if(of && tab==='top') h+='<div class="loSec">ラインの色</div>'+pal('trim',nowTrim())+'<div class="loNote">'+(of.id==='royal'?'白いふちの色が変わるよ':'胸・肩・腰のラインの色が変わるよ')+'</div>';
+      else if(of) h+='<div class="loSec">'+t.name+'の色</div><div class="loNote">鎧の色になるよ</div>';
       else if(isMH) h+='<div class="loSec">'+t.name+'の色</div>'+pal(t.col,cur[t.col]);
-      else h+='<div class="loNote">'+(tab==='top'?'鎧を きると ラインの 色を かえられるよ':'服の 色は マイヒーローで かえられるよ')+'</div>';
+      else h+='<div class="loNote">'+(tab==='top'?'鎧を着ると、ラインの色を変えられるよ':'服の色はマイヒーローで変えられるよ')+'</div>';
     }
     return h+'<div id="loMsg" class="loNote"></div>';
   }
@@ -4421,11 +4421,13 @@ function showLoadout(o){
   function refresh(){
     var sl=document.getElementById('loSlots'), pn=document.getElementById('loPanel'); if(!sl||!pn) return;
     sl.innerHTML=slotsHTML(); pn.innerHTML=panelHTML();
+    // ★v337 タイルの名前は1行。入りきらないときだけ文字を小さくする（「トケイガー／ド」のような変な改行をなくす）
+    pn.querySelectorAll('.loTn').forEach(function(el){ var w=el.clientWidth, sw=el.scrollWidth; if(sw>w && w>0) el.style.fontSize=Math.max(7,10*w/sw).toFixed(1)+'px'; });
     sl.querySelectorAll('.loSlot').forEach(function(el){ _csTap(el,function(){ tab=el.dataset.k; refresh(); }); });
     pn.querySelectorAll('.loTile').forEach(function(el){ _csTap(el,function(){
       var kind=el.dataset.kind, it=find(listOf(kind),el.dataset.id);
-      if(ownedItems.indexOf(it.id)<0){ msg('🔒 ショップで かえるよ（'+it.price+'G）'); return; }
-      if(!usable(it)){ msg('⭐ マイヒーローで つかえるよ'); return; }
+      if(ownedItems.indexOf(it.id)<0){ msg('🔒 ショップで買えるよ（'+it.price+'G）'); return; }
+      if(!usable(it)){ msg('⭐ マイヒーロー専用だよ'); return; }
       if(nowItem(kind).id===it.id) return;
       equipItem(it.id,kind); if(SFX.coin) SFX.coin();
       refresh(); draw();
@@ -4439,14 +4441,14 @@ function showLoadout(o){
   }
   var nm=isMH?(mh.name||''):(CHAR_NAMES[o.cid]||'');
   var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
-    +'<div class="title-logo" style="font-size:20px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6);margin-bottom:0">そうびを えらぼう</div>'
+    +'<div class="title-logo" style="font-size:20px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6);margin-bottom:0">装備を選ぼう</div>'
     +'<div style="color:#9fc4e6;font-size:11px;margin-bottom:2px">'+_escHtml(nm)+'</div>'
     +'<div style="position:relative;width:200px;height:145px">'
       +'<div style="position:absolute;left:50%;bottom:3px;transform:translateX(-50%);width:110px;height:20px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(255,225,120,0.75),rgba(200,150,30,0.25) 70%,rgba(0,0,0,0) 100%)"></div>'
       +'<canvas id="loPrev" width="200" height="145" style="position:relative;display:block"></canvas></div>'
     +'<div id="loSlots" style="display:flex;gap:5px;margin-top:4px"></div>'
     +'<div id="loPanel" style="width:100%;max-width:358px;margin-top:8px;background:rgba(10,28,60,0.7);border:1px solid rgba(140,200,255,0.35);border-radius:14px;padding:6px;box-sizing:border-box"></div>'
-    +'<div class="menuBtnMain" id="loStart" style="margin-top:10px;font-size:18px">▶ これで スタート！</div>'
+    +'<div class="menuBtnMain" id="loStart" style="margin-top:10px;font-size:18px">▶ スタート！</div>'
     +'<div class="uiBtn info" id="loBack" style="font-size:14px;margin-top:8px">◀ もどる</div>';
   ov.className='scrollable mhbg';
   ov.innerHTML=html;
@@ -4481,9 +4483,9 @@ function _showColorStep(st){
     +'<div style="display:flex;align-items:center;justify-content:center;gap:4px;margin:0 0 6px">'+chips+'</div>'
     +'<div style="display:flex;align-items:flex-end;justify-content:center;gap:18px;margin-bottom:2px">'
     +'<div style="text-align:center"><canvas id="mhStepPrev" width="110" height="96" style="display:block"></canvas>'
-    +'<div style="color:#8fa8c0;font-size:10px;margin-top:2px">おおきく みたところ</div></div>'
+    +'</div>'
     +'<div style="text-align:center"><canvas id="mhStepSize" width="70" height="64" style="display:block"></canvas>'
-    +'<div style="color:#ffcc88;font-size:10px;margin-top:2px">ゲーム中のおおきさ</div></div>'
+    +'<div style="color:#ffcc88;font-size:10px;margin-top:2px">ゲーム中の大きさ</div></div>'
     +'</div>'
     +'<div style="color:#9fe4ff;font-size:15px;font-weight:bold;margin:2px 0 6px">'
       +sl.name+'の いろ'+(sl.note?'<span style="color:#6f8ba0;font-weight:normal;font-size:11px">（'+sl.note+'）</span>':'')+'</div>'
@@ -4573,14 +4575,14 @@ function _showCustomConfirm(isNew, editHero){
   // ★v287 v285の帯（夜空＋草地）を使い回す＝画像は増えない
   var html='<div class="mhbgTop"></div><div class="mhbgBot"></div>'
     +'<div class="title-logo" style="font-size:24px;color:#ffe44d;text-shadow:0 2px 8px rgba(255,170,0,0.6)">マイヒーローをつくる</div>'
-    +'<div style="color:#ffcc88;font-size:13px;letter-spacing:2px;margin-bottom:14px">― この顔でいい？ ―</div>'
+    +'<div style="height:12px"></div>'
     // ★v304 大きいプレビューだけだと「ちゃんと顔が見えてる」と思って進んでしまう。
     //   実機のゲーム中では頭の描画枠は 37.4px しかないので、等倍を並べて決める前に気づけるようにする。
     +'<div style="display:flex;align-items:flex-end;justify-content:center;gap:18px;margin-bottom:8px">'
     +'<div style="text-align:center"><canvas id="ccConfirmPreview" width="110" height="96" style="display:block"></canvas>'
-    +'<div style="color:#8fa8c0;font-size:10px;margin-top:2px">おおきく みたところ</div></div>'
+    +'</div>'
     +'<div style="text-align:center"><canvas id="ccSizePreview" width="70" height="64" style="display:block"></canvas>'
-    +'<div style="color:#ffcc88;font-size:10px;margin-top:2px">ゲーム中のおおきさ</div></div>'
+    +'<div style="color:#ffcc88;font-size:10px;margin-top:2px">ゲーム中の大きさ</div></div>'
     +'</div>'
     // ★v314 既存ヒーローは「色を選ぶ」をプレビューのすぐ下・緑の大ボタンにする（CLAUDE.md §10-5）。
     //   v310 はスタート（緑・大）の下に置いていて、実機で「ついスタートを押して色の選択を忘れる」と指摘された。
@@ -4589,19 +4591,19 @@ function _showCustomConfirm(isNew, editHero){
     +((isNew||NEW_BODY_ON)?'':'<div class="menuBtnMain" id="ccColorBtn" style="margin:4px 0 16px;font-size:17px">🎨 ふくの いろを えらぶ</div>')
     +(isNew
       ? (_ccPendingSilhouette
-          ? '<div style="color:#9fe4ff;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">✅ はいけいを きれいに けせたよ</div>'
-          : '<div style="color:#ffcc88;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">はいけいが けせなかったので あたまの かたちに きりぬいたよ<br><span style="color:#8fa8c0">しゃしんアプリの きりぬきが いちばん きれい</span></div>')
+          ? '<div style="color:#9fe4ff;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">✅ 背景を消したよ</div>'
+          : '<div style="color:#ffcc88;font-size:11px;line-height:1.5;margin-bottom:12px;max-width:290px;text-align:center">背景が消せなかったので、頭の形で切り抜いたよ<br><span style="color:#8fa8c0">写真アプリの切り抜きがいちばんきれい</span></div>')
       : '');
   if(_showName){
-    html+='<div style="color:#9fe4ff;font-size:12px;margin-bottom:6px">'+(isNew?'なまえをつけよう':'なまえ（タップで変えられるよ）')+'</div>'
+    html+='<div style="color:#9fe4ff;font-size:12px;margin-bottom:6px">名前</div>'
       +'<input type="text" id="ccNameInput" maxlength="10" value="'+_escHtml(_nameVal)+'" style="width:220px;font-size:16px;text-align:center;padding:8px 10px;border-radius:10px;border:1.5px solid rgba(127,216,255,0.5);background:rgba(0,0,0,0.3);color:#fff;margin-bottom:14px">';
   }
-  html+='<div style="color:#9fe4ff;font-size:12px;line-height:1.5;margin-bottom:18px;max-width:300px;text-align:center">とくぎ・スキルは無し。<br>コインを集めてショップで装備をそろえ、<br><b>じぶんだけのヒーロー</b>に育てよう！</div>'
+  html+='<div style="height:6px"></div>'   // ★v337 とくぎの説明文（3行）は外した（ユーザー「無駄な文章は不要」）
     // ★v310 新規は「スタート」の代わりに色えらびへ進む（最後の色の画面からスタートする）。
     // ★v314 既存ヒーローのスタートは青の普通ボタン（色えらびは上へ移した）。もどるは最下段のまま。
     +(isNew
-      ?'<div class="menuBtnMain" id="ccNextBtn" style="margin-top:0;font-size:18px">'+(NEW_BODY_ON?'つぎへ：そうびを えらぶ ▶':'つぎへ：ふくの いろ ▶')+'</div>'
-      :(NEW_BODY_ON?'<div class="menuBtnMain" id="ccUseBtn" style="margin-top:0;font-size:18px">つぎへ：そうびを えらぶ ▶</div>'   // ★v332
+      ?'<div class="menuBtnMain" id="ccNextBtn" style="margin-top:0;font-size:18px">'+(NEW_BODY_ON?'装備を選ぶ ▶':'服の色を選ぶ ▶')+'</div>'
+      :(NEW_BODY_ON?'<div class="menuBtnMain" id="ccUseBtn" style="margin-top:0;font-size:18px">装備を選ぶ ▶</div>'   // ★v332
                    :'<div class="uiBtn info" id="ccUseBtn" style="width:240px;font-size:16px">▶ この顔でスタート</div>'))
     +'<div class="menuRow">'
     +(isNew?'<div class="uiBtn info" id="ccRedoBtn" style="font-size:14px">🖼️ 選び直す</div>':'')
@@ -4927,6 +4929,14 @@ function _nbParts(key,src,R){
   if(++_nbCacheN>6){ _nbCache={}; _nbCacheN=1; }
   return (_nbCache[key]=P);
 }
+// ★v338 背中の盾の位置（体の単位。x はうしろ側がマイナス・r は傾き・s は大きさ）。3案を描き比べて決めた：
+//   真後ろ（x0・傾き0）はほぼ体に隠れて見えない／少し斜め（x-5・-0.3）は小さくのぞく／この斜めがけはゲーム中の大きさでも「背中の盾」と分かる
+var NB_BACKSH={x:-8,y:-21,r:-0.5,s:1};
+function _backShield(g,id){   // 背中の盾：影も光も付けない（体のうしろなので）
+  var base=ITEM_IMG['sh_'+id]; if(!base) return;
+  var H=ITEM_SPR.shieldH[id]||25, W=H*base.width/base.height;
+  g.drawImage(_shrunk(base,80),-W/2,-H/2,W,H);
+}
 // プレイヤーを新しい体で描く（drawStick から呼ぶ）。描けなかったら false を返して今の描き方に任せる
 //   大きさは drawCharPreview の単位×1.1（今のゲーム中の頭 HR=11 と同じ大きさになる）。当たり判定は変えない
 function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
@@ -4963,18 +4973,21 @@ function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
   }
   function hand(right,ang){ var pv=right?R.piv.ar:R.piv.al, hd=right?(R.handR||BODY_SPR.handR):(R.handL||BODY_SPR.handL), hx=hd[0]-pv[0], hy=hd[1]-pv[1], co=Math.cos(ang), si=Math.sin(ang);
     return [ox+(pv[0]+hx*co-hy*si)*bk, oy+(pv[1]+hx*si+hy*co)*bk+up]; }
+  // ★v338 盾はふだん背中に背負う（ユーザー指定）。体のうしろに描くので、肩と体のわきから少しのぞく
+  var shOn=hasSk(3), shId=eqShield().id||'normal', B=NB_BACKSH;
+  if(shOn && st!=='guard'){ ctx.save(); ctx.translate(B.x,B.y+up); ctx.rotate(B.r); ctx.scale(B.s,B.s); _backShield(ctx,shId); ctx.restore(); }
   part(P.ll,R.piv.ll,lL*lk,0); part(P.lr,R.piv.lr,lR*lk,0);
   part(P.torso,null,0,up);
   part(P.al,R.piv.al,aL,up); part(P.ar,R.piv.ar,aR,up);
-  // 盾：盾スキルを取ってから（今と同じ）。ふだんは左手、ガードは体の前に大きく
-  if(hasSk(3)){
-    ctx.save();
-    if(st==='guard'){ ctx.translate(-2,-16+up); ctx.scale(1.25,1.25); } else { var hL=hand(false,aL); ctx.translate(hL[0]-2,hL[1]-1); }
-    _frontShield(ctx,eqShield().id||'normal',null,80);
+  // 盾：盾スキルを取ってから（今と同じ）。ガードのときだけ体の前に大きく構える（ふだんは上で背中に描いた）
+  if(shOn && st==='guard'){
+    ctx.save(); ctx.translate(-2,-16+up); ctx.scale(1.25,1.25);
+    _frontShield(ctx,shId,null,80);
     ctx.restore();
   }
   // 剣：剣スキルの前は短め（今の 30/44 と同じ比）。ロングソード中は1.9倍。ふりかぶっている間は頭のうしろ
-  var swd=eqSword(), sk=(hasSk(2)?1:0.68)*((p.longT>0)?1.9:1), hR=hand(true,aR);
+  //   ★v338 全体を1.3倍（ユーザー「剣小さすぎ」）。振りぬいた剣先が攻撃の当たり判定の端とそろう（体の中心から 49.6px→60.7px、当たり判定は58.5px）
+  var swd=eqSword(), sk=1.3*(hasSk(2)?1:0.68)*((p.longT>0)?1.9:1), hR=hand(true,aR);
   function sword(){ ctx.save(); ctx.translate(hR[0],hR[1]); ctx.rotate(sw); if(sk!==1) ctx.scale(sk,sk); _frontSword(ctx,swd,128); ctx.restore(); }
   if(back) sword();
   var hd=HEAD[cid], hm=HEAD_META[cid], hc=HEADCFG[cid]||{s:1,oy:0}, k=10*3.4*(hc.s||1)/hm.h;
