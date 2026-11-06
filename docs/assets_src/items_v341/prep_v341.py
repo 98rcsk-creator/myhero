@@ -1,10 +1,13 @@
-# v341・v342 剣5本（刃を長くした描き直し）と盾3つ（炎・雷・闇）の絵を、ゲームに埋め込む形に整える
+# v341・v342・v344 剣5本（刃を長くした描き直し。v344 で刃だけさらに1.45倍）と盾3つ（炎・雷・闇）の絵を、ゲームに埋め込む形に整える
 #   元の絵: swords5.png（2172x724）・shields5.jpg（1170x542。左から 銀・炎・雷・闇・ヒーロー の5つ。銀とヒーローは今の絵のまま使う）
 #   使い方: python3 docs/assets_src/items_v341/prep_v341.py swords5.png shields5.jpg 出力フォルダ
 #   - どちらも背景が透明ではなく、白にうっすら市松模様（247〜255）。ふちから「明るい無彩色」がつながっている所を背景として消す
 #     （絵の中の白い所はふちとつながっていないので消えない）
 #   - 絵のふち2pxは白と混ざっているので、白を引いて色を戻し（アンブレンド）、白さに応じて透けさせる＝白いフチが残らない
 #   - 剣: 高さ300px（今と同じ）の WebP。握る所は prep_swords.py と同じ決め方（鍔の下で幅がほぼ一定の帯の真ん中）
+#   - ★v344 剣は刃だけ縦に BLADE 倍（1.45）に伸ばす。鍔と柄はそのまま（ユーザーの「刃と持ち手がアンバランス」への案B）。
+#     伸ばした分だけ絵が高くなるので、出力の高さも 300×(伸ばした高さ/元の高さ) にする＝柄の細かさは今と同じ。
+#     ゲームの swordLen は「v341 の長さ × lenK（＝伸ばした高さ/元の高さ）」にする＝柄の大きさは今のまま、剣先だけ伸びる
 #   - 盾: 高さ192px（今の盾と同じ）の WebP
 import sys, os, json
 import numpy as np
@@ -67,9 +70,9 @@ def crop(arr, pad=4):
     ys, xs = np.where(arr[:, :, 3] > 0)
     return arr[max(0, ys.min() - pad):ys.max() + 1 + pad, max(0, xs.min() - pad):xs.max() + 1 + pad]
 
-def grip(a):   # prep_swords.py と同じ
+def grip(a, ymin=0):   # prep_swords.py と同じ。★v344 ymin＝ここより上は探さない（伸ばした刃の細い所を柄とまちがえないように）
     w = (a > 128).sum(axis=1); ys = np.where(w > 0)[0]; y0, y1 = ys.min(), ys.max(); mw = w.max()
-    narrow = (w > 0) & (w < 0.4 * mw); narrow[:y0 + int((y1 - y0) * 0.4)] = False
+    narrow = (w > 0) & (w < 0.4 * mw); narrow[:max(ymin, y0 + int((y1 - y0) * 0.4))] = False
     best = (0, 0, 0); s = None
     for y in range(len(w) + 1):
         v = narrow[y] if y < len(w) else False
@@ -89,12 +92,24 @@ def save(arr, path, TH):
     h, w = arr.shape[:2]; im = Image.fromarray(arr, 'RGBA').resize((round(w * TH / h), TH), Image.LANCZOS)
     im.save(path, 'WEBP', quality=88, method=6); return np.asarray(im)
 
+BLADE = 1.45
+def stretch_blade(c, b):
+    # ★v344 刃の下のはし＝鍔の上のはし：絵の下55%の中でいちばん幅の広い行（鍔）から上へ、幅が鍔の55%を切るまでたどる
+    w = (c[:, :, 3] > 128).sum(axis=1); ys = np.where(w > 0)[0]; top, bot = ys.min(), ys.max()
+    lo = top + int((bot - top) * 0.45); g = lo + int(np.argmax(w[lo:])); bb = g
+    while bb > top and w[bb - 1] > 0.55 * w[g]: bb -= 1
+    nh = round((bb - top) * b)   # 刃（top〜bb）だけ縦に伸ばす。PIL の RGBA の縮尺はαで重みをつける＝ふちに色がにじまない
+    seg = np.asarray(Image.fromarray(np.ascontiguousarray(c[top:bb]), 'RGBA').resize((c.shape[1], nh), Image.LANCZOS))
+    return np.concatenate([c[:top], seg, c[bb:]], 0), top + nh
+
 meta = {'sword': {}, 'shield': {}}
 S = cut_bg(SW); r = runs(S, 30); assert len(r) == 5, r
 for name, (x0, x1) in zip(['silver', 'flame', 'thunder', 'dark', 'herosword'], r):
-    a2 = save(crop(main_only(S[:, max(0, x0 - 6):x1 + 6])), f'{OUT}/sword_{name}.webp', 300)
-    gx, gy = grip(a2[:, :, 3]); ys = np.where((a2[:, :, 3] > 40).any(axis=1))[0]
-    meta['sword'][name] = {'w': int(a2.shape[1]), 'h': 300, 'gripX': round(gx, 1), 'gripY': round(gy, 1), 'top': int(ys.min()), 'webp': os.path.getsize(f'{OUT}/sword_{name}.webp')}
+    c = crop(main_only(S[:, max(0, x0 - 6):x1 + 6])); st, nb = stretch_blade(c, BLADE)
+    TH = round(300 * st.shape[0] / c.shape[0])
+    a2 = save(st, f'{OUT}/sword_{name}.webp', TH)
+    gx, gy = grip(a2[:, :, 3], round(nb * TH / st.shape[0])); ys = np.where((a2[:, :, 3] > 40).any(axis=1))[0]
+    meta['sword'][name] = {'w': int(a2.shape[1]), 'h': TH, 'lenK': round(st.shape[0] / c.shape[0], 4), 'gripX': round(gx, 1), 'gripY': round(gy, 1), 'top': int(ys.min()), 'webp': os.path.getsize(f'{OUT}/sword_{name}.webp')}
 H = cut_bg(SH); r = runs(H, 50); print('盾のかたまり', r)
 # 雷と闇、闇とヒーローは、闇のトゲの先が y217〜261 で数pxくっついている → くっついた列の中で絵がいちばん少ない列で切る
 cnt = (H[:, :, 3] > 128).sum(axis=0); rr = []
