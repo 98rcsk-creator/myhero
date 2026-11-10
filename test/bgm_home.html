@@ -18,11 +18,11 @@ p{font-size:12px;color:#9fc4e6;margin:2px 0 12px;text-align:center;line-height:1
 </style>
 </head>
 <body>
-<h1>ホームのBGM 聴きくらべ 2回目</h1>
+<h1>ホームのBGM 聴きくらべ 3回目</h1>
 <p>ボタンを押すと流れるで（もう一回押すと止まる）。<br>音が出ないときは、マナーモードを切って音量を上げてな。</p>
-<button class="bt" data-id="D">D　はじまりの朝（オカリナ）<small>鳥の声とハープ → オカリナ → ストリングスで広がる</small></button>
-<button class="bt" data-id="E">E　はじまりの朝（低く太く）<small>Dと同じ曲。メロディを1オクターブ下げてチェロとホルン</small></button>
-<button class="bt" data-id="B">B　前回の「壮大でゆったり」<small>くらべる用</small></button>
+<button class="bt" data-id="F">F　オカリナ＋走るピチカート<small>メロディはオカリナ、下でチェロが支える。後半から速いピチカート</small></button>
+<button class="bt" data-id="G">G　低音が主役＋速いオカリナ<small>メロディはチェロとホルン。後半からオカリナが速い別メロディ</small></button>
+<button class="bt" data-id="D">D　前回のオカリナ<small>くらべる用（鳥だけ新しくした）</small></button>
 <button class="bt" id="stop">■ 止める</button>
 <div id="st"></div>
 <script>
@@ -44,14 +44,6 @@ var MUS=(function(){
 
   // ---- 曲（1小節＝16分音符16個。メロディは「音名/長さ」、- は休み。コードは1小節に1つ、または半分ずつ2つ）----
   var SONGS={
-    B:{ tempo:84,
-      chords:['F','C','Dm','Bb','F','Am','Bb','C', 'Db','Eb','F','F','Bb','C','Db Eb','F'],
-      mel:['C5/8 F5/4 A5/4','G5/12 E5/4','F5/8 A5/4 D6/4','D6/4 C6/4 Bb5/8',
-           'A5/8 C6/4 F6/4','E6/12 C6/4','D6/8 Bb5/4 D6/4','C6/12 -/4',
-           'Ab4/8 Db5/4 F5/4','Bb4/4 Eb5/4 G5/8','A5/12 C5/4','F5/4 G5/4 A5/4 C6/4',
-           'D6/8 Bb5/4 F5/4','E5/4 G5/4 C6/8','Db6/4 Ab5/4 Eb6/4 Bb5/4','F6/12 -/4'],
-      lead:function(b){ return b<8?[['strings',0,0.17],['strings',-12,0.07]]:[['strings',0,0.16],['horn',-12,0.11]]; },
-      pad:0.036, harp:0.060, bass:0.15, bassPat:'long', snare:0, timp:0.24, swell:0.06 },
     // ★2回目（ユーザー「Bの感じでもっと低音・鳥の鳴き声・オカリナのオープニングみたいな、ここから全てが始まるドキドキワクワク」）
     //   20小節：夜明け（ハープと鳥だけ）4 → オカリナのメロディ 8 → ストリングスとホルンで広がる 8（bVI→bVII→I）→ 夜明けに戻る
     //   D と E は同じ曲。D＝メロディがオカリナ（中くらいの高さ）／E＝メロディを1オクターブ下げてチェロとホルン（低く太い）
@@ -64,11 +56,25 @@ var MUS=(function(){
            'D5/4 F5/4 Bb5/8','E5/4 G5/4 C6/8','D6/8 A5/4 F#5/4','E5/12 -/4'],
       lead:function(b){ return b<12?[['oca',0,0.20]]:[['oca',0,0.15],['strings',-12,0.10],['horn',-12,0.09]]; },
       lv:function(b){ return b<4?[0.6,1,0]:(b<12?[0.85,0.9,0.85]:[1.15,0.8,1.1]); },
-      pad:0.030, harp:0.075, bass:0.17, bassPat:'long', snare:0, timp:0.22, timpHit:[12,16], timpRoll:[11], swell:0.05, swellBars:[11], birds:0.035 },
-    E:{ tempo:76, padC:55, arpC:45, bassC:38, same:'D',
-      lead:function(b){ return b<4?[['oca',0,0.17]]:(b<12?[['strings',-12,0.17],['horn',-12,0.06]]:[['strings',-12,0.16],['horn',-12,0.13],['strings',-24,0.07]]); },
-      lv:function(b){ return b<4?[0.6,1,0]:(b<12?[0.9,0.85,1]:[1.15,0.8,1.15]); },
-      pad:0.030, harp:0.070, bass:0.19, bassPat:'long', snare:0, timp:0.24, timpHit:[12,16], timpRoll:[11], swell:0.05, swellBars:[11], birds:0.035 }
+      pad:0.030, harp:0.075, bass:0.17, bassPat:'long', snare:0, timp:0.22, timpHit:[12,16], timpRoll:[11], swell:0.05, swellBars:[11], birds:0.013 },
+    // ★3回目（ユーザー「Dが近い。鳥はもっと自然に＝たまたま鳴いたのがメロディになったくらい。テンポの速い楽器をもう1つ。
+    //   低音のメロディが軸で、中間で1つアップテンポなメロディ、鳥がそれを後押し」）。F・G とも曲は D と同じ
+    //   F＝オカリナのメロディ＋1オクターブ下でチェロが同じメロディ（軸）。後半からピチカートが16分音符で走る
+    //   G＝メロディはチェロとホルン（低音が軸）。オカリナは真ん中の高さで8分音符の速い別メロディ（mel2）
+    F:{ tempo:76, padC:57, arpC:45, bassC:40, same:'D',
+      lead:function(b){ return b<4?[['oca',0,0.19]]:(b<12?[['oca',0,0.17],['strings',-12,0.10]]:[['oca',0,0.14],['strings',-12,0.12],['horn',-12,0.09]]); },
+      lv:function(b){ return b<4?[0.6,1,0]:(b<12?[0.85,0.9,0.9]:[1.1,0.75,1.1]); },
+      run:0.045, runLv:function(b){ return b<8?0:(b<12?0.6:1); },
+      pad:0.030, harp:0.070, bass:0.17, bassPat:'long', snare:0, timp:0.22, timpHit:[12,16], timpRoll:[11], swell:0.05, swellBars:[11], birds:0.013 },
+    G:{ tempo:76, padC:57, arpC:45, bassC:40, same:'D',
+      lead:function(b){ return b<4?[['oca',0,0.19]]:(b<12?[['strings',-12,0.17],['horn',-12,0.06]]:[['strings',-12,0.16],['horn',-12,0.12],['strings',-24,0.06]]); },
+      mel2:['','','','', '','','','',
+            '-/4 F#5/2 A5/2 D6/2 E6/2 D6/2 A5/2','-/4 G5/2 B5/2 D6/2 B5/2 G5/2 B5/2','-/4 E5/2 G5/2 B5/2 E6/2 B5/2 G5/2','-/4 E5/2 A5/2 C#6/2 E6/4 -/2',
+            'D5/2 F5/2 Bb5/2 F5/2 D6/2 Bb5/2 F5/2 Bb5/2','E5/2 G5/2 C6/2 G5/2 E6/2 C6/2 G5/2 C6/2','F#5/2 A5/2 D6/2 A5/2 F#6/2 D6/2 A5/2 D6/2','F#6/2 E6/2 D6/2 A5/2 F#5/2 A5/2 D6/4',
+            'D5/2 F5/2 Bb5/2 F5/2 D6/2 Bb5/2 F5/2 Bb5/2','E5/2 G5/2 C6/2 G5/2 E6/2 C6/2 G5/2 C6/2','F#5/2 A5/2 D6/2 F#6/2 E6/2 D6/2 A5/2 F#5/2','E5/2 A5/2 C#6/2 E6/2 C#6/4 -/4'],
+      lead2:function(b){ return [['oca',0,b<12?0.085:0.10]]; },
+      lv:function(b){ return b<4?[0.6,1,0]:(b<12?[0.9,0.85,1]:[1.1,0.7,1.1]); },
+      pad:0.030, harp:0.065, bass:0.18, bassPat:'long', snare:0, timp:0.23, timpHit:[12,16], timpRoll:[11], swell:0.05, swellBars:[11], birds:0.013 }
   };
 
   // ---- 楽器 ----
@@ -97,6 +103,9 @@ var MUS=(function(){
     // オカリナ：ほぼ純音。出だしで少し下からしゃくり上げ、ゆっくりめのビブラート
     oca:function(B,f,t,d,v){ var c=B.ctx, e=t+d+0.4, g=amp(c,t,d,v,0.06,0.92,0.16), o=osc(c,wave(c,'oca',[1,0.13,0.05,0.02]),f,t,e,0);
       if(o.detune){ o.detune.setValueAtTime(-35,t); o.detune.linearRampToValueAtTime(0,t+0.07); } o.connect(g); vib(c,o,t,e,4.6,7,Math.min(0.25,d*0.45)); out(B,g,0.55); },
+    // ピチカート（弦をはじく）：短くて歯切れのいい音。速いフレーズ用
+    pizz:function(B,f,t,d,v){ var c=B.ctx, e=t+0.5, g=c.createGain(), lp=c.createBiquadFilter(), o=osc(c,wave(c,'pizz',[1,0.6,0.38,0.22,0.12,0.06]),f,t,e,0); lp.type='lowpass'; lp.frequency.value=3200;
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.004); g.gain.setTargetAtTime(0,t+0.005,0.075); o.connect(lp); lp.connect(g); out(B,g,0.35); },
     harp:function(B,f,t,d,v){ var c=B.ctx, e=t+1.3, g=c.createGain(), o=osc(c,wave(c,'harp',W_HARP),f,t,e,0);
       g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.005); g.gain.setTargetAtTime(0,t+0.006,0.26); o.connect(g); out(B,g,0.40); },
     glock:function(B,f,t,d,v){ var c=B.ctx, e=t+0.9, g=c.createGain(), o=osc(c,'sine',f,t,e,0), o2=osc(c,'sine',f*4,t,e,0), g2=c.createGain(); g2.gain.value=0.22;
@@ -114,24 +123,39 @@ var MUS=(function(){
   function swell(B,t,d,v){ var c=B.ctx, s=c.createBufferSource(), fl=c.createBiquadFilter(), g=c.createGain(); s.buffer=noiseBuf(c); s.loop=true; fl.type='highpass'; fl.frequency.value=5000;
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+d); g.gain.setTargetAtTime(0,t+d,0.35); s.connect(fl); fl.connect(g); s.start(t); s.stop(t+d+1.8); VOICES++; MUS._iv.push([t,t+d+1.8]); out(B,g,0.5); }
 
-  // 鳥の声（ピヨピヨ）：高い音を短くしゃくり上げるのを2〜5回。高さと間は毎回ばらつかせる
-  function bird(B,t,v){ var c=B.ctx, n=2+Math.floor(Math.random()*4), f0=2700+Math.random()*900, gap=0.11+Math.random()*0.06;
-    for(var i=0;i<n;i++){ var s=t+i*gap, o=osc(c,'sine',f0,s,s+0.11,0), g=c.createGain(), f=f0*(1+Math.random()*0.06);
-      o.frequency.setValueAtTime(f,s); o.frequency.exponentialRampToValueAtTime(f*1.38,s+0.045); o.frequency.exponentialRampToValueAtTime(f*1.12,s+0.09);
-      g.gain.setValueAtTime(0,s); g.gain.linearRampToValueAtTime(v*(0.7+Math.random()*0.3),s+0.012); g.gain.linearRampToValueAtTime(0,s+0.1); o.connect(g); out(B,g,0.6); } }
+  // 鳥の声 ★3回目に作り直し（ユーザー「鳴き声入れました！みたいで不自然」）
+  //   前：曲と無関係な高さ・タイミングで2〜5連発、音量も大きめ → 効果音として浮いていた
+  //   今：①高さはその小節の和音の音（高いオクターブ）②「ピ・ヨ」＝上の音→すぐ下の和音の音、を1〜2回 ③16分音符の刻みに乗せる（少しだけ揺らす）
+  //       ④メロディが長く伸びている所でだけ、ときどき鳴く（合いの手）⑤小さく・こもらせて・響き多め＝遠くで鳴いている
+  function bird(B,t,tones,st,v){ var c=B.ctx, lad=[], m, i, lp=c.createBiquadFilter(), bg=c.createGain(); lp.type='lowpass'; lp.frequency.value=4800; bg.gain.value=1;
+    for(m=93;m<=103;m++) if(tones.indexOf(m%12)>=0) lad.push(m);
+    var hi=1+Math.floor(Math.random()*(lad.length-1)), pairs=1+(Math.random()<0.45?1:0), seq=[];
+    for(i=0;i<pairs;i++){ seq.push(lad[hi]); seq.push(lad[hi-1]); }
+    if(Math.random()<0.3) seq.push(lad[hi]);   // たまに最後だけ上がって終わる
+    for(i=0;i<seq.length;i++){ var s=t+i*st+(Math.random()-0.5)*0.024, f=hz(seq[i]), o=osc(c,'sine',f,s,s+0.1,0), g=c.createGain(), vv=v*(0.65+Math.random()*0.35)*(i%2?0.8:1);
+      o.frequency.setValueAtTime(f*1.11,s); o.frequency.exponentialRampToValueAtTime(f,s+0.028); o.frequency.exponentialRampToValueAtTime(f*0.975,s+0.085);   // 上からすっと入って、最後に少し下がる
+      g.gain.setValueAtTime(0,s); g.gain.linearRampToValueAtTime(vv,s+0.016); g.gain.setTargetAtTime(0,s+0.03,0.02); o.connect(g); g.connect(lp); }
+    lp.connect(bg); out(B,bg,1.4); }
   // ---- 1小節ぶんを予約する（only：'mel'＝メロディだけ／'acc'＝伴奏だけ。音量バランスの計測用）----
   var SNARE='x...x.x.x...x.xx';
   function bar(B,S,b,t0,only){
     var st=60/S.tempo/4, bl=st*16, i, k;
     if(only!=='acc'){ var pos=0, L=S._mel[b], ld=S.lead(b);
       for(i=0;i<L.length;i++){ if(L[i].m!=null) for(k=0;k<ld.length;k++) INS[ld[k][0]](B,hz(L[i].m+ld[k][1]),t0+pos*st,L[i].len*st*0.93,ld[k][2]); pos+=L[i].len; } }
+    var slots=[];   // 鳥が鳴ける場所＝メロディが2拍以上伸びている音の、1拍あと
+    if(S.birds){ var q0=0, ML=S._mel[b]; for(i=0;i<ML.length;i++){ if(ML[i].len>=8 && q0+4<=11) slots.push(q0+4); q0+=ML[i].len; } if(b<4 && !slots.length) slots=[6,10]; }
     if(only==='mel') return bl;
+    if(S._mel2 && S._mel2[b].length){ var p2=0, L2=S._mel2[b], l2=S.lead2(b);
+      for(i=0;i<L2.length;i++){ if(L2[i].m!=null) for(k=0;k<l2.length;k++) INS[l2[k][0]](B,hz(L2[i].m+l2[k][1]),t0+p2*st,L2[i].len*st*0.9,l2[k][2]); p2+=L2[i].len; } }
     var cs=S.chords[b].split(' '), n=cs.length, seg=bl/n, lv=S.lv?S.lv(b):[1,1,1];   // lv＝この小節の 和音・ハープ・ベース の音量の倍率
     for(var ci=0;ci<n;ci++){ var c=chord(cs[ci]), t=t0+ci*seg, lad=[], r0=near(c.tones[0],S.arpC||50), m;
       if(S.pad) for(k=0;k<c.tones.length;k++) INS.strings(B,hz(near(c.tones[k],S.padC||62)),t,seg*0.98,S.pad*lv[0]);
       for(m=r0;m<=r0+26;m++) if(c.tones.indexOf(m%12)>=0) lad.push(m);
       var pat=(n===1)?[0,2,3,4,5,4,3,2]:[0,2,3,4];
       for(i=0;i<pat.length;i++) INS.harp(B,hz(lad[pat[i]]),t+i*st*2,0,S.harp*lv[1]*(i===0?1.15:0.85));
+      var rl=S.run?S.run*S.runLv(b):0;   // 速いピチカート：和音の音を16分音符で上がり下がり
+      if(rl){ var r1=near(c.tones[0],62), rd=[], RP=[0,1,2,1,3,2,1,2,0,1,2,1,3,2,3,2], rn=16/n; for(m=r1;m<=r1+19;m++) if(c.tones.indexOf(m%12)>=0) rd.push(m);
+        for(i=0;i<rn;i++) INS.pizz(B,hz(rd[RP[i]%rd.length]),t+i*st,0,rl*(i%4===0?1.2:0.8)); }
       var bm=near(c.bass,S.bassC||43), q=st*4, bv=S.bass*lv[2];
       if(!bv) continue;
       if(S.bassPat==='march'){ INS.bass(B,hz(bm),t,q*0.8,S.bass); if(n===1){ INS.bass(B,hz(near(c.tones[2],43)),t+q*2,q*0.8,S.bass*0.85); } }
@@ -143,7 +167,8 @@ var MUS=(function(){
     if(S.timp){ var c0=chord(cs[0]); if(hit) INS.timp(B,hz(near(c0.bass,41)),t0,0,S.timp);
       if(roll) for(i=0;i<8;i++) INS.timp(B,hz(near(chord(cs[n-1]).bass,41)),t0+st*8+i*st,0,S.timp*(0.35+0.08*i)); }   // 8小節目の後半でクレッシェンドのロール
     if(S.swell && sw) swell(B,t0+bl*0.25,bl*0.75,S.swell);
-    if(S.birds){ var nb=(b<4?2:(Math.random()<0.55?1:0)); for(i=0;i<nb;i++) bird(B,t0+Math.random()*bl*0.85,S.birds); }   // 夜明けの4小節は多め
+    if(S.birds && slots.length && Math.random()<(b<4?0.8:0.45)){ var sp=slots[Math.floor(Math.random()*slots.length)], ct=chord(cs[Math.min(n-1,Math.floor(sp/(16/n)))]).tones.slice(0,3);
+      bird(B,t0+sp*st,ct,st,S.birds); }   // 1小節に多くて1回。鳴かない小節もある
     return bl;
   }
   // ---- 出口：そのまま＋リバーブ → コンプレッサー（音割れ防止）----
@@ -152,7 +177,8 @@ var MUS=(function(){
     for(var ch=0;ch<2;ch++){ var d=ib.getChannelData(ch); for(var i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.6); }
     cv.buffer=ib; B.dry=ctx.createGain(); B.rev=cv; wg.gain.value=0.55; cv.connect(wg); wg.connect(m); B.dry.connect(m);
     cp.threshold.value=-14; cp.ratio.value=4; cp.attack.value=0.01; cp.release.value=0.2; m.gain.value=1.0; m.connect(cp); cp.connect(dest); B.master=m; B.end=cp; return B; }
-  function prep(id){ var S=SONGS[id]; if(S.same){ S.chords=SONGS[S.same].chords; S.mel=SONGS[S.same].mel; } if(!S._mel){ S._mel=S.mel.map(line); S._mel.forEach(function(L,i){ var s=0; L.forEach(function(x){ s+=x.len; }); if(s!==16) throw new Error(id+' の '+(i+1)+' 小節目の長さが '+s); }); } return S; }
+  function prep(id){ var S=SONGS[id]; if(S.same){ S.chords=SONGS[S.same].chords; S.mel=SONGS[S.same].mel; } if(S.mel2 && !S._mel2) S._mel2=S.mel2.map(function(x){ return x?line(x):[]; });
+    if(!S._mel){ S._mel=S.mel.map(line); S._mel.forEach(function(L,i){ var s=0; L.forEach(function(x){ s+=x.len; }); if(s!==16) throw new Error(id+' の '+(i+1)+' 小節目の長さが '+s); }); } return S; }
 
   var ctx=null, cur=null;
   function stop(){ if(!cur) return; clearInterval(cur.tm); var B=cur.B, t=ctx.currentTime; B.master.gain.setTargetAtTime(0,t,0.05); setTimeout(function(){ try{ B.end.disconnect(); }catch(e){} },500); cur=null; }
