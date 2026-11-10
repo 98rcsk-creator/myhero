@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>My HERO BGM 試聴</title>
+<style>
+html,body{margin:0;height:100%;background:#0b1d3f;color:#fff;font-family:-apple-system,"Hiragino Sans",sans-serif;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column;align-items:center;padding:18px 16px;box-sizing:border-box}
+h1{font-size:19px;margin:4px 0 2px;color:#ffe44d}
+p{font-size:12px;color:#9fc4e6;margin:2px 0 12px;text-align:center;line-height:1.6}
+.bt{width:100%;max-width:340px;margin:6px 0;padding:14px 12px;border-radius:16px;border:2px solid rgba(120,190,255,.7);
+  background:linear-gradient(180deg,#1d63b4,#123c78);font-size:17px;font-weight:bold;color:#fff;text-align:left;box-sizing:border-box}
+.bt small{display:block;font-size:11px;font-weight:normal;color:#bfe0ff;margin-top:3px}
+.bt.on{border-color:#ffe44d;background:linear-gradient(180deg,#8a6a12,#5a4208);box-shadow:0 0 14px rgba(255,214,90,.55)}
+#stop{text-align:center;background:linear-gradient(180deg,#555f72,#333a48);border-color:#99a}
+#st{font-size:12px;color:#ffe44d;height:18px;margin-top:6px}
+</style>
+</head>
+<body>
+<h1>ホームのBGM 聴きくらべ</h1>
+<p>ボタンを押すと流れるで（もう一回押すと止まる）。<br>音が出ないときは、マナーモードを切って音量を上げてな。</p>
+<button class="bt" data-id="A">A　わくわく出発<small>ホルンとマーチの太鼓。朝、冒険に出かける感じ</small></button>
+<button class="bt" data-id="B">B　壮大でゆったり<small>ストリングスとティンパニ。広い世界を見わたす感じ</small></button>
+<button class="bt" data-id="C">C　ちょっと切ない<small>笛とハープ。静かな村、夕方の感じ</small></button>
+<button class="bt" id="stop">■ 止める</button>
+<div id="st"></div>
+<script>
+// ===== My HERO 新しい音楽エンジンの試作（2026-11 試聴ページ。ゲーム本体にはまだ入れていない）=====
+//  今のBGM：矩形波4音・2小節ループ・setInterval で発音
+//  試作　　：楽器8種（倍音を持たせた波形＋フィルタ＋音量の山）・響き（リバーブ）・16小節・音の時計に合わせて1小節ずつ先に予約
+//  曲は「コード進行＋メロディ」だけを書き、伴奏（和音・ハープの分散・ベース・太鼓）はコードから自動で作る＝曲データが小さい
+//  メロディは3曲ともオリジナル
+var MUS=(function(){
+  var PC={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  function pc(n){ return (PC[n.charAt(0)]+(n.charAt(1)==='#'?1:(n.charAt(1)==='b'?-1:0))+12)%12; }
+  function midi(n){ var m=/^([A-G][#b]?)(-?\d)$/.exec(n); return pc(m[1])+12*(+m[2]+1); }
+  function hz(m){ return 440*Math.pow(2,(m-69)/12); }
+  function near(p,c){ var m=c-(((c-p)%12)+12)%12; if(c-m>6) m+=12; return m; }   // 音名 p を、高さ c のいちばん近くへ
+  function chord(c){ var m=/^([A-G][#b]?)(m?)(?:\/([A-G][#b]?))?$/.exec(c), r=pc(m[1]); return {tones:[r,(r+(m[2]?3:4))%12,(r+7)%12], bass:m[3]?pc(m[3]):r}; }
+  function line(s){ return s.split(/\s+/).filter(Boolean).map(function(t){ var a=t.split('/'); return {m:a[0]==='-'?null:midi(a[0]), len:+a[1]}; }); }
+
+  // ---- 曲（1小節＝16分音符16個。メロディは「音名/長さ」、- は休み。コードは1小節に1つ、または半分ずつ2つ）----
+  var SONGS={
+    A:{ tempo:132,
+      chords:['D','D','G','A','D','Bm','G A','D', 'G','A','F#m','Bm','G','D/F#','C','A'],
+      mel:['A4/4 D5/4 F#5/6 E5/2','D5/2 E5/2 F#5/4 A5/8','B5/6 A5/2 G5/4 D5/4','E5/4 C#5/2 E5/2 A5/8',
+           'A4/4 D5/4 F#5/6 E5/2','D5/2 E5/2 F#5/4 B5/8','B5/2 A5/2 G5/4 A5/2 G5/2 E5/4','D5/12 -/4',
+           'G5/4 B5/4 D6/6 B5/2','C#6/4 A5/4 E5/8','F#5/4 A5/4 C#6/6 A5/2','B5/4 F#5/4 D5/8',
+           'G5/2 A5/2 B5/4 G5/4 D5/4','F#5/2 G5/2 A5/4 F#5/4 D5/4','E5/4 G5/4 C6/8','C#6/4 B5/2 A5/2 E5/4 A5/4'],
+      lead:function(b){ return b<8?[['horn',0,0.20],['glock',12,0.05]]:[['strings',0,0.15],['flute',12,0.09]]; },
+      pad:0.030, harp:0.070, bass:0.15, bassPat:'march', snare:0.050, timp:0.20 },
+    B:{ tempo:84,
+      chords:['F','C','Dm','Bb','F','Am','Bb','C', 'Db','Eb','F','F','Bb','C','Db Eb','F'],
+      mel:['C5/8 F5/4 A5/4','G5/12 E5/4','F5/8 A5/4 D6/4','D6/4 C6/4 Bb5/8',
+           'A5/8 C6/4 F6/4','E6/12 C6/4','D6/8 Bb5/4 D6/4','C6/12 -/4',
+           'Ab4/8 Db5/4 F5/4','Bb4/4 Eb5/4 G5/8','A5/12 C5/4','F5/4 G5/4 A5/4 C6/4',
+           'D6/8 Bb5/4 F5/4','E5/4 G5/4 C6/8','Db6/4 Ab5/4 Eb6/4 Bb5/4','F6/12 -/4'],
+      lead:function(b){ return b<8?[['strings',0,0.17],['strings',-12,0.07]]:[['strings',0,0.16],['horn',-12,0.11]]; },
+      pad:0.036, harp:0.060, bass:0.15, bassPat:'long', snare:0, timp:0.24, swell:0.06 },
+    C:{ tempo:96,
+      chords:['Am','F','C','G','Am','F','G','E', 'F','G','C','Am','Dm','E','Am','Am E'],
+      mel:['E5/6 A5/2 C6/8','A5/4 F5/4 C6/8','G5/6 C6/2 E6/8','D6/4 B5/4 G5/8',
+           'E5/6 A5/2 C6/8','A5/4 C6/4 F6/8','G6/4 D6/4 B5/4 D6/4','E6/8 G#5/4 B5/4',
+           'C6/4 A5/4 F5/4 A5/4','D6/4 B5/4 G5/4 B5/4','E6/8 G6/4 E6/4','C6/12 A5/4',
+           'F5/4 A5/4 D6/8','E6/4 B5/4 G#5/8','A5/6 C6/2 E6/8','A5/8 B5/4 G#5/4'],
+      lead:function(b){ return b<8?[['flute',0,0.19]]:[['flute',0,0.18],['strings',-12,0.06]]; },
+      pad:0.026, harp:0.085, bass:0.11, bassPat:'half', snare:0, timp:0 }
+  };
+
+  // ---- 楽器 ----
+  function wave(ctx,name,h){ var c=ctx._mw||(ctx._mw={}); if(c[name]) return c[name];
+    var re=new Float32Array(h.length+1), im=new Float32Array(h.length+1); for(var i=0;i<h.length;i++) im[i+1]=h[i];
+    return (c[name]=ctx.createPeriodicWave(re,im)); }
+  function noiseBuf(ctx){ if(ctx._mn) return ctx._mn; var n=ctx.sampleRate, b=ctx.createBuffer(1,n,n), d=b.getChannelData(0); for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return (ctx._mn=b); }
+  var VOICES=0;   // 計測用：予約した発音体（オシレーター／ノイズ）の数
+  function osc(ctx,w,f,t,end,det){ var o=ctx.createOscillator(); if(typeof w==='string') o.type=w; else o.setPeriodicWave(w);
+    o.frequency.setValueAtTime(f,t); if(det && o.detune) o.detune.setValueAtTime(det,t); o.start(t); o.stop(end); VOICES++; MUS._iv.push([t,end]); return o; }
+  function vib(ctx,o,t,end,rate,cents,delay){ if(!o.detune) return; var l=ctx.createOscillator(), g=ctx.createGain(); l.frequency.value=rate;
+    g.gain.setValueAtTime(0,t); g.gain.setValueAtTime(0,t+delay); g.gain.linearRampToValueAtTime(cents,t+delay+0.12); l.connect(g); g.connect(o.detune); l.start(t); l.stop(end); }
+  // 音量の山：a 秒で立ち上がり → s 倍まで落ち着く → 音の長さが終わったら r 秒で消える
+  function amp(ctx,t,dur,vol,a,s,r){ var g=ctx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+a);
+    g.gain.setTargetAtTime(vol*s,t+a,0.08); g.gain.setTargetAtTime(0,t+Math.max(dur,a+0.01),r/3); return g; }
+  function out(B,g,send){ g.connect(B.dry); if(send){ var s=B.ctx.createGain(); s.gain.value=send; g.connect(s); s.connect(B.rev); } }
+  var W_STR=[1,0.55,0.42,0.30,0.22,0.16,0.12,0.09,0.06,0.04], W_HORN=[1,0.62,0.48,0.30,0.18,0.10,0.05], W_FLUTE=[1,0.30,0.10,0.04],
+      W_HARP=[1,0.45,0.22,0.10,0.05], W_BASS=[1,0.85,0.55,0.32,0.16,0.08];
+  var INS={
+    strings:function(B,f,t,d,v){ var c=B.ctx, e=t+d+0.5, g=amp(c,t,d,v,0.09,0.9,0.28), lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=Math.min(5200,f*5); lp.Q.value=0.4;
+      var w=wave(c,'str',W_STR), a=osc(c,w,f,t,e,-7), b=osc(c,w,f,t,e,7); a.connect(lp); b.connect(lp); lp.connect(g); if(d>0.5) vib(c,a,t,e,5.4,7,0.25); out(B,g,0.45); },
+    horn:function(B,f,t,d,v){ var c=B.ctx, e=t+d+0.4, g=amp(c,t,d,v,0.05,0.85,0.18), lp=c.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=0.7;
+      lp.frequency.setValueAtTime(f*1.5,t); lp.frequency.linearRampToValueAtTime(f*4.5,t+0.07); lp.frequency.setTargetAtTime(f*3,t+0.07,0.2);
+      var o=osc(c,wave(c,'horn',W_HORN),f,t,e,0); o.connect(lp); lp.connect(g); out(B,g,0.40); },
+    flute:function(B,f,t,d,v){ var c=B.ctx, e=t+d+0.35, g=amp(c,t,d,v,0.045,0.9,0.14), o=osc(c,wave(c,'flute',W_FLUTE),f,t,e,0); o.connect(g); vib(c,o,t,e,5.0,9,Math.min(0.18,d*0.4)); out(B,g,0.50); },
+    harp:function(B,f,t,d,v){ var c=B.ctx, e=t+1.3, g=c.createGain(), o=osc(c,wave(c,'harp',W_HARP),f,t,e,0);
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.005); g.gain.setTargetAtTime(0,t+0.006,0.26); o.connect(g); out(B,g,0.40); },
+    glock:function(B,f,t,d,v){ var c=B.ctx, e=t+0.9, g=c.createGain(), o=osc(c,'sine',f,t,e,0), o2=osc(c,'sine',f*4,t,e,0), g2=c.createGain(); g2.gain.value=0.22;
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.003); g.gain.setTargetAtTime(0,t+0.004,0.16); o.connect(g); o2.connect(g2); g2.connect(g); out(B,g,0.45); },
+    bass:function(B,f,t,d,v){ var c=B.ctx, e=t+d+0.3, g=amp(c,t,d,v,0.012,0.7,0.12), lp=c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=900;
+      var o=osc(c,wave(c,'bass',W_BASS),f,t,e,0); o.connect(lp); lp.connect(g); out(B,g,0.12); },
+    timp:function(B,f,t,d,v){ var c=B.ctx, e=t+1.0, g=c.createGain(), o=osc(c,wave(c,'bass',W_BASS),f,t,e,0);
+      o.frequency.setValueAtTime(f*1.25,t); o.frequency.exponentialRampToValueAtTime(f,t+0.06);
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.004); g.gain.setTargetAtTime(0,t+0.005,0.22); o.connect(g); out(B,g,0.40);
+      noise(B,t,0.05,v*0.5,'lowpass',500,0.3); },
+    snare:function(B,f,t,d,v){ noise(B,t,0.07,v,'bandpass',1900,0.25); }
+  };
+  function noise(B,t,d,v,type,fq,send){ var c=B.ctx, s=c.createBufferSource(), fl=c.createBiquadFilter(), g=c.createGain(); s.buffer=noiseBuf(c); fl.type=type; fl.frequency.value=fq; fl.Q.value=0.8;
+    g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.0001,t+d); s.connect(fl); fl.connect(g); s.start(t,Math.random()*0.5); s.stop(t+d+0.02); VOICES++; MUS._iv.push([t,t+d]); out(B,g,send); }
+  function swell(B,t,d,v){ var c=B.ctx, s=c.createBufferSource(), fl=c.createBiquadFilter(), g=c.createGain(); s.buffer=noiseBuf(c); s.loop=true; fl.type='highpass'; fl.frequency.value=5000;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+d); g.gain.setTargetAtTime(0,t+d,0.35); s.connect(fl); fl.connect(g); s.start(t); s.stop(t+d+1.8); VOICES++; MUS._iv.push([t,t+d+1.8]); out(B,g,0.5); }
+
+  // ---- 1小節ぶんを予約する（only：'mel'＝メロディだけ／'acc'＝伴奏だけ。音量バランスの計測用）----
+  var SNARE='x...x.x.x...x.xx';
+  function bar(B,S,b,t0,only){
+    var st=60/S.tempo/4, bl=st*16, i, k;
+    if(only!=='acc'){ var pos=0, L=S._mel[b], ld=S.lead(b);
+      for(i=0;i<L.length;i++){ if(L[i].m!=null) for(k=0;k<ld.length;k++) INS[ld[k][0]](B,hz(L[i].m+ld[k][1]),t0+pos*st,L[i].len*st*0.93,ld[k][2]); pos+=L[i].len; } }
+    if(only==='mel') return bl;
+    var cs=S.chords[b].split(' '), n=cs.length, seg=bl/n;
+    for(var ci=0;ci<n;ci++){ var c=chord(cs[ci]), t=t0+ci*seg, lad=[], r0=near(c.tones[0],50), m;
+      if(S.pad) for(k=0;k<3;k++) INS.strings(B,hz(near(c.tones[k],62)),t,seg*0.98,S.pad);
+      for(m=r0;m<=r0+26;m++) if(c.tones.indexOf(m%12)>=0) lad.push(m);
+      var pat=(n===1)?[0,2,3,4,5,4,3,2]:[0,2,3,4];
+      for(i=0;i<pat.length;i++) INS.harp(B,hz(lad[pat[i]]),t+i*st*2,0,S.harp*(i===0?1.15:0.85));
+      var bm=near(c.bass,43), q=st*4;
+      if(S.bassPat==='march'){ INS.bass(B,hz(bm),t,q*0.8,S.bass); if(n===1){ INS.bass(B,hz(near(c.tones[2],43)),t+q*2,q*0.8,S.bass*0.85); } }
+      else if(S.bassPat==='half'){ INS.bass(B,hz(bm),t,seg*(n===1?0.48:0.9),S.bass); if(n===1) INS.bass(B,hz(bm),t+q*2,q*1.8,S.bass*0.8); }
+      else INS.bass(B,hz(bm),t,seg*0.95,S.bass);
+    }
+    if(S.snare) for(i=0;i<16;i++) if(SNARE.charAt(i)==='x') INS.snare(B,0,t0+i*st,0,S.snare*(i%4===0?1:0.55));
+    if(S.timp){ var c0=chord(cs[0]); if(b%4===0) INS.timp(B,hz(near(c0.bass,41)),t0,0,S.timp);
+      if(b%8===7) for(i=0;i<8;i++) INS.timp(B,hz(near(chord(cs[n-1]).bass,41)),t0+st*8+i*st,0,S.timp*(0.35+0.08*i)); }   // 8小節目の後半でクレッシェンドのロール
+    if(S.swell && b%8===7) swell(B,t0+bl*0.25,bl*0.75,S.swell);
+    return bl;
+  }
+  // ---- 出口：そのまま＋リバーブ → コンプレッサー（音割れ防止）----
+  function bus(ctx,dest){ var B={ctx:ctx}, m=ctx.createGain(), cp=ctx.createDynamicsCompressor(), cv=ctx.createConvolver(), wg=ctx.createGain();
+    var n=Math.floor(ctx.sampleRate*1.9), ib=ctx.createBuffer(2,n,ctx.sampleRate);
+    for(var ch=0;ch<2;ch++){ var d=ib.getChannelData(ch); for(var i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.6); }
+    cv.buffer=ib; B.dry=ctx.createGain(); B.rev=cv; wg.gain.value=0.55; cv.connect(wg); wg.connect(m); B.dry.connect(m);
+    cp.threshold.value=-14; cp.ratio.value=4; cp.attack.value=0.01; cp.release.value=0.2; m.gain.value=1.0; m.connect(cp); cp.connect(dest); B.master=m; B.end=cp; return B; }
+  function prep(id){ var S=SONGS[id]; if(!S._mel){ S._mel=S.mel.map(line); S._mel.forEach(function(L,i){ var s=0; L.forEach(function(x){ s+=x.len; }); if(s!==16) throw new Error(id+' の '+(i+1)+' 小節目の長さが '+s); }); } return S; }
+
+  var ctx=null, cur=null;
+  function stop(){ if(!cur) return; clearInterval(cur.tm); var B=cur.B, t=ctx.currentTime; B.master.gain.setTargetAtTime(0,t,0.05); setTimeout(function(){ try{ B.end.disconnect(); }catch(e){} },500); cur=null; }
+  function play(id){
+    if(!ctx){ var AC=window.AudioContext||window.webkitAudioContext; ctx=new AC(); }
+    if(ctx.state==='suspended') ctx.resume();
+    stop(); var S=prep(id), B=bus(ctx,ctx.destination), me={B:B, b:0, t:ctx.currentTime+0.12}; cur=me;
+    function tick(){ while(cur===me && me.t<ctx.currentTime+0.5){ me.t+=bar(B,S,me.b%S.chords.length,me.t); me.b++; } }
+    tick(); me.tm=setInterval(tick,120);
+  }
+  // 計測用：音を出さずに全曲を計算して、最大音量・平均音量・同時に鳴る発音体の数を返す
+  function render(id,only,loops){ var S=prep(id), bl=60/S.tempo*4, n=S.chords.length*(loops||1), sec=n*bl+2, OC=window.OfflineAudioContext||window.webkitOfflineAudioContext, oc=new OC(2,Math.ceil(sec*44100),44100);
+    VOICES=0; MUS._iv=[]; var B=bus(oc,oc.destination), t=0.05; for(var b=0;b<n;b++) t+=bar(B,S,b%S.chords.length,t,only);
+    var iv=MUS._iv.slice(), ev=[]; iv.forEach(function(x){ ev.push([x[0],1]); ev.push([x[1],-1]); }); ev.sort(function(a,b){ return a[0]-b[0]||a[1]-b[1]; }); var c=0, mx=0; ev.forEach(function(e){ c+=e[1]; if(c>mx) mx=c; });
+    return oc.startRendering().then(function(buf){ var d=buf.getChannelData(0), pk=0, sq=0, nan=0; for(var i=0;i<d.length;i++){ var v=d[i]; if(v!==v) nan++; var a=v<0?-v:v; if(a>pk) pk=a; sq+=v*v; }
+      return {sec:+sec.toFixed(1), peak:+pk.toFixed(3), rmsDb:+(10*Math.log(sq/d.length)/Math.LN10).toFixed(1), nan:nan, voices:VOICES, maxAtOnce:mx}; }); }
+  return {play:play, stop:stop, render:render, _iv:[], playing:function(){ return !!cur; }};
+})();
+
+(function(){
+  var bts=document.querySelectorAll('.bt[data-id]'), st=document.getElementById('st'), now=null;
+  function mark(){ for(var i=0;i<bts.length;i++) bts[i].className='bt'+(bts[i].getAttribute('data-id')===now?' on':''); st.textContent=now?('♪ '+now+' を再生中'):''; }
+  function halt(){ MUS.stop(); now=null; mark(); }
+  for(var i=0;i<bts.length;i++) bts[i].addEventListener('click',function(){ var id=this.getAttribute('data-id'); if(now===id){ halt(); return; }
+    try{ MUS.play(id); now=id; }catch(e){ st.textContent='エラー: '+e.message; return; } mark(); });
+  document.getElementById('stop').addEventListener('click',halt);
+  document.addEventListener('visibilitychange',function(){ if(document.hidden) halt(); });
+})();
+</script>
+</body>
+</html>
