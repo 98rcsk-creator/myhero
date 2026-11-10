@@ -14,14 +14,20 @@ p{font-size:12px;color:#9fc4e6;margin:2px 0 12px;text-align:center;line-height:1
 .bt small{display:block;font-size:11px;font-weight:normal;color:#bfe0ff;margin-top:3px}
 .bt.on{border-color:#ffe44d;background:linear-gradient(180deg,#8a6a12,#5a4208);box-shadow:0 0 14px rgba(255,214,90,.55)}
 #stop{text-align:center;background:linear-gradient(180deg,#555f72,#333a48);border-color:#99a}
+p+.hd{margin-top:0}.hd{width:100%;max-width:340px;font-size:12px;color:#ffe44d;margin:8px 0 0;font-weight:bold}
 #st{font-size:12px;color:#ffe44d;height:18px;margin-top:6px}
 </style>
 </head>
 <body>
-<h1>ホームのBGM 聴きくらべ 5回目</h1>
-<p>ボタンを押すと流れるで（もう一回押すと止まる）。<br>1周 約2分。サビは 40秒・1分05秒・1分40秒 あたり。<br>音が出ないときは、マナーモードを切って音量を上げてな。</p>
-<button class="bt" data-id="J">J　オーケストラ版<small>楽器23種類。低いチェロで始まって、サビごとに楽器が増える</small></button>
-<button class="bt" data-id="H">H　F の2分版<small>くらべる用。オカリナ＋チェロ＋ピチカート</small></button>
+<h1>BGM 聴きくらべ 6回目</h1>
+<p>ボタンを押すと流れるで（もう一回押すと止まる）。<br>音が出ないときは、マナーモードを切って音量を上げてな。</p>
+<div class="hd">ホーム</div>
+<button class="bt" data-id="J">J　オーケストラ版<small>前回と同じ。楽器23種類・約2分・サビ3回</small></button>
+<div class="hd">新しい4曲（同じ楽器で）</div>
+<button class="bt" data-id="K">K　キャラ選択<small>クラリネットとピチカートで軽く。「だれで行く？」</small></button>
+<button class="bt" data-id="S">S　ショップ<small>チェレスタとファゴット。ほのぼの、ちょっとおどけた感じ</small></button>
+<button class="bt" data-id="X">X　ボス<small>速い短調。金管と太鼓、後半は合唱</small></button>
+<button class="bt" data-id="C">C　クリア<small>ファンファーレ。1回鳴って終わる（約8秒）</small></button>
 <button class="bt" id="stop">■ 止める</button>
 <div id="st"></div>
 <script>
@@ -127,6 +133,48 @@ var MUS=(function(){
       lead2:function(b){ return [['oca',0,[0,0.085,0.095,0,0.10,0,0.11][LSEC(b)]]]; },
       lv:function(b){ return [[0.6,1,0],[0.9,0.85,1],[1.0,0.8,1.05],[0.9,0.85,1],[1.1,0.7,1.1],[0.6,1,0.5],[1.25,0.7,1.2]][LSEC(b)]; } });
   })();
+
+  // ★6回目 ホーム以外の曲（同じオーケストラの楽器で）。メロディは全部オリジナル。ゲーム本体にはまだ入れていない
+  //   K キャラ選択：ホームの出だしと同じ「下から3つ上がる」形を明るいト長調で。クラリネットとピチカートで軽く
+  //   S ショップ：チェレスタとファゴットで、ほのぼの・ちょっとおどけた感じ
+  //   X ボス：ニ短調・速い。金管のメロディ、太鼓、後半は合唱とファンファーレ
+  //   C クリア：4小節のファンファーレ（1回だけ鳴って終わる）
+  SONGS.K={ tempo:104, padC:60, arpC:50, bassC:43, bassPat:'march', snare:0, timp:0, pad:0.022, harp:0.060, bass:0.13, run:0.040, vol:1.4,
+    chords:['G','D/F#','Em','C','G','Am','C D','G', 'C','G/B','Am','D','C','G/B','Am D','G'],
+    mel:['D5/2 G5/2 B5/4 A5/2 G5/2 B5/4','A5/4 F#5/4 D5/8','E5/2 G5/2 B5/4 A5/2 G5/2 E5/4','G5/4 E5/4 C5/8',
+         'D5/2 G5/2 B5/4 A5/2 G5/2 B5/4','C6/4 A5/4 E5/8','E5/2 G5/2 C6/4 D6/4 A5/4','G5/12 -/4',
+         'E5/4 G5/4 C6/6 G5/2','D5/4 G5/4 B5/8','C5/4 E5/4 A5/6 E5/2','F#5/4 A5/4 D6/8',
+         'E6/4 C6/4 G5/4 E5/4','D6/4 B5/4 G5/4 D5/4','C5/2 E5/2 A5/4 F#5/4 A5/4','G5/12 -/4'],
+    lead:function(b){ return b<8?[['clar',0,0.14],['pizz',12,0.05]]:[['flute',0,0.13],['violin',0,0.07],['glock',12,0.03]]; },
+    inner:function(b){ return b<8?null:[['viola',0,0.04]]; },
+    runLv:function(b){ return b<8?0.7:1; }, triOn:function(b){ return b>=8; }, triV:0.010 };
+  SONGS.S={ tempo:112, padC:60, arpC:50, bassC:43, bassPat:'march', snare:0, timp:0, pad:0.018, harp:0.045, bass:0.11, run:0.026, vol:1.6,
+    chords:['F','Dm','Bb','C','F','Dm','Gm C','F', 'Bb','F/A','Gm','C','Bb','F/A','Gm C','F'],
+    mel:['C5/4 F5/2 A5/2 C6/4 A5/4','F5/4 A5/2 D6/2 A5/8','D5/4 F5/2 Bb5/2 D6/4 Bb5/4','G5/4 E5/4 C5/8',
+         'C5/4 F5/2 A5/2 C6/4 A5/4','D6/4 A5/4 F5/8','G5/2 Bb5/2 D6/4 C6/4 G5/4','F5/12 -/4',
+         'D6/6 Bb5/2 F5/8','C6/6 A5/2 F5/8','Bb5/6 G5/2 D5/8','E5/4 G5/4 C6/8',
+         'D6/4 F6/4 D6/4 Bb5/4','C6/4 F6/4 C6/4 A5/4','Bb5/4 G5/4 E5/4 G5/4','F5/12 -/4'],
+    lead:function(b){ return b<8?[['celesta',0,0.21],['clar',-12,0.11]]:[['oboe',0,0.16],['celesta',12,0.08]]; },
+    bassDbl:function(b){ return [['bassoon',0.05]]; },
+    inner:function(b){ return b<8?null:[['viola',0,0.035]]; },
+    runLv:function(b){ return b<8?0.6:1; }, triOn:function(b){ return true; }, triV:0.008 };
+  SONGS.X={ tempo:152, padC:57, arpC:45, bassC:38, bassPat:'march', snare:0.050, timp:0.22, pad:0.024, harp:0, bass:0.13, run:0.038, vol:1.25,
+    chords:['Dm','Dm','Bb','C','Dm','Dm','Bb','A', 'Gm','Dm','Bb','A','Gm','Dm','Bb A','Dm'],
+    mel:['D5/6 D5/2 F5/4 A5/4','G5/2 F5/2 E5/4 D5/8','D5/6 D5/2 F5/4 Bb5/4','A5/2 G5/2 E5/4 C5/8',
+         'D5/6 D5/2 F5/4 A5/4','D6/8 A5/4 F5/4','Bb5/6 A5/2 F5/4 D5/4','E5/4 C#5/4 A4/8',
+         'G5/4 Bb5/4 D6/8','A5/4 F5/4 D5/8','F5/4 Bb5/4 D6/8','C#6/4 A5/4 E5/8',
+         'D6/2 Bb5/2 G5/4 D6/2 Bb5/2 G5/4','D6/2 A5/2 F5/4 D6/2 A5/2 F5/4','D6/2 Bb5/2 F5/4 C#6/2 A5/2 E5/4','D5/12 -/4'],
+    lead:function(b){ return b<8?[['trumpet',0,0.16],['horn',-12,0.15],['tromb',-12,0.09]]:[['trumpet',0,0.16],['violin',0,0.13],['horn',-12,0.15],['tromb',-12,0.10]]; },
+    inner:function(b){ return b<8?[['viola',0,0.04]]:[['viola',0,0.04],['choir',0,0.05]]; },
+    fan:function(b){ return b>=12?[['tromb',-12,0.035]]:null; },
+    bassDbl:function(b){ return [['contra',0.08],['tuba',0.06]]; },
+    runLv:function(b){ return 1; }, crash:[0,8], crashV:0.045, bdOn:function(b){ return true; }, bdV:0.11 };
+  SONGS.C={ tempo:132, once:true, timp:0.17, padC:62, arpC:50, bassC:43, bassPat:'long', snare:0, timpHit:[0,3], timpRoll:[2], pad:0.026, harp:0.050, bass:0.13, vol:1.2,
+    chords:['D','G A','Bb C','D'],
+    mel:['D5/3 D5/1 D5/4 F#5/4 A5/4','B5/4 G5/4 C#6/4 A5/4','D6/4 Bb5/4 E6/4 C6/4','D6/16'],
+    lead:function(b){ return [['trumpet',0,0.17],['violin',0,0.13],['horn',-12,0.15],['glock',12,0.05]]; },
+    inner:function(b){ return [['viola',0,0.035],['choir',0,0.03]]; },
+    bassDbl:function(b){ return [['contra',0.07],['tuba',0.05]]; }, crash:[0,3], crashV:0.04 };
 
   // ---- 楽器 ----
   function wave(ctx,name,h){ var c=ctx._mw||(ctx._mw={}); if(c[name]) return c[name];
@@ -282,7 +330,9 @@ var MUS=(function(){
     if(!ctx){ var AC=window.AudioContext||window.webkitAudioContext; ctx=new AC(); }
     if(ctx.state==='suspended') ctx.resume();
     stop(); var S=prep(id), B=bus(ctx,ctx.destination); B.master.gain.value=0.8*(S.vol||1); var me={B:B, b:0, t:ctx.currentTime+0.12}; cur=me;
-    function tick(){ while(cur===me && me.t<ctx.currentTime+0.5){ me.t+=bar(B,S,me.b%S.chords.length,me.t); me.b++; } }
+    function tick(){ while(cur===me && me.t<ctx.currentTime+0.5){
+      if(S.once && me.b>=S.chords.length){ clearInterval(me.tm); if(!me.done){ me.done=true; setTimeout(function(){ if(cur===me){ stop(); if(MUS.onEnd) MUS.onEnd(); } },Math.max(0,(me.t-ctx.currentTime)*1000)+2500); } return; }
+      me.t+=bar(B,S,me.b%S.chords.length,me.t); me.b++; } }
     tick(); me.tm=setInterval(tick,120);
   }
   // 計測用：音を出さずに全曲を計算して、最大音量・平均音量・同時に鳴る発音体の数を返す
@@ -291,13 +341,14 @@ var MUS=(function(){
     var iv=MUS._iv.slice(), ev=[]; iv.forEach(function(x){ ev.push([x[0],1]); ev.push([x[1],-1]); }); ev.sort(function(a,b){ return a[0]-b[0]||a[1]-b[1]; }); var c=0, mx=0; ev.forEach(function(e){ c+=e[1]; if(c>mx) mx=c; });
     return oc.startRendering().then(function(buf){ var d=buf.getChannelData(0), pk=0, sq=0, nan=0; for(var i=0;i<d.length;i++){ var v=d[i]; if(v!==v) nan++; var a=v<0?-v:v; if(a>pk) pk=a; sq+=v*v; }
       return {sec:+sec.toFixed(1), peak:+pk.toFixed(3), rmsDb:+(10*Math.log(sq/d.length)/Math.LN10).toFixed(1), nan:nan, voices:VOICES, maxAtOnce:mx}; }); }
-  return {play:play, stop:stop, render:render, _iv:[], playing:function(){ return !!cur; }};
+  return {play:play, stop:stop, render:render, onEnd:null, _iv:[], playing:function(){ return !!cur; }};
 })();
 
 (function(){
   var bts=document.querySelectorAll('.bt[data-id]'), st=document.getElementById('st'), now=null;
   function mark(){ for(var i=0;i<bts.length;i++) bts[i].className='bt'+(bts[i].getAttribute('data-id')===now?' on':''); st.textContent=now?('♪ '+now+' を再生中'):''; }
   function halt(){ MUS.stop(); now=null; mark(); }
+  MUS.onEnd=function(){ now=null; mark(); };
   for(var i=0;i<bts.length;i++) bts[i].addEventListener('click',function(){ var id=this.getAttribute('data-id'); if(now===id){ halt(); return; }
     try{ MUS.play(id); now=id; }catch(e){ st.textContent='エラー: '+e.message; return; } mark(); });
   document.getElementById('stop').addEventListener('click',halt);
