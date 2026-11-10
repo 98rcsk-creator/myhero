@@ -18,11 +18,10 @@ p{font-size:12px;color:#9fc4e6;margin:2px 0 12px;text-align:center;line-height:1
 </style>
 </head>
 <body>
-<h1>ホームのBGM 聴きくらべ 3回目</h1>
-<p>ボタンを押すと流れるで（もう一回押すと止まる）。<br>音が出ないときは、マナーモードを切って音量を上げてな。</p>
-<button class="bt" data-id="F">F　オカリナ＋走るピチカート<small>メロディはオカリナ、下でチェロが支える。後半から速いピチカート</small></button>
-<button class="bt" data-id="G">G　低音が主役＋速いオカリナ<small>メロディはチェロとホルン。後半からオカリナが速い別メロディ</small></button>
-<button class="bt" data-id="D">D　前回のオカリナ<small>くらべる用（鳥だけ新しくした）</small></button>
+<h1>ホームのBGM 聴きくらべ 5回目</h1>
+<p>ボタンを押すと流れるで（もう一回押すと止まる）。<br>1周 約2分。サビは 40秒・1分05秒・1分40秒 あたり。<br>音が出ないときは、マナーモードを切って音量を上げてな。</p>
+<button class="bt" data-id="J">J　オーケストラ版<small>楽器23種類。低いチェロで始まって、サビごとに楽器が増える</small></button>
+<button class="bt" data-id="H">H　F の2分版<small>くらべる用。オカリナ＋チェロ＋ピチカート</small></button>
 <button class="bt" id="stop">■ 止める</button>
 <div id="st"></div>
 <script>
@@ -76,6 +75,58 @@ var MUS=(function(){
       lv:function(b){ return b<4?[0.6,1,0]:(b<12?[0.9,0.85,1]:[1.1,0.7,1.1]); },
       pad:0.030, harp:0.065, bass:0.18, bassPat:'long', snare:0, timp:0.23, timpHit:[12,16], timpRoll:[11], swell:0.05, swellBars:[11], birds:0.013 }
   };
+  // ★4回目（ユーザー「2分で一周、その間にサビが3回来てほしい」）。D の曲を組み直した40小節＝約2分6秒
+  //   夜明け4 → Aメロ8 → サビ①4 → Bメロ4（新しく書いた）→ サビ②8 → 静かな所4（新しく書いた）→ サビ③8（終わりを新しく書いた）
+  //   サビは回を追うごとに大きく：①ストリングスが入る／②ホルンとティンパニ／③さらに1オクターブ上のストリングスと鉄琴、ティンパニを2小節ごと、メロディも最後に上へ
+  //   H＝F の楽器（オカリナ＋下でチェロ＋ピチカート）／I＝G の楽器（メロディはチェロとホルン＋オカリナの速い別メロディ）
+  function LSEC(b){ return b<4?0:(b<12?1:(b<16?2:(b<20?3:(b<28?4:(b<32?5:6))))); }
+  (function(){ var D=SONGS.D, G2=SONGS.G.mel2;
+    var L={ tempo:76,
+      chords:D.chords.slice(0,16).concat(['G','D/F#','Em','A'], D.chords.slice(12,20), ['G9','D/F#','G9','A'], ['Bb','C','D','D','Bb','C','D','D']),
+      mel:D.mel.slice(0,16).concat(['B5/6 A5/2 G5/8','A5/6 G5/2 F#5/8','G5/6 F#5/2 E5/4 G5/4','A5/8 C#5/4 E5/4'], D.mel.slice(12,20),
+        ['-/4 D5/4 A5/8','F#5/12 -/4','-/4 D5/4 B5/8','A5/8 E5/4 A5/4'], D.mel.slice(12,16), ['D5/4 F5/4 Bb5/8','E5/4 G5/4 C6/8','D6/8 E6/4 F#6/4','D6/12 -/4']) };
+    SONGS.L=L;
+    // 強弱（計測して決めた）：付ける前は Aメロ -16.1dB／サビ① -16.3／サビ② -16.1／サビ③ -15.0 で、サビが山に聞こえない差しか無かった
+    var DYN=[0.8,0.72,1.1,0.7,1.3,0.65,1.5];
+    var common={ dyn:function(b){ return DYN[LSEC(b)]; }, tempo:76, padC:57, arpC:45, bassC:40, same:'L', bassPat:'long', snare:0, pad:0.030, swell:0.05, birds:0.013,
+      timpHit:[12,20,24,32,34,36,38], timpRoll:[11,19,31], swellBars:[19,31] };
+    function mk(o){ for(var k in common) if(!(k in o)) o[k]=common[k]; return o; }
+    SONGS.H=mk({ harp:0.070, bass:0.17, timp:0.22, run:0.045,
+      lead:function(b){ return [ [['oca',0,0.19]], [['oca',0,0.17],['strings',-12,0.10]], [['oca',0,0.15],['strings',-12,0.11],['horn',-12,0.05]], [['oca',0,0.17],['strings',-12,0.09]],
+        [['oca',0,0.14],['strings',-12,0.12],['horn',-12,0.09]], [['oca',0,0.18]], [['oca',0,0.13],['strings',0,0.07],['strings',-12,0.12],['horn',-12,0.11],['glock',12,0.035]] ][LSEC(b)]; },
+      lv:function(b){ return [[0.6,1,0],[0.85,0.9,0.9],[1.0,0.8,1.0],[0.85,0.9,0.9],[1.1,0.75,1.1],[0.6,1,0.5],[1.25,0.75,1.2]][LSEC(b)]; },
+      runLv:function(b){ return [0,(b<8?0:0.5),0.8,0.4,1,0,1.15][LSEC(b)]; } });
+    // ★5回目 J＝オーケストラ版（ユーザー「Fが近い。もっとオーケストラ感。楽器が20個以上ある感じで色んなメロディ。
+    //   ただ軸は低音でゆったり、ここから冒険が始まるよって感じのスタート」）
+    //   同時に動く線：①メロディ（チェロが軸。上にオカリナ→バイオリン→トランペット）②速い別メロディ（クラリネット→フルート→ピッコロ・チェレスタ）
+    //   ③内声（ビオラ・ファゴット・合唱）④走るピチカート ⑤ハープ ⑥金管のファンファーレ ⑦低音（ベース＋コントラバス＋チューバ）＋打楽器
+    var I2=['','','','','','','',''].concat(SONGS.G.mel2.slice(8,12), SONGS.G.mel2.slice(12,16), ['','','',''], SONGS.G.mel2.slice(12,20), ['','','',''], SONGS.G.mel2.slice(12,16),
+        [SONGS.G.mel2[12],SONGS.G.mel2[13],SONGS.G.mel2[18],'F#5/2 A5/2 D6/2 F#6/2 D6/8']);
+    // 楽器が多いぶん音が大きくなり、最初はサビ②で最大1.01・サビ③で1.31（1.0を超えると音割れ）→ J だけ強弱の幅と全体の音量を下げた
+    SONGS.J=mk({ vol:0.8, dyn:function(b){ return [0.8,0.72,1.0,0.7,1.1,0.65,1.2][LSEC(b)]; }, harp:0.062, bass:0.14, timp:0.22, run:0.040, mel2:I2,
+      lead:function(b){ return [ [['cello',-12,0.15],['oca',0,0.11]],
+        [['cello',-12,0.16],['oca',0,0.13],['viola',-12,0.05]],
+        [['violin',0,0.11],['cello',-12,0.13],['horn',-12,0.08],['oca',0,0.08]],
+        [['oboe',0,0.11],['cello',-12,0.12],['clar',-12,0.05]],
+        [['violin',0,0.11],['violin',12,0.04],['cello',-12,0.12],['horn',-12,0.10],['trumpet',0,0.05]],
+        [['oca',0,0.17],['celesta',12,0.04]],
+        [['violin',0,0.11],['violin',12,0.05],['cello',-12,0.12],['horn',-12,0.11],['trumpet',0,0.07],['tromb',-12,0.06],['glock',12,0.03]] ][LSEC(b)]; },
+      lead2:function(b){ return [ [], [['clar',0,0.05]], [['flute',0,0.06]], [], [['flute',0,0.06],['picc',12,0.025]], [], [['flute',0,0.06],['picc',12,0.03],['celesta',0,0.03]] ][LSEC(b)]; },
+      inner:function(b){ return [ null, [['viola',0,0.05],['bassoon',-12,0.04]], [['viola',0,0.05],['bassoon',-12,0.04]], [['clar',0,0.045],['viola',0,0.04]],
+        [['viola',0,0.05],['bassoon',-12,0.045],['choir',0,0.03]], [['viola',0,0.035]], [['viola',0,0.05],['bassoon',-12,0.045],['choir',0,0.05]] ][LSEC(b)]; },
+      fan:function(b){ var q=LSEC(b); return q===6?[['trumpet',0,0.05],['tromb',-12,0.04]]:((q===4 && b>=24)?[['trumpet',0,0.035]]:null); },
+      bassDbl:function(b){ return [ [['contra',0.08]], [['contra',0.08]], [['contra',0.09],['tuba',0.05]], [['contra',0.08]], [['contra',0.09],['tuba',0.07]], [['contra',0.05]], [['contra',0.10],['tuba',0.08]] ][LSEC(b)]; },
+      lv:function(b){ return [[0.7,1,0.6],[0.85,0.9,0.9],[1.0,0.8,1.0],[0.85,0.9,0.9],[1.1,0.75,1.1],[0.6,1,0.5],[1.2,0.75,1.15]][LSEC(b)]; },
+      runLv:function(b){ return [0,(b<8?0:0.5),0.8,0.4,1,0,1.1][LSEC(b)]; },
+      crash:[12,20,32,36], crashV:0.05, bdOn:function(b){ var q=LSEC(b); return q===4||q===6; }, bdV:0.16, triOn:function(b){ var q=LSEC(b); return q===2||q===4||q===6; }, triV:0.010 });
+    SONGS.I=mk({ harp:0.065, bass:0.18, timp:0.23,
+      mel2:['','','','','','','',''].concat(G2.slice(8,12), G2.slice(12,16), ['','','',''], G2.slice(12,20), ['','','',''], G2.slice(12,16),
+        [G2[12],G2[13],G2[18],'F#5/2 A5/2 D6/2 F#6/2 D6/8']),
+      lead:function(b){ return [ [['oca',0,0.19]], [['strings',-12,0.17],['horn',-12,0.06]], [['strings',-12,0.16],['horn',-12,0.09]], [['strings',-12,0.16],['horn',-12,0.05]],
+        [['strings',-12,0.16],['horn',-12,0.12],['strings',-24,0.06]], [['oca',0,0.18]], [['strings',-12,0.16],['strings',0,0.07],['horn',-12,0.13],['strings',-24,0.06],['glock',12,0.03]] ][LSEC(b)]; },
+      lead2:function(b){ return [['oca',0,[0,0.085,0.095,0,0.10,0,0.11][LSEC(b)]]]; },
+      lv:function(b){ return [[0.6,1,0],[0.9,0.85,1],[1.0,0.8,1.05],[0.9,0.85,1],[1.1,0.7,1.1],[0.6,1,0.5],[1.25,0.7,1.2]][LSEC(b)]; } });
+  })();
 
   // ---- 楽器 ----
   function wave(ctx,name,h){ var c=ctx._mw||(ctx._mw={}); if(c[name]) return c[name];
@@ -118,6 +169,38 @@ var MUS=(function(){
       noise(B,t,0.05,v*0.5,'lowpass',500,0.3); },
     snare:function(B,f,t,d,v){ noise(B,t,0.07,v,'bandpass',1900,0.25); }
   };
+  // ★5回目 オーケストラ用：楽器を「倍音の形・立ち上がり・フィルタ・ビブラート」の表から作る
+  //   h＝倍音の強さ（音色）／a・s・r＝立ち上がり・伸ばす強さ・消える速さ／lp＝こもり具合（音の高さの何倍まで通すか）／env＝出だしだけこもらせて開く（金管）
+  //   det＝2本をわずかにずらして重ねる（大人数の弦）／vib＝[速さ,深さ]
+  function T(o){ return function(B,f,t,d,v){ var c=B.ctx, e=t+d+o.r*2+0.15, g=amp(c,t,d,v,o.a,o.s,o.r), n=g;
+    if(o.lp){ var lp=c.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=0.6; var top=Math.min(9000,f*o.lp);
+      if(o.env){ lp.frequency.setValueAtTime(f*o.env,t); lp.frequency.linearRampToValueAtTime(top,t+o.a+0.03); lp.frequency.setTargetAtTime(top*0.7,t+o.a+0.03,0.25); } else lp.frequency.value=top;
+      lp.connect(g); n=lp; }
+    var w=wave(c,o.n,o.h), a=osc(c,w,f,t,e,o.det?-o.det:0); a.connect(n); if(o.det) osc(c,w,f,t,e,o.det).connect(n);
+    if(o.vib && d>0.35) vib(c,a,t,e,o.vib[0],o.vib[1],Math.min(0.25,d*0.4)); out(B,g,o.send); }; }
+  var ORCH={
+    violin:{n:'vn',h:[1,0.6,0.5,0.38,0.3,0.22,0.17,0.12,0.09,0.06,0.04],a:0.08,s:0.9,r:0.26,lp:6,det:7,vib:[5.6,8],send:0.5},
+    viola :{n:'va',h:[1,0.55,0.4,0.28,0.2,0.13,0.08,0.05],a:0.09,s:0.9,r:0.28,lp:4.5,vib:[5.2,6],send:0.45},
+    cello :{n:'vc',h:[1,0.7,0.5,0.36,0.26,0.18,0.12,0.08,0.05],a:0.07,s:0.9,r:0.3,lp:5,det:5,vib:[5.0,7],send:0.45},
+    contra:{n:'cb',h:[1,0.9,0.6,0.4,0.25,0.15,0.08],a:0.10,s:0.9,r:0.3,lp:5,send:0.3},
+    picc  :{n:'pc',h:[1,0.2,0.06],a:0.03,s:0.9,r:0.1,vib:[5.6,8],send:0.5},
+    oboe  :{n:'ob',h:[0.55,1,0.85,0.7,0.5,0.32,0.2,0.1],a:0.035,s:0.9,r:0.12,lp:7,vib:[5.2,6],send:0.45},
+    clar  :{n:'cl',h:[1,0.04,0.55,0.03,0.28,0.02,0.13,0,0.06],a:0.04,s:0.9,r:0.13,lp:6,send:0.45},
+    bassoon:{n:'bn',h:[1,0.35,0.65,0.25,0.35,0.12,0.15,0.05],a:0.04,s:0.88,r:0.14,lp:6,send:0.4},
+    trumpet:{n:'tp',h:[1,0.9,0.8,0.66,0.52,0.4,0.3,0.2,0.13,0.08],a:0.03,s:0.85,r:0.12,lp:7,env:1.5,send:0.45},
+    tromb :{n:'tb',h:[1,0.85,0.7,0.5,0.36,0.24,0.14,0.08],a:0.045,s:0.85,r:0.15,lp:5.5,env:1.3,send:0.42},
+    tuba  :{n:'tu',h:[1,0.75,0.45,0.25,0.12,0.06],a:0.06,s:0.9,r:0.18,lp:4,send:0.3},
+    choir :{n:'ch',h:[1,0.5,0.75,0.3,0.12,0.25,0.1,0.04],a:0.18,s:0.95,r:0.4,lp:3.2,det:9,send:0.7}
+  };
+  for(var _k in ORCH) INS[_k]=T(ORCH[_k]);
+  INS.celesta=function(B,f,t,d,v){ var c=B.ctx, e=t+1.1, g=c.createGain(), o=osc(c,wave(c,'ce',[1,0.3,0.05,0.12]),f,t,e,0);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.004); g.gain.setTargetAtTime(0,t+0.005,0.22); o.connect(g); out(B,g,0.5); };
+  INS.bdrum=function(B,f,t,d,v){ var c=B.ctx, e=t+0.6, g=c.createGain(), o=osc(c,wave(c,'bass',W_BASS),70,t,e,0); o.frequency.setValueAtTime(110,t); o.frequency.exponentialRampToValueAtTime(62,t+0.08);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.004); g.gain.setTargetAtTime(0,t+0.005,0.12); o.connect(g); out(B,g,0.3); };
+  INS.tri=function(B,f,t,d,v){ var c=B.ctx, e=t+0.7, g=c.createGain(), o=osc(c,'sine',4186,t,e,0), o2=osc(c,'sine',6270,t,e,0);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.002); g.gain.setTargetAtTime(0,t+0.003,0.14); o.connect(g); o2.connect(g); out(B,g,0.5); };
+  INS.crash=function(B,f,t,d,v){ var c=B.ctx, s=c.createBufferSource(), fl=c.createBiquadFilter(), g=c.createGain(); s.buffer=noiseBuf(c); s.loop=true; fl.type='highpass'; fl.frequency.value=4200;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+0.006); g.gain.setTargetAtTime(0,t+0.01,0.45); s.connect(fl); fl.connect(g); s.start(t); s.stop(t+2.4); VOICES++; MUS._iv.push([t,t+2.4]); out(B,g,0.5); };
   function noise(B,t,d,v,type,fq,send){ var c=B.ctx, s=c.createBufferSource(), fl=c.createBiquadFilter(), g=c.createGain(); s.buffer=noiseBuf(c); fl.type=type; fl.frequency.value=fq; fl.Q.value=0.8;
     g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.0001,t+d); s.connect(fl); fl.connect(g); s.start(t,Math.random()*0.5); s.stop(t+d+0.02); VOICES++; MUS._iv.push([t,t+d]); out(B,g,send); }
   function swell(B,t,d,v){ var c=B.ctx, s=c.createBufferSource(), fl=c.createBiquadFilter(), g=c.createGain(); s.buffer=noiseBuf(c); s.loop=true; fl.type='highpass'; fl.frequency.value=5000;
@@ -139,24 +222,34 @@ var MUS=(function(){
   // ---- 1小節ぶんを予約する（only：'mel'＝メロディだけ／'acc'＝伴奏だけ。音量バランスの計測用）----
   var SNARE='x...x.x.x...x.xx';
   function bar(B,S,b,t0,only){
-    var st=60/S.tempo/4, bl=st*16, i, k;
+    var st=60/S.tempo/4, bl=st*16, i, k, dy=S.dyn?S.dyn(b):1;   // dy＝この小節の全体の強さ（静かな所とサビの差をつける）
     if(only!=='acc'){ var pos=0, L=S._mel[b], ld=S.lead(b);
-      for(i=0;i<L.length;i++){ if(L[i].m!=null) for(k=0;k<ld.length;k++) INS[ld[k][0]](B,hz(L[i].m+ld[k][1]),t0+pos*st,L[i].len*st*0.93,ld[k][2]); pos+=L[i].len; } }
+      for(i=0;i<L.length;i++){ if(L[i].m!=null) for(k=0;k<ld.length;k++) INS[ld[k][0]](B,hz(L[i].m+ld[k][1]),t0+pos*st,L[i].len*st*0.93,ld[k][2]*dy); pos+=L[i].len; } }
     var slots=[];   // 鳥が鳴ける場所＝メロディが2拍以上伸びている音の、1拍あと
     if(S.birds){ var q0=0, ML=S._mel[b]; for(i=0;i<ML.length;i++){ if(ML[i].len>=8 && q0+4<=11) slots.push(q0+4); q0+=ML[i].len; } if(b<4 && !slots.length) slots=[6,10]; }
     if(only==='mel') return bl;
     if(S._mel2 && S._mel2[b].length){ var p2=0, L2=S._mel2[b], l2=S.lead2(b);
-      for(i=0;i<L2.length;i++){ if(L2[i].m!=null) for(k=0;k<l2.length;k++) INS[l2[k][0]](B,hz(L2[i].m+l2[k][1]),t0+p2*st,L2[i].len*st*0.9,l2[k][2]); p2+=L2[i].len; } }
-    var cs=S.chords[b].split(' '), n=cs.length, seg=bl/n, lv=S.lv?S.lv(b):[1,1,1];   // lv＝この小節の 和音・ハープ・ベース の音量の倍率
+      for(i=0;i<L2.length;i++){ if(L2[i].m!=null) for(k=0;k<l2.length;k++) INS[l2[k][0]](B,hz(L2[i].m+l2[k][1]),t0+p2*st,L2[i].len*st*0.9,l2[k][2]*dy); p2+=L2[i].len; } }
+    var cs=S.chords[b].split(' '), n=cs.length, seg=bl/n, lv=(S.lv?S.lv(b):[1,1,1]).map(function(x){ return x*dy; });   // lv＝この小節の 和音・ハープ・ベース の音量の倍率
     for(var ci=0;ci<n;ci++){ var c=chord(cs[ci]), t=t0+ci*seg, lad=[], r0=near(c.tones[0],S.arpC||50), m;
       if(S.pad) for(k=0;k<c.tones.length;k++) INS.strings(B,hz(near(c.tones[k],S.padC||62)),t,seg*0.98,S.pad*lv[0]);
       for(m=r0;m<=r0+26;m++) if(c.tones.indexOf(m%12)>=0) lad.push(m);
       var pat=(n===1)?[0,2,3,4,5,4,3,2]:[0,2,3,4];
       for(i=0;i<pat.length;i++) INS.harp(B,hz(lad[pat[i]]),t+i*st*2,0,S.harp*lv[1]*(i===0?1.15:0.85));
-      var rl=S.run?S.run*S.runLv(b):0;   // 速いピチカート：和音の音を16分音符で上がり下がり
+      var rl=S.run?S.run*S.runLv(b)*dy:0;   // 速いピチカート：和音の音を16分音符で上がり下がり
       if(rl){ var r1=near(c.tones[0],62), rd=[], RP=[0,1,2,1,3,2,1,2,0,1,2,1,3,2,3,2], rn=16/n; for(m=r1;m<=r1+19;m++) if(c.tones.indexOf(m%12)>=0) rd.push(m);
         for(i=0;i<rn;i++) INS.pizz(B,hz(rd[RP[i]%rd.length]),t+i*st,0,rl*(i%4===0?1.2:0.8)); }
+      // 内声（★5回目）：和音の3度→5度を2分音符でゆっくり。ビオラ・ファゴット・合唱などが真ん中で動く
+      var inn=S.inner?S.inner(b):null;
+      if(inn) for(k=0;k<inn.length;k++){ var hf=seg/(n===1?2:1);
+        INS[inn[k][0]](B,hz(near(c.tones[1],57)+inn[k][1]),t,hf*0.96,inn[k][2]*dy); if(n===1) INS[inn[k][0]](B,hz(near(c.tones[2],57)+inn[k][1]),t+hf,hf*0.96,inn[k][2]*dy); }
+      // ファンファーレ（★5回目）：金管が「タッタ ター」のリズムで和音の音を鳴らす
+      var fa=S.fan?S.fan(b):null;
+      if(fa && n===1){ var FP=[[0,2,0],[3,1,0],[4,4,1],[8,2,2],[11,1,2],[12,4,1]];
+        for(k=0;k<fa.length;k++) for(i=0;i<FP.length;i++) INS[fa[k][0]](B,hz(near(c.tones[FP[i][2]],69)+fa[k][1]),t+FP[i][0]*st,FP[i][1]*st*0.85,fa[k][2]*dy); }
       var bm=near(c.bass,S.bassC||43), q=st*4, bv=S.bass*lv[2];
+      var bd2=S.bassDbl?S.bassDbl(b):null;   // ベースと同じ音を、コントラバス・チューバでも伸ばす
+      if(bd2) for(k=0;k<bd2.length;k++) INS[bd2[k][0]](B,hz(bm),t,seg*0.97,bd2[k][1]*dy);
       if(!bv) continue;
       if(S.bassPat==='march'){ INS.bass(B,hz(bm),t,q*0.8,S.bass); if(n===1){ INS.bass(B,hz(near(c.tones[2],43)),t+q*2,q*0.8,S.bass*0.85); } }
       else if(S.bassPat==='half'){ INS.bass(B,hz(bm),t,seg*(n===1?0.48:0.9),S.bass); if(n===1) INS.bass(B,hz(bm),t+q*2,q*1.8,S.bass*0.8); }
@@ -164,8 +257,11 @@ var MUS=(function(){
     }
     if(S.snare) for(i=0;i<16;i++) if(SNARE.charAt(i)==='x') INS.snare(B,0,t0+i*st,0,S.snare*(i%4===0?1:0.55));
     var hit=S.timpHit?S.timpHit.indexOf(b)>=0:(b%4===0), roll=S.timpRoll?S.timpRoll.indexOf(b)>=0:(b%8===7), sw=S.swellBars?S.swellBars.indexOf(b)>=0:(b%8===7);
-    if(S.timp){ var c0=chord(cs[0]); if(hit) INS.timp(B,hz(near(c0.bass,41)),t0,0,S.timp);
-      if(roll) for(i=0;i<8;i++) INS.timp(B,hz(near(chord(cs[n-1]).bass,41)),t0+st*8+i*st,0,S.timp*(0.35+0.08*i)); }   // 8小節目の後半でクレッシェンドのロール
+    if(S.timp){ var c0=chord(cs[0]); if(hit) INS.timp(B,hz(near(c0.bass,41)),t0,0,S.timp*dy);
+      if(roll) for(i=0;i<8;i++) INS.timp(B,hz(near(chord(cs[n-1]).bass,41)),t0+st*8+i*st,0,S.timp*dy*(0.35+0.08*i)); }   // 8小節目の後半でクレッシェンドのロール
+    if(S.crash && S.crash.indexOf(b)>=0) INS.crash(B,0,t0,0,S.crashV*dy);
+    if(S.bdOn && S.bdOn(b)){ INS.bdrum(B,0,t0,0,S.bdV*dy); INS.bdrum(B,0,t0+st*8,0,S.bdV*dy*0.7); }
+    if(S.triOn && S.triOn(b)) for(i=2;i<16;i+=4) INS.tri(B,0,t0+i*st,0,S.triV);
     if(S.swell && sw) swell(B,t0+bl*0.25,bl*0.75,S.swell);
     if(S.birds && slots.length && Math.random()<(b<4?0.8:0.45)){ var sp=slots[Math.floor(Math.random()*slots.length)], ct=chord(cs[Math.min(n-1,Math.floor(sp/(16/n)))]).tones.slice(0,3);
       bird(B,t0+sp*st,ct,st,S.birds); }   // 1小節に多くて1回。鳴かない小節もある
@@ -176,7 +272,7 @@ var MUS=(function(){
     var n=Math.floor(ctx.sampleRate*1.9), ib=ctx.createBuffer(2,n,ctx.sampleRate);
     for(var ch=0;ch<2;ch++){ var d=ib.getChannelData(ch); for(var i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.6); }
     cv.buffer=ib; B.dry=ctx.createGain(); B.rev=cv; wg.gain.value=0.55; cv.connect(wg); wg.connect(m); B.dry.connect(m);
-    cp.threshold.value=-14; cp.ratio.value=4; cp.attack.value=0.01; cp.release.value=0.2; m.gain.value=1.0; m.connect(cp); cp.connect(dest); B.master=m; B.end=cp; return B; }
+    cp.threshold.value=-14; cp.ratio.value=4; cp.attack.value=0.01; cp.release.value=0.2; m.gain.value=0.8; m.connect(cp); cp.connect(dest); B.master=m; B.end=cp; return B; }
   function prep(id){ var S=SONGS[id]; if(S.same){ S.chords=SONGS[S.same].chords; S.mel=SONGS[S.same].mel; } if(S.mel2 && !S._mel2) S._mel2=S.mel2.map(function(x){ return x?line(x):[]; });
     if(!S._mel){ S._mel=S.mel.map(line); S._mel.forEach(function(L,i){ var s=0; L.forEach(function(x){ s+=x.len; }); if(s!==16) throw new Error(id+' の '+(i+1)+' 小節目の長さが '+s); }); } return S; }
 
@@ -185,13 +281,13 @@ var MUS=(function(){
   function play(id){
     if(!ctx){ var AC=window.AudioContext||window.webkitAudioContext; ctx=new AC(); }
     if(ctx.state==='suspended') ctx.resume();
-    stop(); var S=prep(id), B=bus(ctx,ctx.destination), me={B:B, b:0, t:ctx.currentTime+0.12}; cur=me;
+    stop(); var S=prep(id), B=bus(ctx,ctx.destination); B.master.gain.value=0.8*(S.vol||1); var me={B:B, b:0, t:ctx.currentTime+0.12}; cur=me;
     function tick(){ while(cur===me && me.t<ctx.currentTime+0.5){ me.t+=bar(B,S,me.b%S.chords.length,me.t); me.b++; } }
     tick(); me.tm=setInterval(tick,120);
   }
   // 計測用：音を出さずに全曲を計算して、最大音量・平均音量・同時に鳴る発音体の数を返す
   function render(id,only,loops){ var S=prep(id), bl=60/S.tempo*4, n=S.chords.length*(loops||1), sec=n*bl+2, OC=window.OfflineAudioContext||window.webkitOfflineAudioContext, oc=new OC(2,Math.ceil(sec*44100),44100);
-    VOICES=0; MUS._iv=[]; var B=bus(oc,oc.destination), t=0.05; for(var b=0;b<n;b++) t+=bar(B,S,b%S.chords.length,t,only);
+    VOICES=0; MUS._iv=[]; var B=bus(oc,oc.destination), t=0.05; B.master.gain.value=0.8*(S.vol||1); for(var b=0;b<n;b++) t+=bar(B,S,b%S.chords.length,t,only);
     var iv=MUS._iv.slice(), ev=[]; iv.forEach(function(x){ ev.push([x[0],1]); ev.push([x[1],-1]); }); ev.sort(function(a,b){ return a[0]-b[0]||a[1]-b[1]; }); var c=0, mx=0; ev.forEach(function(e){ c+=e[1]; if(c>mx) mx=c; });
     return oc.startRendering().then(function(buf){ var d=buf.getChannelData(0), pk=0, sq=0, nan=0; for(var i=0;i<d.length;i++){ var v=d[i]; if(v!==v) nan++; var a=v<0?-v:v; if(a>pk) pk=a; sq+=v*v; }
       return {sec:+sec.toFixed(1), peak:+pk.toFixed(3), rmsDb:+(10*Math.log(sq/d.length)/Math.LN10).toFixed(1), nan:nan, voices:VOICES, maxAtOnce:mx}; }); }
