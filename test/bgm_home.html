@@ -29,9 +29,9 @@ p+.hd{margin-top:0}.hd{width:100%;max-width:340px;font-size:12px;color:#ffe44d;m
 <button class="bt" data-id="W5">5　火山<small>速くて激しい。トランペットとホルン、太鼓</small></button>
 <button class="bt" data-id="W6">6　夜の城<small>古い城の感じ。チェレスタとピチカート、合唱</small></button>
 <button class="bt" data-id="W7">7　空中<small>空を飛ぶ感じ。高いバイオリンとフルート</small></button>
-<button class="bt" data-id="W8">8　海底<small>ゆらゆら。オカリナとハープ</small></button>
-<button class="bt" data-id="W9">9　魔界<small>速くて暗い。低い金管とつんのめる太鼓</small></button>
-<button class="bt" data-id="W10">10　天空神殿<small>堂々と。ホームの曲の形をもう一度</small></button>
+<button class="bt" data-id="W8">8　海底<small>ゆらゆら。オカリナとハープ＋低音を足した</small></button>
+<button class="bt" data-id="W9">9　魔界<small>速くて暗い。低い金管と太鼓＋低音を足した</small></button>
+<button class="bt" data-id="W10">10　天空神殿<small>書き直し：最終決戦。速い短調、金管・合唱・太鼓</small></button>
 <div class="hd">前に決めた5曲（ゲームのテスト版に入っている）</div>
 <button class="bt" data-id="J">ホーム</button>
 <button class="bt" data-id="K">キャラ選択</button>
@@ -257,34 +257,38 @@ var MUS=(function(){
          'A5/4 C6/4 F6/8','B5/4 D6/4 G6/8','A6/8 E6/4 C#6/4','E6/4 C#6/4 A5/8','F6/4 C6/4 A5/8','G6/4 D6/4 B5/8','E6/8 G#6/8','B5/4 E6/4 G#6/4 B5/4'],
     lead:Q([[['violin',0,0.11],['flute',12,0.05]],[['flute',0,0.13],['violin',0,0.07]],[['violin',0,0.11],['trumpet',0,0.06],['flute',12,0.04]],[['horn',-12,0.10],['violin',0,0.11],['glock',12,0.03]]]),
     inner:Q([null,[['viola',0,0.04]],[['viola',0,0.04]],[['viola',0,0.04]]]), runLv:Q([0.7,0.8,1,1]), bdOn:Q([0,0,1,1]), bdV:0.10, triOn:Q([1,1,1,1]), triV:0.009 },
-   // W8 海底：ホ長調・ゆっくり、ゆらゆら。オカリナとハープ、ふわっとした和音
-   W8:{ tempo:100, vol:1.35, pad:0.028, harp:0.080, bass:0.11, bassPat:'half', swell:0.04, swellBars:[7,15,23,31], timp:0,
+   // W8 海底：ホ長調・ゆっくり、ゆらゆら。オカリナとハープ、ふわっとした和音。低いコントラバスと静かなティンパニで深さを出す
+   W8:{ tempo:100, vol:1.35, lk:1.15, bassC:40, pad:0.028, harp:0.080, bass:0.13, bassPat:'half', swell:0.04, swellBars:[7,15,23,31], timp:0.12, timpHit:[0,8,16,24], timpRoll:[],
     chords:['E9','C#m','A9','B','E9','C#m','A B','E', 'AM7','E/G#','F#m','B','AM7','E/G#','F#m B','E', 'C','D','E','E','C','D','B','B'],
     mel:['B5/8 G#5/4 E5/4','C#6/8 G#5/8','A5/8 C#6/4 E6/4','D#6/8 B5/8','B5/8 G#5/4 E5/4','E6/8 C#6/4 G#5/4','A5/4 C#6/4 B5/4 D#6/4','E6/12 -/4',
          'C#6/6 E6/2 A5/8','B5/6 E6/2 G#5/8','A5/6 C#6/2 F#5/8','F#5/4 B5/4 D#6/8','E6/4 C#6/4 A5/8','G#6/4 E6/4 B5/8','A5/4 F#5/4 B5/4 D#6/4','E6/8 B5/8',
          'G5/4 C6/4 E6/8','A5/4 D6/4 F#6/8','G#6/8 E6/8','B5/4 G#5/4 E5/8','E6/4 C6/4 G5/8','F#6/4 D6/4 A5/8','B5/8 D#6/8','F#6/8 D#6/4 B5/4'],
-    lead:Q([[['oca',0,0.17]],[['clar',0,0.12],['celesta',12,0.05]],[['oca',0,0.15],['flute',12,0.05]],[['violin',0,0.10],['oca',0,0.09],['cello',-12,0.06]]]),
-    inner:Q([[['viola',0,0.035]],[['viola',0,0.04]],[['viola',0,0.04]],[['viola',0,0.04]]]) },
+    lead:Q([[['oca',0,0.17]],[['clar',0,0.12],['celesta',12,0.05],['cello',-12,0.05]],[['oca',0,0.15],['flute',12,0.05],['cello',-12,0.06]],[['violin',0,0.10],['oca',0,0.09],['cello',-12,0.08]]]),
+    inner:Q([[['viola',0,0.035]],[['viola',0,0.04]],[['viola',0,0.04]],[['viola',0,0.04]]]),
+    bassDbl:Q([[['contra',0.045]],[['contra',0.045]],[['contra',0.05]],[['contra',0.05]]]) },   // ★9回目 低音を足した（ユーザー「8・9は合ってる。少しだけ低音要素を入れて難しさを」）
    // W9 魔界：ヘ短調・速くて暗い。低い金管、半音上の和音（Gb）、つんのめる太鼓
-   W9:{ tempo:144, vol:1.2, lk:1.3, padC:53, runC:50, bassC:38, pad:0.022, harp:0, bass:0.14, bassPat:'march', run:0.040, snare:0.045, snarePat:'x..x..x...x.x...',
+   W9:{ tempo:144, vol:1.2, lk:1.45, padC:53, runC:48, bassC:36, pad:0.022, harp:0, bass:0.155, bassPat:'march', run:0.040, snare:0.045, snarePat:'x..x..x...x.x...', timp:0.15, timpHit:[0,4,8,12,16,20,24,28], timpRoll:[15,31],
     chords:['Fm','Fm','Gb','Fm','Fm','Db','C','C', 'Bbm','Fm','Db','C','Bbm','Fm','C','Fm', 'Db','Eb','Fm','Fm','Db','Eb','C','C'],
     mel:['F5/2 F5/2 Ab5/4 C6/4 Ab5/4','G5/2 Ab5/2 G5/4 F5/8','Gb5/2 Gb5/2 Bb5/4 Db6/4 Bb5/4','Ab5/2 G5/2 F5/4 C5/8','F5/2 F5/2 Ab5/4 C6/4 F6/4','F6/4 Db6/4 Ab5/8','G5/4 C6/4 E6/8','E6/2 C6/2 G5/4 E5/8',
          'Bb5/4 Db6/4 F6/8','C6/4 Ab5/4 F5/8','Db6/4 F6/4 Ab6/8','G6/4 E6/4 C6/8','F6/2 Db6/2 Bb5/4 F6/2 Db6/2 Bb5/4','F6/2 C6/2 Ab5/4 F6/2 C6/2 Ab5/4','E6/2 C6/2 G5/4 E6/2 C6/2 G5/4','F5/12 -/4',
          'Ab5/4 Db6/4 F6/8','Bb5/4 Eb6/4 G6/8','Ab6/8 F6/8','C6/4 Ab5/4 F5/8','F6/4 Db6/4 Ab5/8','G6/4 Eb6/4 Bb5/8','C6/8 E6/8','G6/4 E6/4 C6/4 G5/4'],
     lead:Q([[['horn',-12,0.14],['tromb',-24,0.10],['violin',0,0.07]],[['trumpet',-12,0.12],['violin',0,0.10]],[['horn',-12,0.14],['tromb',-24,0.10],['violin',0,0.07],['trumpet',-12,0.08]],[['violin',0,0.11],['trumpet',0,0.09],['choir',-12,0.05]]]),
     inner:Q([[['viola',-12,0.03],['choir',-12,0.018]],[['viola',-12,0.03],['choir',-12,0.018]],[['viola',-12,0.03],['choir',-12,0.018]],[['viola',-12,0.03],['choir',-12,0.018]]]),
-    fan:Q([null,null,null,[['tromb',-12,0.03]]]), bassDbl:Q([[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]]]),
+    fan:Q([null,null,null,[['tromb',-12,0.03]]]), bassDbl:Q([[['contra',0.065],['tuba',0.045]],[['contra',0.065],['tuba',0.045]],[['contra',0.065],['tuba',0.045]],[['contra',0.065],['tuba',0.045]]]),
     runLv:Q([0.8,0.9,1,1]), bdOn:Q([1,1,1,1]), bdV:0.11, crash:[0,16], crashV:0.045 },
-   // W10 天空神殿：ニ長調・堂々と。ホームの曲の形をもう一度（下から3つ上がる／サビの bVI→bVII→I）
-   W10:{ tempo:126, vol:1.25, lk:1.3, pad:0.024, harp:0.055, bass:0.13, bassPat:'march', run:0.035, snare:0.040, timp:0.16, timpHit:[0,8,16,24], timpRoll:[7,23,31],
-    chords:['D','A/C#','Bm','G','D','A/C#','G A','D', 'Bb','C','D','D','Bb','C','D','A', 'G','D/F#','Em','A','G','D/F#','Em A','D'],
-    mel:['A4/2 D5/2 F#5/4 A5/4 F#5/4','E5/4 A5/4 C#6/8','D5/2 F#5/2 B5/4 D6/4 B5/4','A5/2 G5/2 D5/4 G5/8','A4/2 D5/2 F#5/4 A5/4 D6/4','C#6/4 A5/4 E6/8','D6/2 B5/2 G5/4 E6/2 C#6/2 A5/4','D6/12 -/4',
-         'Bb5/8 F5/4 D5/4','C6/8 G5/4 E5/4','D6/12 A5/4','A5/4 F#5/4 D5/4 A4/4','D5/4 F5/4 Bb5/8','E5/4 G5/4 C6/8','D6/8 E6/4 F#6/4','E6/8 C#6/4 A5/4',
-         'B5/6 D6/2 G6/8','A5/6 D6/2 F#6/8','G5/6 B5/2 E6/8','C#6/4 E6/4 A5/8','G6/4 D6/4 B5/8','F#6/4 D6/4 A5/8','E6/2 B5/2 G5/4 E6/2 C#6/2 A5/4','D6/16'],
-    lead:Q([[['trumpet',0,0.11],['violin',0,0.09],['horn',-12,0.09]],[['violin',0,0.11],['horn',-12,0.10],['choir',0,0.04]],[['trumpet',0,0.12],['violin',0,0.10],['horn',-12,0.10],['glock',12,0.03]],[['violin',0,0.11],['flute',12,0.05],['oboe',0,0.06],['cello',-12,0.07]]]),
-    inner:Q([[['viola',0,0.035]],[['viola',0,0.035],['choir',0,0.02]],[['viola',0,0.035],['choir',0,0.02]],[['viola',0,0.035]]]), fan:Q([null,null,[['tromb',-12,0.03]],null]),
-    bassDbl:Q([[['contra',0.045],['tuba',0.03]],[['contra',0.045],['tuba',0.03]],[['contra',0.045],['tuba',0.03]],[['contra',0.045]]]),
-    runLv:Q([0.7,0.8,1,0.8]), bdOn:Q([0,1,1,1]), bdV:0.10, crash:[0,8,16], crashV:0.04, triOn:Q([0,0,1,1]), triV:0.009 }
+   // W10 天空神殿 ★9回目に書き直し（ユーザー「天空で静かそうやけど敵がめちゃくちゃ多い。最終局面っぽいBGMに」）
+   //   前：ニ長調・堂々とした行進 → 今：ト短調・速い（150）。ずっと刻む低い弦と太鼓、金管と合唱。B で明るい調に上がって勇ましく、C の最後だけ長調で終わる（勝ちに行く感じ）
+   //   出だしの「下から3つ上がる」形はホームの曲と同じ（短調にした）＝旅の最初の曲が、最後の戦いの形で戻ってくる
+   W10:{ tempo:150, vol:1.2, lk:1.3, padC:57, runC:50, bassC:38, pad:0.022, harp:0, bass:0.14, bassPat:'march', run:0.042, snare:0.045, timp:0.17, timpHit:[0,8,16,24], timpRoll:[7,15,23,31],
+    chords:['Gm','Gm','Eb','D','Gm','Gm','Eb F','Gm', 'Bb','F','Gm','D','Bb','F','Eb','D', 'Cm','D','Gm','Gm','Cm','D','Eb F','G'],
+    mel:['D5/2 G5/2 Bb5/4 D6/4 Bb5/4','A5/2 Bb5/2 A5/4 G5/8','Eb5/2 G5/2 Bb5/4 Eb6/4 Bb5/4','A5/2 G5/2 F#5/4 D5/8','D5/2 G5/2 Bb5/4 D6/4 G6/4','F6/2 Eb6/2 D6/4 Bb5/8','G5/2 Bb5/2 Eb6/4 A5/2 C6/2 F6/4','G6/8 D6/4 Bb5/4',
+         'D6/6 Bb5/2 F5/8','C6/6 A5/2 F5/8','Bb5/6 G5/2 D5/8','F#5/4 A5/4 D6/8','F6/4 D6/4 Bb5/4 D6/4','F6/4 C6/4 A5/4 C6/4','G6/4 Eb6/4 Bb5/4 G5/4','A5/4 D6/4 F#6/8',
+         'G5/4 C6/4 Eb6/8','A5/4 D6/4 F#6/8','G6/8 D6/4 Bb5/4','G5/2 Bb5/2 D6/4 G6/8','Eb6/4 C6/4 G5/8','F#6/4 D6/4 A5/8','Eb6/2 Bb5/2 G5/4 F6/2 C6/2 A5/4','G6/8 B5/4 D6/4'],
+    lead:Q([[['trumpet',0,0.12],['horn',-12,0.11],['violin',0,0.08]],[['violin',0,0.11],['horn',-12,0.10],['trumpet',0,0.07]],[['trumpet',0,0.12],['violin',0,0.10],['horn',-12,0.11],['tromb',-12,0.07]],[['trumpet',0,0.12],['violin',0,0.11],['horn',-12,0.11],['tromb',-12,0.08],['glock',12,0.03]]]),
+    inner:Q([[['viola',0,0.035],['choir',-12,0.02]],[['viola',0,0.035],['choir',0,0.025]],[['viola',0,0.035],['choir',-12,0.02]],[['viola',0,0.035],['choir',0,0.03]]]),
+    fan:Q([null,null,[['tromb',-12,0.03]],[['tromb',-12,0.035]]]),
+    bassDbl:Q([[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]]]),
+    runLv:Q([0.9,0.9,1,1]), bdOn:Q([1,1,1,1]), bdV:0.10, crash:[0,8,16,24], crashV:0.04 }
   };
   for(var _s in STG){ STG[_s].form=FORM; if(STG[_s].snare===undefined) STG[_s].snare=0; if(STG[_s].timp===undefined) STG[_s].timp=0; SONGS[_s]=STG[_s]; }
 
@@ -460,7 +464,7 @@ var MUS=(function(){
   function render(id,only,loops){ var S=prep(id), bl=60/S.tempo*4, n=S.chords.length*(loops||1), sec=n*bl+2, OC=window.OfflineAudioContext||window.webkitOfflineAudioContext, oc=new OC(2,Math.ceil(sec*44100),44100);
     VOICES=0; MUS._iv=[]; var B=bus(oc,oc.destination), t=0.05; B.master.gain.value=0.8*(S.vol||1); for(var b=0;b<n;b++) t+=bar(B,S,bidx(S,b),t,only);
     var iv=MUS._iv.slice(), ev=[]; iv.forEach(function(x){ ev.push([x[0],1]); ev.push([x[1],-1]); }); ev.sort(function(a,b){ return a[0]-b[0]||a[1]-b[1]; }); var c=0, mx=0; ev.forEach(function(e){ c+=e[1]; if(c>mx) mx=c; });
-    return oc.startRendering().then(function(buf){ var d=buf.getChannelData(0), pk=0, sq=0, nan=0; for(var i=0;i<d.length;i++){ var v=d[i]; if(v!==v) nan++; var a=v<0?-v:v; if(a>pk) pk=a; sq+=v*v; }
+    return oc.startRendering().then(function(buf){ MUS._buf=buf; var d=buf.getChannelData(0), pk=0, sq=0, nan=0; for(var i=0;i<d.length;i++){ var v=d[i]; if(v!==v) nan++; var a=v<0?-v:v; if(a>pk) pk=a; sq+=v*v; }
       return {sec:+sec.toFixed(1), peak:+pk.toFixed(3), rmsDb:+(10*Math.log(sq/d.length)/Math.LN10).toFixed(1), nan:nan, voices:VOICES, maxAtOnce:mx}; }); }
   return {play:play, stop:stop, render:render, onEnd:null, _iv:[], playing:function(){ return !!cur; }};
 })();
