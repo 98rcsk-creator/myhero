@@ -199,7 +199,7 @@ var MUS=(function(){
   function Q(a){ return function(b){ return a[b>>3]; }; }
   var STG={
    // W1 はじまりの草原：ハ長調・明るい行進。フルート→バイオリン→トランペット
-   W1:{ tempo:132, vol:1.4, lk:1.15, pad:0.022, harp:0.050, bass:0.13, bassPat:'march', run:0.035, snare:0.035,
+   W1:{ tempo:132, vol:1.5, lk:1.15, pad:0.022, harp:0.050, bass:0.13, bassPat:'march', run:0.035, snare:0.035,
     chords:['C','G/B','Am','F','C','G/B','F G','C', 'F','C/E','Dm','G','F','C/E','Dm G','C', 'Am','Em','F','C','Am','Em','F','G'],
     mel:['G5/4 E5/2 G5/2 C6/4 G5/4','B5/4 G5/2 B5/2 D6/8','C6/4 A5/2 C6/2 E6/4 C6/4','A5/4 F5/4 C6/8','G5/4 E5/2 G5/2 C6/4 E6/4','D6/4 B5/2 D6/2 G6/8','F6/2 E6/2 C6/4 D6/2 B5/2 G5/4','C6/12 -/4',
          'A5/6 C6/2 F6/8','G5/6 C6/2 E6/8','F5/6 A5/2 D6/8','B5/4 D6/4 G6/8','A6/4 F6/4 C6/4 A5/4','G6/4 E6/4 C6/4 G5/4','F5/2 A5/2 D6/4 B5/2 D6/2 G6/4','E6/8 C6/8',
@@ -250,7 +250,7 @@ var MUS=(function(){
     inner:Q([[['choir',-12,0.020]],[['choir',-12,0.020]],[['choir',-12,0.020]],[['choir',-12,0.020]]]), bassDbl:Q([[['contra',0.04]],[['contra',0.04]],[['contra',0.04]],[['contra',0.04]]]),
     runLv:Q([0.5,0.7,0.8,1]), hatOn:Q([0,1,1,1]) },
    // W7 空中：イ長調・速くて、空を飛ぶ感じ。高いバイオリンとフルート
-   W7:{ tempo:138, vol:1.4, pad:0.022, harp:0.065, bass:0.13, bassPat:'march', run:0.035, snare:0.030,
+   W7:{ tempo:138, vol:1.5, pad:0.022, harp:0.065, bass:0.13, bassPat:'march', run:0.035, snare:0.030,
     chords:['A','E/G#','F#m','D','A','E/G#','D E','A', 'D','A/C#','Bm','E','D','A/C#','Bm E','A', 'F','G','A','A','F','G','E','E'],
     mel:['E5/4 A5/4 C#6/6 B5/2','B5/4 G#5/4 E5/8','F#5/4 A5/4 C#6/6 A5/2','A5/4 F#5/4 D6/8','E5/4 A5/4 C#6/6 E6/2','E6/4 B5/4 G#5/8','F#6/2 D6/2 A5/4 G#6/2 E6/2 B5/4','E6/4 C#6/4 A5/8',
          'F#6/6 D6/2 A5/8','E6/6 C#6/2 A5/8','D6/6 B5/2 F#5/8','G#5/4 B5/4 E6/8','A5/4 D6/4 F#6/8','A5/4 C#6/4 E6/8','D6/2 F#6/2 B5/4 E6/2 G#6/2 B5/4','A6/8 E6/8',
@@ -258,7 +258,7 @@ var MUS=(function(){
     lead:Q([[['violin',0,0.11],['flute',12,0.05]],[['flute',0,0.13],['violin',0,0.07]],[['violin',0,0.11],['trumpet',0,0.06],['flute',12,0.04]],[['horn',-12,0.10],['violin',0,0.11],['glock',12,0.03]]]),
     inner:Q([null,[['viola',0,0.04]],[['viola',0,0.04]],[['viola',0,0.04]]]), runLv:Q([0.7,0.8,1,1]), bdOn:Q([0,0,1,1]), bdV:0.10, triOn:Q([1,1,1,1]), triV:0.009 },
    // W8 海底：ホ長調・ゆっくり、ゆらゆら。オカリナとハープ、ふわっとした和音
-   W8:{ tempo:100, vol:1.5, pad:0.028, harp:0.080, bass:0.11, bassPat:'half', swell:0.04, swellBars:[7,15,23,31], timp:0,
+   W8:{ tempo:100, vol:1.35, pad:0.028, harp:0.080, bass:0.11, bassPat:'half', swell:0.04, swellBars:[7,15,23,31], timp:0,
     chords:['E9','C#m','A9','B','E9','C#m','A B','E', 'AM7','E/G#','F#m','B','AM7','E/G#','F#m B','E', 'C','D','E','E','C','D','B','B'],
     mel:['B5/8 G#5/4 E5/4','C#6/8 G#5/8','A5/8 C#6/4 E6/4','D#6/8 B5/8','B5/8 G#5/4 E5/4','E6/8 C#6/4 G#5/4','A5/4 C#6/4 B5/4 D#6/4','E6/12 -/4',
          'C#6/6 E6/2 A5/8','B5/6 E6/2 G#5/8','A5/6 C#6/2 F#5/8','F#5/4 B5/4 D#6/8','E6/4 C#6/4 A5/8','G#6/4 E6/4 B5/8','A5/4 F#5/4 B5/4 D#6/4','E6/8 B5/8',
