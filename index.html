@@ -2582,6 +2582,9 @@ var WORLD_DIFF=[0.08,0.12,0.18,0.25,0.35,0.50,0.65,0.80,0.95,1.20]; // ★v231 �
 // ★v354 テスト版だけ W10 を 1.20→W10_TEST_DIFF（ユーザー「ステージ10がやっぱまだ難しい」）。W9(0.95) からの上がり幅が +0.25 で、ほかのワールドの間（+0.15）より大きかった。
 //   敵の数・速さ・硬さ・穴・弾・爆弾・被ダメ（calcDamage）がまとめて下がる。本番は実機で確かめてから
 var W10_TEST_DIFF=1.05; if(TEST_MODE) WORLD_DIFF[9]=W10_TEST_DIFF;
+// ★v356 テスト版だけ W10 の穴の数（ステージの長さ1つぶんあたり。×LEN_K で実際の数）。ユーザー「まだ難しい。足の踏み場がない・穴が多すぎる」
+//   前は 13（×3＝39個・約310pxごと）で、穴と穴のあいだの地面が 150〜190px しかなかった
+var W10_TEST_HOLES=8;
 // ★v232 ワールド別のステージ長倍率（GOAL_X = 4200×これ）。
 //   W1-3は低学年向けに短く、W7-10で旧1ワールド(3ステージ×4200=12600px)相当。
 //   実機ではこの配列を 1ワールドずつ触る。
@@ -2610,7 +2613,7 @@ function lvCfg(lv){
   var terr = (w<=1)?'flat' : (w<=2)?'hills' : 'rough';
   return{
     stage:s, boss:boss, bossFight:bossFight, bossDensity:bossDensity, world:w, diff:d,
-    holes:    bossDensity?Math.max(1,Math.round(holeN*0.5)):holeN, // ★v230 密度側
+    holes:    bossDensity?Math.max(1,Math.round(holeN*0.5)):((TEST_MODE && w===10)?W10_TEST_HOLES:holeN), // ★v230 密度側（★v356 テスト版の W10 は W10_TEST_HOLES）
     holeMinW: 55 + Math.min(60, sEff*1.0),   // ★v231 sEff
     holeMaxW: 90 + Math.min(110, sEff*1.8),  // ★v231 sEff
     enemyN:   bossDensity?Math.round(enemyN*0.6):enemyN,  // ★v230 密度側
