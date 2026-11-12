@@ -110,6 +110,10 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 .abtn .ic{display:flex;align-items:center;justify-content:center;}
 /* レーザー残回数バッジ */
 #blas{position:absolute;}
+#blas .lasRing{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;transform:rotate(-90deg);filter:none;opacity:0;pointer-events:none;}   /* ★v358 長押しの溜め（3秒で1周） */
+#blas .lasRing circle{fill:none;stroke-width:6;}
+#blas .lasRing .tr{stroke:rgba(255,255,255,0.22);}   /* 1周のゴール（うすい輪） */
+#blas .lasRing .pg{stroke:#fff;stroke-linecap:round;stroke-dasharray:238.8;stroke-dashoffset:238.8;}
 #blas .badge{position:absolute;right:-2px;bottom:-2px;min-width:18px;height:18px;
   border-radius:9px;background:#ff4d4d;border:2px solid #fff;color:#fff;
   font:900 11px/14px -apple-system,sans-serif;display:none;align-items:center;justify-content:center;
@@ -904,7 +908,7 @@ function showErrEarly(msg){ mkBanner('⚠ '+msg); }
   <div id="apad">
     <div class="abtn" id="bj"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"><path d="M12 5 Q12.9 5 13.5 5.7 L18.6 11.2 Q19.4 12 18.4 12.6 Q17.6 13 16.8 12.4 L14.3 10 L14.3 18 Q14.3 19.2 13 19.2 L11 19.2 Q9.7 19.2 9.7 18 L9.7 10 L7.2 12.4 Q6.4 13 5.6 12.6 Q4.6 12 5.4 11.2 L10.5 5.7 Q11.1 5 12 5 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg></div>
     <div class="abtn" id="ba"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"><g stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"><path d="M18.2 4 Q19.8 3.6 20 5.2 Q20.2 6.6 19.2 7.4 L12.5 14 L10 11.5 L16.6 5 Q17.2 4.2 18.2 4 Z" fill="#fff"/><rect x="5.5" y="14.5" width="5.5" height="3" rx="1.5" transform="rotate(45 8.2 16)" fill="#ffd24d"/><path d="M4 17 Q3.4 19.4 5.6 19.6 L7.5 17.7 L6 16.2 Z" fill="#fff"/></g></svg></div>
-    <div class="abtn" id="blas"><span class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"><path d="M13.5 3 Q14.8 3 14.2 4.4 L12 10 L15.5 10 Q17.2 10 16.2 11.6 L9.5 21 Q8.2 22 8.8 20 L10.8 14 L7.5 14 Q5.8 14 6.8 12.4 L12 3.8 Q12.6 3 13.5 3 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.8" stroke-linejoin="round"/></svg></span><span class="badge"></span></div>
+    <div class="abtn" id="blas"><svg class="lasRing" viewBox="0 0 84 84"><circle class="tr" cx="42" cy="42" r="38"/><circle class="pg" cx="42" cy="42" r="38"/></svg><span class="ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"><path d="M13.5 3 Q14.8 3 14.2 4.4 L12 10 L15.5 10 Q17.2 10 16.2 11.6 L9.5 21 Q8.2 22 8.8 20 L10.8 14 L7.5 14 Q5.8 14 6.8 12.4 L12 3.8 Q12.6 3 13.5 3 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.8" stroke-linejoin="round"/></svg></span><span class="badge"></span></div>
     <div class="abtn" id="bg"><svg viewBox="0 0 24 24" width="28" height="28" fill="none"><path d="M12 3 L19 5.5 V11 C19 16 15.8 19.3 12 21 C8.2 19.3 5 16 5 11 V5.5 Z" fill="#fff" stroke="rgba(0,0,0,0.25)" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 7 V17 M8 11.5 H16" stroke="rgba(0,0,0,0.28)" stroke-width="1.6" stroke-linecap="round"/></svg><span class="invbadge">✨</span><span class="invhint">むてき</span></div>
   </div>
 </div>
@@ -2361,6 +2365,7 @@ function resetP(keepLives){
   p.gPrep=false;       // 防御ボタンのエッジ検出用（無敵モード手動発動）
   p.laserCharge=0;     // 巨大レーザーチャージ（互換用・未使用）
   p.laserWindup=0;     // レーザー溜め（剣振り演出）タイマー
+  p.lasHold=0; p.lasMul=1;   // ★v358 長押しの長さ（フレーム）と、撃ったレーザーの強さの倍率
   p.laserCD=0;         // 巨大レーザークールタイム
   p.lasPrep=false;     // レーザーボタンのエッジ検出用
   p.megaLaserActive=false; // 巨大レーザー発射中
@@ -2486,6 +2491,10 @@ var pbombs=[]; // プレイヤーの投げ爆弾 {x,y,vx,vy,life}
 // ★巨大レーザーの「1発あたりボスに与えられる最大ダメージ」。雑魚は対象外（毎フレーム0.4のまま）。
 //   ボスHP=W1≈6/W6≈9/W10≈15。上限3＝W1で2発・W6で3発・W10で5発が目安（一撃撃破を防止）。
 var LASER_BOSS_CAP=3;
+// ★v358 テスト版：レーザーは押している長さで太く・強く（ユーザー「タップ継続時間で光線の太さ。MAX3秒。0.1秒ごとに太さと強さ。3秒で今の3倍」）
+//   0.1秒（6フレーム）ごとに1段・30段（3秒）で3倍。すぐ離すと今と同じ1倍。3秒たったら離さなくても撃つ
+var LAS_MAX=180;
+function lasMulOf(h){ return 1+2*Math.min(30,Math.floor(h/6))/30; }
 function hurtEnemy(e,dmg,col){
   if(e.dead) return;
   e.hp-=dmg;
@@ -6458,8 +6467,18 @@ function update(){
   }
   if(hasSk(4) || p.trait==='laser'){
     if(p.laserCD>0) p.laserCD--;
-    // ① ボタン押下：即発射せず、まず剣を振るモーション＋溜めを開始
-    if(lasEdge && p.laserCD<=0 && !p.megaLaserActive && p.laserUses>0 && !p.laserWindup){
+    var lasCan=(p.laserCD<=0 && !p.megaLaserActive && p.laserUses>0 && !p.laserWindup), lasGo=false;
+    if(TEST_MODE){   // ★v358 押した瞬間から数え、離したとき（3秒たったら自動で）その長さの強さで撃つ
+      if(lasEdge && lasCan) p.lasHold=1;
+      else if(p.lasHold>0 && gLas() && p.lasHold<LAS_MAX) p.lasHold++;
+      if(p.lasHold>0 && (!gLas() || p.lasHold>=LAS_MAX)){ p.lasMul=lasMulOf(p.lasHold); p.lasHold=0; lasGo=true; }
+      else if(p.lasHold>0 && fr%2===0){   // 溜めている間：剣のまわりに光が集まる（溜まるほど多く・大きく）
+        var lq=p.lasHold/LAS_MAX, lcx=p.x+pw()/2+(p.dir>0?12:-12), lcy=p.y+ph()*0.35, la=Math.random()*Math.PI*2, lrd=14+lq*16;
+        ptcl.push({x:lcx+Math.cos(la)*lrd,y:lcy+Math.sin(la)*lrd,vx:-Math.cos(la)*(1+lq*1.5),vy:-Math.sin(la)*(1+lq*1.5),life:10,ml:10,col:Math.random()<0.5?'#00eeff':'#ffffff',r:1.5+lq*2});
+      }
+    } else if(lasEdge && lasCan){ p.lasMul=1; lasGo=true; }
+    // ① ボタン押下：即発射せず、まず剣を振るモーション＋溜めを開始（★v358 テスト版は離したとき）
+    if(lasGo){
       p.laserWindup=16;     // 溜めフレーム（剣を振りかぶる→振り抜く）
       p.atkT=16;            // 剣振りモーション発動
       p.swingId=(p.swingId||0)+1;
@@ -6493,6 +6512,7 @@ function update(){
     p.laserCharge=0;
   }
   if(p.megaLaserActive){
+    var _lm=p.lasMul||1;   // ★v358 長押しの強さ（1〜3倍）。ダメージ・ボスへの上限・上下の届く範囲に掛ける
     p.megaLaserTimer--;
     if(p.megaLaserTimer<=0) p.megaLaserActive=false;
     // 巨大レーザー：画面内（カメラ範囲）かつ進行方向の敵のみヒット
@@ -6506,13 +6526,13 @@ function update(){
       // ② 進行方向にいる
       var inFront=(p.dir>0&&e2.x>p.x)||(p.dir<0&&e2.x<p.x+pw());
       // ③ レーザーのY範囲内（±30px）
-      var inRange=Math.abs((e2.y+e2.h/2)-laserY)<e2.h*0.8+30;
+      var inRange=Math.abs((e2.y+e2.h/2)-laserY)<e2.h*0.8+30+9*(_lm-1);
       if(onScreen&&inFront&&inRange){
-        var _ldmg=0.4;
-        // ★ボスは1レーザーあたりの被ダメージに上限（LASER_BOSS_CAP）。雑魚は従来通り毎フレーム0.4。
+        var _ldmg=0.4*_lm;
+        // ★ボスは1レーザーあたりの被ダメージに上限（LASER_BOSS_CAP）。雑魚は従来通り毎フレーム0.4。（★v358 どちらも長押しの倍率を掛ける）
         if(e2.isBoss){
-          var _rem=LASER_BOSS_CAP-(e2.lasShotDmg||0);
-          _ldmg=(_rem<=0)?0:Math.min(0.4,_rem);
+          var _rem=LASER_BOSS_CAP*_lm-(e2.lasShotDmg||0);
+          _ldmg=(_rem<=0)?0:Math.min(0.4*_lm,_rem);
           e2.lasShotDmg=(e2.lasShotDmg||0)+_ldmg;
         }
         e2.hp-=_ldmg;
@@ -9599,25 +9619,32 @@ function draw(){
 
 
   // 巨大レーザー発射エフェクト
+  if(p.lasHold>0){   // ★v358 溜めている間：剣の先に光の玉（溜まるほど大きく）
+    var cq=Math.min(1,p.lasHold/LAS_MAX), cgx=(p.x+pw()/2)-cam+(p.dir>0?12:-12), cgy=p.y+ph()*0.35, cr0=3+cq*9+Math.sin(fr*0.5)*0.8;
+    ctx.save(); ctx.globalAlpha=0.45+cq*0.35; ctx.fillStyle='#00eeff'; ctx.shadowColor='#00eeff'; ctx.shadowBlur=12+cq*14;
+    ctx.beginPath(); ctx.arc(cgx,cgy,cr0,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.globalAlpha=0.95; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(cgx,cgy,cr0*0.5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
   if(p.megaLaserActive){
     var ly=p.y+ph()*0.35;
     var lx=(p.x+pw()/2)-cam;
-    var lEndX=p.dir>0?W+50:-50;
+    var lEndX=p.dir>0?W+50:-50, tk=p.lasMul||1;   // ★v358 太さ＝長押しの倍率（1〜3倍）
     ctx.save();
     ctx.globalAlpha=0.9;
     // コア
-    ctx.strokeStyle='#ffffff'; ctx.lineWidth=6;
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=6*tk;
     ctx.shadowColor='#00eeff'; ctx.shadowBlur=30;
     ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lEndX,ly); ctx.stroke();
     // グロー
-    ctx.strokeStyle='#00eeff'; ctx.lineWidth=18;
+    ctx.strokeStyle='#00eeff'; ctx.lineWidth=18*tk;
     ctx.globalAlpha=0.35;
     ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lEndX,ly); ctx.stroke();
     // 外縁
     ctx.strokeStyle='#aaeeff'; ctx.lineWidth=2;
     ctx.globalAlpha=0.7;
-    ctx.beginPath(); ctx.moveTo(lx,ly-9); ctx.lineTo(lEndX,ly-9); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(lx,ly+9); ctx.lineTo(lEndX,ly+9); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lx,ly-9*tk); ctx.lineTo(lEndX,ly-9*tk); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lx,ly+9*tk); ctx.lineTo(lEndX,ly+9*tk); ctx.stroke();
     ctx.restore();
   }
 
@@ -9768,6 +9795,10 @@ function loop(ts){
         blas.classList.add(lasState==='ready'?'laser-ready':'laser-cd');
       }
     }
+    // ★v358 長押しのリング：3秒で1周。溜めていない間は消す。満タンは金色
+    var lrp=p.lasHold>0?Math.round(Math.min(1,p.lasHold/LAS_MAX)*200):-1;
+    if(_btnState.lasP!==lrp){ _btnState.lasP=lrp; var lrg=blas.querySelector('.lasRing'); if(lrg){ var lc=lrg.querySelector('.pg'); lrg.style.opacity=lrp<0?0:1;
+      lc.style.strokeDashoffset=lrp<0?238.8:(238.8*(1-lrp/200)).toFixed(1); lc.style.stroke=(p.lasHold>=LAS_MAX-6)?'#ffe44d':'#ffffff'; } }
     // 残回数バッジ：爆弾所持中は💣、それ以外はレーザー残数
     var badge=blas.querySelector('.badge');
     if(badge){ badge.textContent = p.hasBomb ? '💣' : ((hasSk(4)||p.trait==='laser') ? (p.laserUses>0?String(p.laserUses):'✕') : ''); }
@@ -9905,7 +9936,7 @@ var TUT_STEPS=[
   {btn:'jump2', scene:'djump', title:'2段ジャンプ', text:'スキルを取ると空中でもう1回！\n青ボタンを2回押す。'},
   {btn:'sword', scene:'sword', title:'ソード',     text:'赤ボタンで剣をふる。\n目の前の敵を斬る！'},
   {btn:'jump',  scene:'stomp', title:'ふみつけ',   text:'ジャンプして敵の上に落ちると\n踏みつけ攻撃！スキル無しでもOK。'},
-  {btn:'laser', scene:'laser', title:'レーザー',   text:'黄ボタンで前方に大レーザー。\n回数げんてい・ボスに有効！'},
+  {btn:'laser', scene:'laser', title:'レーザー',   text:TEST_MODE?'黄ボタンで前方に大レーザー。\n長く押すほど太く強い（3秒で3倍）！':'黄ボタンで前方に大レーザー。\n回数げんてい・ボスに有効！'},
   {btn:'guard', scene:'guard', title:'ぼうぎょ',   text:'緑ボタンでガード。\nダメージを大きくカット！'},
   {btn:'inv',   scene:'inv',   title:'無敵モード',  text:'スキルを全部集めると緑ボタンに✨。\n押すと10秒むてき！1ステージ1回。'},
   {btn:'coin',  scene:'coin',  title:'コイン',     text:'コインを集めると\nスキルが順番に解放される！'},
