@@ -5467,10 +5467,44 @@ function _nbParts(key,src,R){
 // ★v345 x-8→-13・y-21→-19・傾き-0.5→-0.25（ユーザー「盾の種類が反映してない」）。前の位置は盾の真ん中の絵（炎・稲妻・トゲ）が体に隠れ、
 //   見えるのは盾の45%（ふちだけ）で種類が見分けられなかった。4案を描き比べ、見える所が80%で真ん中の絵まで見えるこの位置にした
 var NB_BACKSH={x:-13,y:-19,r:-0.25,s:1};
-function _backShield(g,id){   // 背中の盾：影も光も付けない（体のうしろなので）
+// ★v353 背中の盾は裏側（ユーザー「盾が表のまま背負ってる感じで不自然。背負うときは裏面が見えるのが自然」）。
+//   表の絵から盾ごとに1回だけ作る（画像データは増やさない）：形とふち（外側の帯）は左右反転した表の絵のまま、
+//   内側は ふちの色を暗くした板＋ふちの内側の影＋革のベルト2本。模様・宝石は裏から見えないので描かない
+function _shieldBack(id){
+  var base=ITEM_IMG['sh_'+id]; if(!base) return null; if(base._back) return base._back;
+  var src=_shrunk(base,80), w=src.width, h=src.height, c=document.createElement('canvas'); c.width=w; c.height=h;
+  var g=c.getContext('2d'); g.drawImage(src,0,0); var o; try{ o=g.getImageData(0,0,w,h); }catch(e){ return (base._back=src); }
+  var d=o.data, n=w*h, s=new Uint8ClampedArray(d), D=new Float32Array(n), x, y, i;
+  // 外からの距離（2回なめる近似）
+  for(i=0;i<n;i++) D[i]=s[i*4+3]>100?99:0;
+  for(y=0;y<h;y++) for(x=0;x<w;x++){ i=y*w+x; if(!D[i]) continue; var m=D[i];
+    if(x>0) m=Math.min(m,D[i-1]+1); if(y>0){ m=Math.min(m,D[i-w]+1); if(x>0) m=Math.min(m,D[i-w-1]+1.4); if(x<w-1) m=Math.min(m,D[i-w+1]+1.4); } else m=Math.min(m,1); if(x===0||x===w-1) m=Math.min(m,1); D[i]=m; }
+  for(y=h-1;y>=0;y--) for(x=w-1;x>=0;x--){ i=y*w+x; if(!D[i]) continue; var m2=D[i];
+    if(x<w-1) m2=Math.min(m2,D[i+1]+1); if(y<h-1){ m2=Math.min(m2,D[i+w]+1); if(x<w-1) m2=Math.min(m2,D[i+w+1]+1.4); if(x>0) m2=Math.min(m2,D[i+w-1]+1.4); } else m2=Math.min(m2,1); D[i]=m2; }
+  var rim=Math.max(3,Math.round(h*0.075)), R=0,G=0,B=0,k=0;
+  for(i=0;i<n;i++) if(D[i]>0 && D[i]<=rim){ R+=s[i*4]; G+=s[i*4+1]; B+=s[i*4+2]; k++; }
+  if(k){ R/=k; G/=k; B/=k; }
+  var L=0.3*R+0.59*G+0.11*B; R=R*0.75+L*0.25; G=G*0.75+L*0.25; B=B*0.75+L*0.25;   // 板は ふちの色を少しくすませる
+  var s1=Math.round(h*0.36), s2=Math.round(h*0.60), sw=Math.max(3,Math.round(h*0.085));   // 革のベルト（上・下）
+  for(y=0;y<h;y++) for(x=0;x<w;x++){
+    i=y*w+x; var j=i*4, mx=(y*w+(w-1-x))*4;   // 左右反転
+    d[j+3]=s[mx+3]; if(!s[mx+3]) continue;
+    var dd=D[y*w+(w-1-x)];
+    if(dd<=rim){ d[j]=s[mx]; d[j+1]=s[mx+1]; d[j+2]=s[mx+2]; continue; }   // ふち：表の絵のまま
+    var sh=0.64-0.22*(y/h)+0.08*(1-x/w);                                         // 板：上・左が少し明るい
+    if(dd<=rim+2.5) sh*=0.55+0.18*(dd-rim);                                     // ふちの内側の影
+    var r=R*sh, gg=G*sh, b=B*sh, ys=-1;
+    if(y>=s1 && y<s1+sw) ys=y-s1; else if(y>=s2 && y<s2+sw) ys=y-s2;
+    if(ys>=0){ var lt=(ys===0)?1.25:(ys===sw-1?0.6:1); r=128*lt; gg=82*lt; b=46*lt; }   // ベルト（上のふちが明るい・下が暗い）
+    d[j]=r; d[j+1]=gg; d[j+2]=b;
+  }
+  g.putImageData(o,0,0);
+  return (base._back=c);
+}
+function _backShield(g,id){   // 背中の盾：影も光も付けない（体のうしろなので）。★v353 裏側を描く（ガードのときは今までどおり表＝_frontShield）
   var base=ITEM_IMG['sh_'+id]; if(!base) return;
   var H=ITEM_SPR.shieldH[id]||25, W=H*base.width/base.height;
-  g.drawImage(_shrunk(base,80),-W/2,-H/2,W,H);
+  g.drawImage(_shieldBack(id)||_shrunk(base,80),-W/2,-H/2,W,H);
 }
 // プレイヤーを新しい体で描く（drawStick から呼ぶ）。描けなかったら false を返して今の描き方に任せる
 //   大きさは drawCharPreview の単位×1.1（今のゲーム中の頭 HR=11 と同じ大きさになる）。当たり判定は変えない
