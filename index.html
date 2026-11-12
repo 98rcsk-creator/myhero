@@ -2593,7 +2593,14 @@ var WORLD_DIFF=[0.08,0.12,0.18,0.25,0.35,0.50,0.65,0.80,0.95,1.20]; // ★v231 �
 var W10_TEST_DIFF=1.05; if(TEST_MODE) WORLD_DIFF[9]=W10_TEST_DIFF;
 // ★v356 テスト版だけ W10 の穴の数（ステージの長さ1つぶんあたり。×LEN_K で実際の数）。ユーザー「まだ難しい。足の踏み場がない・穴が多すぎる」
 //   前は 13（×3＝39個・約310pxごと）で、穴と穴のあいだの地面が 150〜190px しかなかった
-var W10_TEST_HOLES=8;
+// ★v363 テスト版：W8〜W10 の差をはっきり（ユーザー「8〜10はだいたい同じぐらいに感じた。もう少し違いを。空中の敵が低空すぎて浮き台を使えば楽勝。
+//   上も難しく。でも8より10のほうが、どこの踏み場も難しいように」）。v356 で決めた W10 の穴の数（8）は、ここの holes に移した
+//   holes＝穴の数（ステージの長さ1つぶんあたり。×LEN_K 3）／platK＝浮き台の幅の倍率／fly＝空の敵の割合（ほかは0.28）
+//   hi＝空の敵のうち高い所を飛ぶ割合／top＝高い所の上限（地面から。下限は110＝浮き台の高さ）。前は全部 地面から58（急降下は100）＝浮き台の下だった
+var LATE_TEST={8:{holes:6.7,platK:1,fly:0.30,hi:0.35,top:170}, 9:{holes:7.3,platK:0.9,fly:0.34,hi:0.5,top:200}, 10:{holes:8,platK:0.8,fly:0.38,hi:0.65,top:230}};
+// ★v362 テスト版：ボスの手前この距離（GOAL_X-BOSS_CLEAR より右）には小さい敵を置かない・入らせない（ユーザー「ボスの近くに小物の敵いたら難しいから、全ステージ不要」）
+//   ボスは GOAL_X-360。900 ＝ ボスが画面に入るあたり（ボスの左はしから画面1枚と少し）。敵の数は同じで、手前に詰めて配る
+var BOSS_CLEAR=900;
 // ★v232 ワールド別のステージ長倍率（GOAL_X = 4200×これ）。
 //   W1-3は低学年向けに短く、W7-10で旧1ワールド(3ステージ×4200=12600px)相当。
 //   実機ではこの配列を 1ワールドずつ触る。
@@ -2622,7 +2629,7 @@ function lvCfg(lv){
   var terr = (w<=1)?'flat' : (w<=2)?'hills' : 'rough';
   return{
     stage:s, boss:boss, bossFight:bossFight, bossDensity:bossDensity, world:w, diff:d,
-    holes:    bossDensity?Math.max(1,Math.round(holeN*0.5)):((TEST_MODE && w===10)?W10_TEST_HOLES:holeN), // ★v230 密度側（★v356 テスト版の W10 は W10_TEST_HOLES）
+    holes:    bossDensity?Math.max(1,Math.round(holeN*0.5)):((TEST_MODE && LATE_TEST[w])?LATE_TEST[w].holes:holeN), // ★v230 密度側（★v356・v363 テスト版の W8〜W10 は LATE_TEST）
     holeMinW: 55 + Math.min(60, sEff*1.0),   // ★v231 sEff
     holeMaxW: 90 + Math.min(110, sEff*1.8),  // ★v231 sEff
     enemyN:   bossDensity?Math.round(enemyN*0.6):enemyN,  // ★v230 密度側
@@ -2636,6 +2643,7 @@ function lvCfg(lv){
     bomberInterval: bombInt,
     terrain:  terr,
     platN:    Math.round(8 + s*0.24),
+    late:     (TEST_MODE && LATE_TEST[w])||null,   // ★v363
   };
 }
 
@@ -2772,6 +2780,7 @@ function buildWorld(lv){
       py2=GROUND-90-Math.random()*60;
     }
     var pw2=isHighPlat?50+Math.floor(Math.random()*30):60+Math.floor(Math.random()*50);
+    if(cfg.late) pw2=Math.round(pw2*cfg.late.platK);   // ★v363 テスト版：W9・W10 は浮き台がせまい
     // 穴の真上（水平方向に重なる）は配置しない
     var overHole=holes.some(function(h){
       return px2+pw2>h.x+10 && px2<h.x+h.w-10;
@@ -2845,14 +2854,14 @@ function buildWorld(lv){
 
   // 敵配置（ステージ全体に均等分散）
   // スタート350px・ゴール200px手前は敵なし
-  var ENE_START=350, ENE_END=200;
+  var ENE_START=350, ENE_END=(TEST_MODE && cfg.bossFight)?BOSS_CLEAR:200;   // ★v362 テスト版はボスの手前を空ける
   var eneRange=GOAL_X-ENE_START-ENE_END;
   var totalN=Math.round(cfg.enemyN*LEN_K);  // ★v231 数×LEN_K（1.5倍長に密度追従）
   var sectionW=eneRange/totalN;
   var placed=0;
 
   // 飛行系の比率
-  var flyRatio=cfg.hasFlying?0.28:0;
+  var flyRatio=cfg.hasFlying?((cfg.late&&cfg.late.fly)||0.28):0;   // ★v363 テスト版の W8〜W10 は多め
   var flyCount=Math.round(totalN*flyRatio);
   var groundCount=totalN-flyCount;
 
@@ -2953,8 +2962,10 @@ function buildWorld(lv){
       var _fk=ENE_SIZE_K[ftype]||1;              // ★v302 タイプ別倍率
       var fh=Math.floor(baseH*(isDiver?DIVER_H_K:FLY_H_K)*_fk);
       var fw=Math.round((baseW+(isBomber?4:0)+(isDiver?-2:0))*_fk);
+      var fy0=isDiver?GROUND-100:GROUND-58;
+      if(cfg.late && Math.random()<cfg.late.hi) fy0=GROUND-110-Math.round(Math.random()*(cfg.late.top-110));   // ★v363 テスト版：高い所（浮き台の高さ〜上）を飛ぶ
       enms.push({
-        x:ex, y:isDiver?GROUND-100:GROUND-58,
+        x:ex, y:fy0, cruiseY:isDiver?fy0:undefined,
         w:fw, h:fh,
         vx:-spd*(isDiver?0.6:1), vy:0, baseSpd:spd*(isDiver?0.6:1),
         onG:true,
@@ -5586,11 +5597,13 @@ function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
   // ★v360 テスト版：飛んでいる間、靴の底からジェットの炎（ユーザー「空飛ぶときブーツの底から炎噴射。メラメラじゃなくてジェットタイプ」）
   //   左右の靴底の真ん中（絵の x101・x255）から脚の向きに下へ。外のうすい光→オレンジ→黄→白い芯の4層。長さだけ少しふるえる（ゆらゆら揺らさない）
   //   上昇中は長く・下降中は短く。脚より先に描く（ふん出し口は靴にかくれる）
-  if(p.flying && TEST_MODE){ var jL=12*(p.vy<-0.5?1.35:(p.vy>1?0.7:1)); jetFlame(R.piv.ll,lL*lk,101,jL,0); jetFlame(R.piv.lr,lR*lk,255,jL,1); }
+  //   ★v361 実機で「小さすぎて分かりにくい」→ 長さ 12→22・太さ 約1.6倍。ふん出し口に明るい輪（靴底が光る）
+  if(p.flying && TEST_MODE){ var jL=22*(p.vy<-0.5?1.3:(p.vy>1?0.7:1)); jetFlame(R.piv.ll,lL*lk,101,jL,0); jetFlame(R.piv.lr,lR*lk,255,jL,1); }
   function jetFlame(piv,ang,sx,L,sd){
-    var px=ox+piv[0]*bk, py=oy+piv[1]*bk, n=L*(0.94+0.06*Math.sin(fr*1.9+sd*2.1)), J=[[7.4,1,'rgba(255,120,30,0.28)'],[5.2,0.92,'rgba(255,110,20,0.85)'],[3.6,0.7,'#ffd23a'],[1.9,0.42,'#f2fbff']];
+    var px=ox+piv[0]*bk, py=oy+piv[1]*bk, n=L*(0.94+0.06*Math.sin(fr*1.9+sd*2.1)), J=[[12,1,'rgba(255,120,30,0.3)'],[8.4,0.9,'rgba(255,110,20,0.9)'],[5.8,0.68,'#ffd23a'],[3,0.4,'#f2fbff']];
     ctx.save(); ctx.translate(px,py); ctx.rotate(ang); ctx.translate(ox+sx*bk-px,oy+353*bk-py);
     for(var i=0;i<4;i++){ var w=J[i][0]/2, l=n*J[i][1]; ctx.fillStyle=J[i][2]; ctx.beginPath(); ctx.moveTo(-w,0); ctx.bezierCurveTo(-w,l*0.35,-w*0.24,l*0.8,0,l); ctx.bezierCurveTo(w*0.24,l*0.8,w,l*0.35,w,0); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle='rgba(255,236,170,0.9)'; ctx.beginPath(); ctxEllipse(ctx,0,0.4,4.6,1.5,0,0,Math.PI*2); ctx.fill();   // ふん出し口の明るい輪
     ctx.restore();
   }
   part(P.ll,R.piv.ll,lL*lk,0); part(P.lr,R.piv.lr,lR*lk,0);
@@ -6634,7 +6647,7 @@ function update(){
       if(gUp()){ p.vy-=1.1; if(p.vy<-3.4)p.vy=-3.4; }
       else if(gDown()){ p.vy+=1.0; if(p.vy>4.5)p.vy=4.5; }
       else { p.vy*=0.72; }  // ホバリング（ふわっと滞空）
-      if(fr%3===0){ if(TEST_MODE){ var jsd=(Math.random()<0.5?-1:1); ptcl.push({x:p.x+pw()/2+jsd*6.6+(Math.random()-0.5)*3,y:p.y+ph()+10,vx:(Math.random()-0.5)*0.8,vy:2+Math.random()*1.5,life:10,ml:10,col:Math.random()<0.5?'#ffb13a':'#ff7a1a',r:1+Math.random()}); }   // ★v360 テスト版：ジェットの炎から火の粉（前の水色の粒と同じ数）
+      if(fr%3===0){ if(TEST_MODE){ var jsd=(Math.random()<0.5?-1:1); ptcl.push({x:p.x+pw()/2+jsd*6.6+(Math.random()-0.5)*4,y:p.y+ph()+22,vx:(Math.random()-0.5)*0.8,vy:2.5+Math.random()*1.5,life:12,ml:12,col:Math.random()<0.5?'#ffb13a':'#ff7a1a',r:1.5+Math.random()*1.2}); }   // ★v360 テスト版：ジェットの炎から火の粉（前の水色の粒と同じ数）
         else ptcl.push({x:p.x+pw()/2+(Math.random()-0.5)*16,y:p.y+ph()*0.5,vx:(Math.random()-0.5)*1.6,vy:1+Math.random(),life:14,ml:14,col:'#bfe9ff',r:2+Math.random()*1.5}); }
     }
   } else if(p.flyAvail && gUp()){
@@ -6861,7 +6874,7 @@ function update(){
       } else {
         e.vx=-baseSpd*0.6; e.x+=e.vx;
         // ★巡航高度へ徐々に戻る（着地後に地面へ居座らない）＋軽い上下
-        var cruiseY=GROUND-100;
+        var cruiseY=e.cruiseY||(GROUND-100);   // ★v363 高い所の急降下は、その高さに戻る
         e.y += (cruiseY-e.y)*0.05;
         e.y += Math.sin(fr*0.04+ei)*0.7;
       }
@@ -6933,6 +6946,7 @@ function update(){
       if(e.x < 24){ e.x=24; if(e.moveDir!==undefined) e.moveDir=1; else e.vx=Math.abs(e.vx||baseSpd); }
       if(e.x > GOAL_X-120){ e.x=GOAL_X-120; if(e.moveDir!==undefined) e.moveDir=-1; else e.vx=-Math.abs(e.vx||baseSpd); }  // ★ゴール旗の手前で折り返す（ゴール後に敵が出ないように）
     }
+    if(TEST_MODE && e.type!=='boss' && isBossStage(level)){ var _bzx=GOAL_X-BOSS_CLEAR; if(e.x+e.w>_bzx){ e.x=_bzx-e.w; if(e.moveDir!==undefined) e.moveDir=-1; if(e.diving) e.diveVx=-Math.abs(e.diveVx||0); } }   // ★v362 ボスのまわりに入らせない（歩く敵は引き返す・急降下も押し戻す）
     // ★飛行敵（コウモリ系）は地面に埋まらないよう、ローカル地面の少し上にclamp。
     //   下めに飛ぶのはOK・埋没のみ防止。穴の上(_surf>GROUND+10)はclampしない。
     if(e.type==='fly'||e.type==='bomber'||e.type==='diver'){
@@ -6989,6 +7003,18 @@ function update(){
       }
     }
 
+    // ★v362 テスト版：ふだんの火炎放射（2.5秒ごとに0.4秒。描画の breathingB と同じ間）も攻撃にする（ユーザー「火の玉は攻撃として機能してるけど、火炎放射は演出になってる。
+    //   火の玉の攻撃力の3分の1ぐらいでいいし、火炎放射もダメージとして立派な攻撃に」）。前は覚醒ブレス（breathTimer）だけ当たっていた
+    //   当たりは描いている5つの円そのまま（向き・位置・大きさを描画と同じ式で。ゆれ±3px は入れない）。ダメージ＝火の玉の3分の1。ガード中は防げる
+    if(TEST_MODE && e.type==='boss' && !(e.breathTimer>0) && (fr%150)<24 && p.ifrm<=0){
+      var _bfl=(p.x>e.x+e.w/2)?-1:1, _bhit=false;
+      for(var _brk=0;_brk<5 && !_bhit;_brk++){ var _bcx=e.x+e.w/2+_bfl*(-0.46-0.12*_brk)*e.w, _bcy=e.y+e.h*0.38, _bcr=e.w*(0.15+0.055*_brk),
+        _bnx=Math.max(p.x,Math.min(_bcx,p.x+pw())), _bny=Math.max(p.y,Math.min(_bcy,p.y+ph())); _bhit=((_bnx-_bcx)*(_bnx-_bcx)+(_bny-_bcy)*(_bny-_bcy)<_bcr*_bcr); }
+      if(_bhit){
+        if(p.st==='guard'){ if(e._bgC!==Math.floor(fr/150)){ e._bgC=Math.floor(fr/150); p.guardEffect=30; SFX.guard(); burst(p.x+pw()/2,p.y+ph()*0.3,'#aaddff',8); } }
+        else { takeDamage(Math.max(1,Math.round(calcDamage('fire')/3))); updHUD(); if(p.hp<=0){ showGameOver(); } }
+      }
+    }
     // ★覚醒ブレスの持続・当たり判定・演出（ボスの向く側へ薙ぐ）
     if(e.type==='boss' && e.breathTimer>0){
       e.breathTimer--;
