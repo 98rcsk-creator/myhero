@@ -6926,13 +6926,15 @@ function update(){
             SFX.bossRoar();
           } else {
             // ★通常：3way火球（扇状に3発）
-            var bSpdB=3.4, spread=[-0.34,0,0.34];
+            //   ★v357 テスト版：ボスの大きさに合わせて火の玉も大きく（ユーザー「ボスは大きくなってるのに攻撃は初期サイズのまま」）。
+            //   W1 のボス（高さ88）＝半径6のまま → W5（224）＝11 → W8〜W10（313）＝16。当たり判定（hr）は見た目より小さめ（6＋ふえた分の6割）＝よけやすさを残す
+            var bSpdB=3.4, spread=[-0.34,0,0.34], bfr=TEST_MODE?6*Math.min(2.8,Math.max(1,e.h/88*0.75)):6;
             for(var bk=0;bk<3;bk++){
               bullets.push({
                 x:e.x+(dirB>0?e.w:0), y:e.y+e.h*0.42,
                 vx:dirB*bSpdB*Math.cos(spread[bk]),
                 vy:bSpdB*Math.sin(spread[bk])-0.6,
-                type:'fire', elem:e.elem||'fire', life:150, r:6,
+                type:'fire', elem:e.elem||'fire', life:150, r:bfr, hr:6+(bfr-6)*0.6,
               });
             }
             SFX.hit();
@@ -7261,7 +7263,7 @@ function update(){
       continue;
     }
     // プレイヤーに当たる
-    var bBox={x:b.x-b.r,y:b.y-b.r,w:b.r*2,h:b.r*2};
+    var bhr=b.hr||b.r, bBox={x:b.x-bhr,y:b.y-bhr,w:bhr*2,h:bhr*2};   // ★v357 hr＝当たり判定の半径（ボスの大きい火の玉だけ。ほかは r と同じ）
     if(p.ifrm<=0 && aabb({x:p.x,y:p.y,w:pw(),h:ph()},bBox)){
       bullets.splice(bi,1);
       // ★v305 体当たりの判定(p.st==='guard')と条件をそろえた。
