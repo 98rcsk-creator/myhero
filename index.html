@@ -2566,6 +2566,9 @@ function isBossStage(s){ return s%STAGES_PER_WORLD===0; }   // 5,10,...,50がボ
 function stageWorld(s){ return Math.min(NUM_WORLDS,Math.floor((s-1)/STAGES_PER_WORLD)+1); } // 1〜10
 // ★ワールド別の難易度%（100%=基準max、W10だけ120%）。序盤は緩く、W6から急上昇。
 var WORLD_DIFF=[0.08,0.12,0.18,0.25,0.35,0.50,0.65,0.80,0.95,1.20]; // ★v231 序盤(W1-2)を緩和
+// ★v354 テスト版だけ W10 を 1.20→W10_TEST_DIFF（ユーザー「ステージ10がやっぱまだ難しい」）。W9(0.95) からの上がり幅が +0.25 で、ほかのワールドの間（+0.15）より大きかった。
+//   敵の数・速さ・硬さ・穴・弾・爆弾・被ダメ（calcDamage）がまとめて下がる。本番は実機で確かめてから
+var W10_TEST_DIFF=1.05; if(TEST_MODE) WORLD_DIFF[9]=W10_TEST_DIFF;
 // ★v232 ワールド別のステージ長倍率（GOAL_X = 4200×これ）。
 //   W1-3は低学年向けに短く、W7-10で旧1ワールド(3ステージ×4200=12600px)相当。
 //   実機ではこの配列を 1ワールドずつ触る。
@@ -2748,7 +2751,17 @@ function buildWorld(lv){
     var overHole=holes.some(function(h){
       return px2+pw2>h.x+10 && px2<h.x+h.w-10;
     });
+    // ★v354 テスト版：穴に重なった台は捨てずに、近い方の穴のはしの外へずらす（ユーザー「ステージ10の足場が少なすぎる」）。
+    //   前は捨てていたので、穴の多い W10 は 40台のうち 15台しか置けず、台の無い所が最大 3,800px 続いていた。ずらしても穴の上には置かない
+    if(overHole && TEST_MODE){
+      var hh=holes.filter(function(h){ return px2+pw2>h.x+10 && px2<h.x+h.w-10; })[0], cand=[hh.x+hh.w+16, hh.x-pw2-16], moved=false;
+      if(Math.abs(cand[1]-px2)<Math.abs(cand[0]-px2)) cand.reverse();
+      for(var ci=0;ci<2 && !moved;ci++){ var nx=cand[ci]; if(nx<200||nx+pw2>GOAL_X-120) continue;
+        if(!holes.some(function(h){ return nx+pw2>h.x+10 && nx<h.x+h.w-10; }) && !tiles.some(function(q){ return !q.g && q.h===10 && nx+pw2>q.x-8 && nx<q.x+q.w+8; })){ px2=nx; moved=true; } }   // ほかの台とも重ねない
+      overHole=!moved;
+    }
     if(overHole) continue;
+    if(TEST_MODE && tiles.some(function(q){ return !q.g && q.h===10 && px2+pw2>q.x-8 && px2<q.x+q.w+8; })) continue;   // ★v354 ずらした台のとなりに来たら、重ねずに捨てる
     // ボス面はボス戦エリア(GOAL_X-780以降)にランダム浮台を置かない（専用足場2つのみ）
     if(cfg.bossDensity && px2+pw2>GOAL_X-780) continue; // ★v230 密度側
     // ★地面の高低差で浮台が埋まらないように：この位置の地面より
