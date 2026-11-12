@@ -10694,7 +10694,12 @@ function _coinCv(px,glow){
 //   以前は1枚ずつ毎フレーム光をぼかして（shadowBlur）楕円3つと「$」の文字を描いていた
 function _drawCoin(g,spin){
   var R=10.5, w=Math.max(0.12,spin), cs=_coinCv(56,true), cr=R*cs.width/56;
-  g.fillStyle='#b77806'; g.beginPath(); ctxEllipse(g,R*0.16*Math.sqrt(1-w*w),0,R*w,R,0,0,Math.PI*2); g.fill();   // 横を向くほど厚みが見える
+  if(TEST_MODE){   // ★v359 テスト版：厚いコイン（ユーザー「デザインは今のままで良いけど厚みがほしい」）。ふちの厚み 半径の16%→42%
+    //   奥（濃い金）と手前（明るい金）の2段。どちらも「うらの面の楕円＋表とのあいだの四角」＝円柱の横から見た形（1パスに2つ・moveTo を先に）
+    var dx=R*0.42*Math.sqrt(1-w*w);
+    if(dx>0.3){ var k, ds=[dx,dx*0.5], cl=['#94600a','#d99a1c'];
+      for(k=0;k<2;k++){ var d=ds[k]; g.fillStyle=cl[k]; g.beginPath(); g.moveTo(d+R*w,0); ctxEllipse(g,d,0,R*w,R,0,0,Math.PI*2); g.moveTo(0,-R); g.rect(0,-R,d,2*R); g.fill(); } }
+  } else { g.fillStyle='#b77806'; g.beginPath(); ctxEllipse(g,R*0.16*Math.sqrt(1-w*w),0,R*w,R,0,0,Math.PI*2); g.fill(); }   // 横を向くほど厚みが見える
   g.drawImage(cs,-cr*w,-cr,2*cr*w,2*cr);
 }
 // 画面の文字の中に置くコイン（クリア画面のマス・実績）。まわりの文字の大きさに合わせる
