@@ -2594,6 +2594,9 @@ var W10_TEST_DIFF=1.05; if(TEST_MODE) WORLD_DIFF[9]=W10_TEST_DIFF;
 // ★v356 テスト版だけ W10 の穴の数（ステージの長さ1つぶんあたり。×LEN_K で実際の数）。ユーザー「まだ難しい。足の踏み場がない・穴が多すぎる」
 //   前は 13（×3＝39個・約310pxごと）で、穴と穴のあいだの地面が 150〜190px しかなかった
 var W10_TEST_HOLES=8;
+// ★v362 テスト版：ボスの手前この距離（GOAL_X-BOSS_CLEAR より右）には小さい敵を置かない・入らせない（ユーザー「ボスの近くに小物の敵いたら難しいから、全ステージ不要」）
+//   ボスは GOAL_X-360。900 ＝ ボスが画面に入るあたり（ボスの左はしから画面1枚と少し）。敵の数は同じで、手前に詰めて配る
+var BOSS_CLEAR=900;
 // ★v232 ワールド別のステージ長倍率（GOAL_X = 4200×これ）。
 //   W1-3は低学年向けに短く、W7-10で旧1ワールド(3ステージ×4200=12600px)相当。
 //   実機ではこの配列を 1ワールドずつ触る。
@@ -2845,7 +2848,7 @@ function buildWorld(lv){
 
   // 敵配置（ステージ全体に均等分散）
   // スタート350px・ゴール200px手前は敵なし
-  var ENE_START=350, ENE_END=200;
+  var ENE_START=350, ENE_END=(TEST_MODE && cfg.bossFight)?BOSS_CLEAR:200;   // ★v362 テスト版はボスの手前を空ける
   var eneRange=GOAL_X-ENE_START-ENE_END;
   var totalN=Math.round(cfg.enemyN*LEN_K);  // ★v231 数×LEN_K（1.5倍長に密度追従）
   var sectionW=eneRange/totalN;
@@ -6935,6 +6938,7 @@ function update(){
       if(e.x < 24){ e.x=24; if(e.moveDir!==undefined) e.moveDir=1; else e.vx=Math.abs(e.vx||baseSpd); }
       if(e.x > GOAL_X-120){ e.x=GOAL_X-120; if(e.moveDir!==undefined) e.moveDir=-1; else e.vx=-Math.abs(e.vx||baseSpd); }  // ★ゴール旗の手前で折り返す（ゴール後に敵が出ないように）
     }
+    if(TEST_MODE && e.type!=='boss' && isBossStage(level)){ var _bzx=GOAL_X-BOSS_CLEAR; if(e.x+e.w>_bzx){ e.x=_bzx-e.w; if(e.moveDir!==undefined) e.moveDir=-1; if(e.diving) e.diveVx=-Math.abs(e.diveVx||0); } }   // ★v362 ボスのまわりに入らせない（歩く敵は引き返す・急降下も押し戻す）
     // ★飛行敵（コウモリ系）は地面に埋まらないよう、ローカル地面の少し上にclamp。
     //   下めに飛ぶのはOK・埋没のみ防止。穴の上(_surf>GROUND+10)はclampしない。
     if(e.type==='fly'||e.type==='bomber'||e.type==='diver'){
@@ -6991,6 +6995,18 @@ function update(){
       }
     }
 
+    // ★v362 テスト版：ふだんの火炎放射（2.5秒ごとに0.4秒。描画の breathingB と同じ間）も攻撃にする（ユーザー「火の玉は攻撃として機能してるけど、火炎放射は演出になってる。
+    //   火の玉の攻撃力の3分の1ぐらいでいいし、火炎放射もダメージとして立派な攻撃に」）。前は覚醒ブレス（breathTimer）だけ当たっていた
+    //   当たりは描いている5つの円そのまま（向き・位置・大きさを描画と同じ式で。ゆれ±3px は入れない）。ダメージ＝火の玉の3分の1。ガード中は防げる
+    if(TEST_MODE && e.type==='boss' && !(e.breathTimer>0) && (fr%150)<24 && p.ifrm<=0){
+      var _bfl=(p.x>e.x+e.w/2)?-1:1, _bhit=false;
+      for(var _brk=0;_brk<5 && !_bhit;_brk++){ var _bcx=e.x+e.w/2+_bfl*(-0.46-0.12*_brk)*e.w, _bcy=e.y+e.h*0.38, _bcr=e.w*(0.15+0.055*_brk),
+        _bnx=Math.max(p.x,Math.min(_bcx,p.x+pw())), _bny=Math.max(p.y,Math.min(_bcy,p.y+ph())); _bhit=((_bnx-_bcx)*(_bnx-_bcx)+(_bny-_bcy)*(_bny-_bcy)<_bcr*_bcr); }
+      if(_bhit){
+        if(p.st==='guard'){ if(e._bgC!==Math.floor(fr/150)){ e._bgC=Math.floor(fr/150); p.guardEffect=30; SFX.guard(); burst(p.x+pw()/2,p.y+ph()*0.3,'#aaddff',8); } }
+        else { takeDamage(Math.max(1,Math.round(calcDamage('fire')/3))); updHUD(); if(p.hp<=0){ showGameOver(); } }
+      }
+    }
     // ★覚醒ブレスの持続・当たり判定・演出（ボスの向く側へ薙ぐ）
     if(e.type==='boss' && e.breathTimer>0){
       e.breathTimer--;
