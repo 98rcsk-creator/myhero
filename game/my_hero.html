@@ -5586,11 +5586,13 @@ function _drawPlayerNB(cx,cy,dir,st,ifrm,atkT){
   // ★v360 テスト版：飛んでいる間、靴の底からジェットの炎（ユーザー「空飛ぶときブーツの底から炎噴射。メラメラじゃなくてジェットタイプ」）
   //   左右の靴底の真ん中（絵の x101・x255）から脚の向きに下へ。外のうすい光→オレンジ→黄→白い芯の4層。長さだけ少しふるえる（ゆらゆら揺らさない）
   //   上昇中は長く・下降中は短く。脚より先に描く（ふん出し口は靴にかくれる）
-  if(p.flying && TEST_MODE){ var jL=12*(p.vy<-0.5?1.35:(p.vy>1?0.7:1)); jetFlame(R.piv.ll,lL*lk,101,jL,0); jetFlame(R.piv.lr,lR*lk,255,jL,1); }
+  //   ★v361 実機で「小さすぎて分かりにくい」→ 長さ 12→22・太さ 約1.6倍。ふん出し口に明るい輪（靴底が光る）
+  if(p.flying && TEST_MODE){ var jL=22*(p.vy<-0.5?1.3:(p.vy>1?0.7:1)); jetFlame(R.piv.ll,lL*lk,101,jL,0); jetFlame(R.piv.lr,lR*lk,255,jL,1); }
   function jetFlame(piv,ang,sx,L,sd){
-    var px=ox+piv[0]*bk, py=oy+piv[1]*bk, n=L*(0.94+0.06*Math.sin(fr*1.9+sd*2.1)), J=[[7.4,1,'rgba(255,120,30,0.28)'],[5.2,0.92,'rgba(255,110,20,0.85)'],[3.6,0.7,'#ffd23a'],[1.9,0.42,'#f2fbff']];
+    var px=ox+piv[0]*bk, py=oy+piv[1]*bk, n=L*(0.94+0.06*Math.sin(fr*1.9+sd*2.1)), J=[[12,1,'rgba(255,120,30,0.3)'],[8.4,0.9,'rgba(255,110,20,0.9)'],[5.8,0.68,'#ffd23a'],[3,0.4,'#f2fbff']];
     ctx.save(); ctx.translate(px,py); ctx.rotate(ang); ctx.translate(ox+sx*bk-px,oy+353*bk-py);
     for(var i=0;i<4;i++){ var w=J[i][0]/2, l=n*J[i][1]; ctx.fillStyle=J[i][2]; ctx.beginPath(); ctx.moveTo(-w,0); ctx.bezierCurveTo(-w,l*0.35,-w*0.24,l*0.8,0,l); ctx.bezierCurveTo(w*0.24,l*0.8,w,l*0.35,w,0); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle='rgba(255,236,170,0.9)'; ctx.beginPath(); ctxEllipse(ctx,0,0.4,4.6,1.5,0,0,Math.PI*2); ctx.fill();   // ふん出し口の明るい輪
     ctx.restore();
   }
   part(P.ll,R.piv.ll,lL*lk,0); part(P.lr,R.piv.lr,lR*lk,0);
@@ -6634,7 +6636,7 @@ function update(){
       if(gUp()){ p.vy-=1.1; if(p.vy<-3.4)p.vy=-3.4; }
       else if(gDown()){ p.vy+=1.0; if(p.vy>4.5)p.vy=4.5; }
       else { p.vy*=0.72; }  // ホバリング（ふわっと滞空）
-      if(fr%3===0){ if(TEST_MODE){ var jsd=(Math.random()<0.5?-1:1); ptcl.push({x:p.x+pw()/2+jsd*6.6+(Math.random()-0.5)*3,y:p.y+ph()+10,vx:(Math.random()-0.5)*0.8,vy:2+Math.random()*1.5,life:10,ml:10,col:Math.random()<0.5?'#ffb13a':'#ff7a1a',r:1+Math.random()}); }   // ★v360 テスト版：ジェットの炎から火の粉（前の水色の粒と同じ数）
+      if(fr%3===0){ if(TEST_MODE){ var jsd=(Math.random()<0.5?-1:1); ptcl.push({x:p.x+pw()/2+jsd*6.6+(Math.random()-0.5)*4,y:p.y+ph()+22,vx:(Math.random()-0.5)*0.8,vy:2.5+Math.random()*1.5,life:12,ml:12,col:Math.random()<0.5?'#ffb13a':'#ff7a1a',r:1.5+Math.random()*1.2}); }   // ★v360 テスト版：ジェットの炎から火の粉（前の水色の粒と同じ数）
         else ptcl.push({x:p.x+pw()/2+(Math.random()-0.5)*16,y:p.y+ph()*0.5,vx:(Math.random()-0.5)*1.6,vy:1+Math.random(),life:14,ml:14,col:'#bfe9ff',r:2+Math.random()*1.5}); }
     }
   } else if(p.flyAvail && gUp()){
