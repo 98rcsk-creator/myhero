@@ -2597,7 +2597,10 @@ var W10_TEST_DIFF=1.05; if(TEST_MODE) WORLD_DIFF[9]=W10_TEST_DIFF;
 //   上も難しく。でも8より10のほうが、どこの踏み場も難しいように」）。v356 で決めた W10 の穴の数（8）は、ここの holes に移した
 //   holes＝穴の数（ステージの長さ1つぶんあたり。×LEN_K 3）／platK＝浮き台の幅の倍率／fly＝空の敵の割合（ほかは0.28）
 //   hi＝空の敵のうち高い所を飛ぶ割合／top＝高い所の上限（地面から。下限は110＝浮き台の高さ）。前は全部 地面から58（急降下は100）＝浮き台の下だった
-var LATE_TEST={8:{holes:6.7,platK:1,fly:0.30,hi:0.35,top:170}, 9:{holes:7.3,platK:0.9,fly:0.34,hi:0.5,top:200}, 10:{holes:8,platK:0.8,fly:0.38,hi:0.65,top:230}};
+//   ★v364 en＝敵の数（ステージの長さ1つぶんあたり。×3）／onPlat＝浮き台に乗せる敵の割合（台の数に対して）。ユーザー「地上の敵が多すぎて浮き台を使わないとクリアできない。
+//   逆に浮き台を使えばクリアできてしまう。敵が少し多すぎる。浮き台を使えばクリアできる、みたいにならないように。ステージ10を基準に」
+//   前は en＝36/42/46（×3＝109/127/139体）。地上の敵（ふつう・速い・トゲ）を近くの浮き台に移して、台の上を歩かせる（数は同じ。地上がへる）
+var LATE_TEST={8:{holes:6.7,platK:1,fly:0.30,hi:0.35,top:170,en:26,onPlat:0.2}, 9:{holes:7.3,platK:0.9,fly:0.34,hi:0.5,top:200,en:31,onPlat:0.3}, 10:{holes:8,platK:0.8,fly:0.38,hi:0.65,top:230,en:35,onPlat:0.4}};
 // ★v362 テスト版：ボスの手前この距離（GOAL_X-BOSS_CLEAR より右）には小さい敵を置かない・入らせない（ユーザー「ボスの近くに小物の敵いたら難しいから、全ステージ不要」）
 //   ボスは GOAL_X-360。900 ＝ ボスが画面に入るあたり（ボスの左はしから画面1枚と少し）。敵の数は同じで、手前に詰めて配る
 var BOSS_CLEAR=900;
@@ -2632,7 +2635,7 @@ function lvCfg(lv){
     holes:    bossDensity?Math.max(1,Math.round(holeN*0.5)):((TEST_MODE && LATE_TEST[w])?LATE_TEST[w].holes:holeN), // ★v230 密度側（★v356・v363 テスト版の W8〜W10 は LATE_TEST）
     holeMinW: 55 + Math.min(60, sEff*1.0),   // ★v231 sEff
     holeMaxW: 90 + Math.min(110, sEff*1.8),  // ★v231 sEff
-    enemyN:   bossDensity?Math.round(enemyN*0.6):enemyN,  // ★v230 密度側
+    enemyN:   bossDensity?Math.round(enemyN*0.6):((TEST_MODE && LATE_TEST[w])?LATE_TEST[w].en:enemyN),  // ★v230 密度側（★v364 テスト版の W8〜W10 は LATE_TEST）
     enemySpd: enemySpd,
     enemyHp:  enemyHp,
     bossHp:   5 + Math.round(d*8),                 // W1≈6 / W6≈9 / W10≈15
@@ -3016,6 +3019,22 @@ function buildWorld(lv){
         shootBurst:isShooter?2:1,
         shootBurstTimer:0,
       });
+    }
+  }
+
+  // ★v364 テスト版 W8〜W10：浮き台の上にも敵（台の数×onPlat）。台を等間隔に選び、いちばん近い地上の敵（ふつう・速い・トゲ）を台の上へ移す。
+  //   ボスのまわり（BOSS_CLEAR）の台・スタート直後の台は使わない。台の上では台のはしで折り返す（e.pl）・ゆっくり歩く
+  if(cfg.late && cfg.late.onPlat>0){
+    var _pls=tiles.filter(function(q){ return !q.g && q.h===10 && !q.goal && q.x>600 && q.x+q.w<GOAL_X-BOSS_CLEAR; });
+    var _need=Math.round(_pls.length*cfg.late.onPlat), _used={};
+    for(var _pk=0;_pk<_need;_pk++){
+      var _pl=_pls[Math.floor((_pk+0.5)*_pls.length/_need)]; if(!_pl) continue;
+      var _best=null, _bd=1e9;
+      for(var _ek=0;_ek<enms.length;_ek++){ var _e=enms[_ek]; if(_used[_ek] || _e.pl || !(_e.type==='normal'||_e.type==='fast'||_e.type==='spiky')) continue;
+        var _dd=Math.abs((_e.x+_e.w/2)-(_pl.x+_pl.w/2)); if(_dd<_bd){ _bd=_dd; _best=_ek; } }
+      if(_best===null || _bd>600) continue;
+      var _g=enms[_best]; _used[_best]=1;
+      _g.x=Math.round(_pl.x+_pl.w/2-_g.w/2); _g.y=_pl.y-_g.h; _g.vy=0; _g.pl={x:_pl.x,w:_pl.w,y:_pl.y}; _g.baseSpd=(_g.baseSpd||cfg.enemySpd)*0.4;
     }
   }
 
@@ -6945,6 +6964,11 @@ function update(){
     if(e.type!=='boss' && e.type!=='ghost'){
       if(e.x < 24){ e.x=24; if(e.moveDir!==undefined) e.moveDir=1; else e.vx=Math.abs(e.vx||baseSpd); }
       if(e.x > GOAL_X-120){ e.x=GOAL_X-120; if(e.moveDir!==undefined) e.moveDir=-1; else e.vx=-Math.abs(e.vx||baseSpd); }  // ★ゴール旗の手前で折り返す（ゴール後に敵が出ないように）
+    }
+    if(e.pl){   // ★v364 浮き台の上の敵：台のはしで折り返す。落ちたら（台より下に行ったら）ふつうの敵にもどる
+      if(e.y>e.pl.y+6) e.pl=null;
+      else if(e.x<e.pl.x){ e.x=e.pl.x; e.moveDir=1; }
+      else if(e.x+e.w>e.pl.x+e.pl.w){ e.x=e.pl.x+e.pl.w-e.w; e.moveDir=-1; }
     }
     if(TEST_MODE && e.type!=='boss' && isBossStage(level)){ var _bzx=GOAL_X-BOSS_CLEAR; if(e.x+e.w>_bzx){ e.x=_bzx-e.w; if(e.moveDir!==undefined) e.moveDir=-1; if(e.diving) e.diveVx=-Math.abs(e.diveVx||0); } }   // ★v362 ボスのまわりに入らせない（歩く敵は引き返す・急降下も押し戻す）
     // ★飛行敵（コウモリ系）は地面に埋まらないよう、ローカル地面の少し上にclamp。
