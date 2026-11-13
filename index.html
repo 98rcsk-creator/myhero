@@ -41,6 +41,8 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #taT{font-size:30px;line-height:1;color:#fff;letter-spacing:1px;font-variant-numeric:tabular-nums;text-shadow:2px 0 0 #0a1a3a,-2px 0 0 #0a1a3a,0 2px 0 #0a1a3a,0 -2px 0 #0a1a3a,0 0 8px rgba(0,0,0,0.7);}
 #taC{display:inline-block;margin-top:4px;font-size:12px;color:#fff;background:rgba(10,20,45,0.62);border-radius:10px;padding:2px 9px;}
 #taC b{color:#7dff8a;}
+/* ★v369 攻略チャット：画面いっぱいの縦の箱（会話の所だけスクロール） */
+#overlay.scrollable.guideOv{padding:12px 10px 10px !important;overflow:hidden !important;overflow-y:hidden !important;gap:0 !important;}   /* .scrollable より強く（文字入力とスクロールのため .scrollable は付けたまま） */
 #pad{width:390px;height:210px;background:linear-gradient(160deg,#15151f 0%,#0a0a12 60%,#06060c 100%);
   display:flex;align-items:flex-end;
   justify-content:space-between;padding:0 16px 8px;flex-shrink:0;
@@ -846,6 +848,17 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #overlay.home #achBtn{position:absolute;left:50.8%;width:19.0%;top:calc(60% + 16.65vw);height:21.62vw;}
 #overlay.home #rankBtn{position:absolute;left:71.3%;width:19.3%;top:calc(60% + 16.65vw);height:21.62vw;}
 #overlay.home #howtoBtn{position:absolute;left:22.2%;width:55.5%;top:calc(60% + 43.67vw);height:10.59vw;}
+/* ★v370 テスト版：冒険の記録・攻略チャットの丸ボタン（ユーザー依頼「新しい2つは円形・右端か左端・既存のボタンやロゴと重ならない・押しやすい大きさ」）
+   「あそびかた」と同じ高さ（中心＝60% + 48.97vw）の左右の空き（左はし〜22.2%／77.7%〜右はし）のまん中に置く。絵の座標と同じ式なので機種でずれない。
+   実測：IG 390×674 は上のボタン4つの下から13px・画面の下まで50px／SE 375×548 は13px・8px あく。直径 14.5vw（IG 57px・SE 54px）。動きは付けない（§10） */
+#overlay.home .homeRound{position:absolute;top:calc(60% + 41.72vw);width:14.5vw;height:14.5vw;margin-left:-7.25vw;border-radius:50%;box-sizing:border-box;
+  border:3px solid #fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;
+  box-shadow:0 4px 0 rgba(10,30,80,0.55),0 6px 10px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;transition:transform .09s ease,filter .09s ease;}
+#overlay.home .homeRound span{font-size:6vw;line-height:1;}
+#overlay.home .homeRound b{font-size:2.6vw;line-height:1.2;color:#fff;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,0.7);white-space:nowrap;}
+#overlay.home .homeRound:active{transform:scale(0.92);filter:brightness(1.12);}
+#overlay.home .hrRec{left:11.1%;background:radial-gradient(circle at 35% 28%,#8fc2ff 0%,#3b72e6 55%,#2147a6 100%);}   /* 青（オレンジだと📜の色と近くて見えにくかった） */
+#overlay.home .hrChat{left:88.85%;background:radial-gradient(circle at 35% 28%,#9ff0a8 0%,#33b84f 55%,#16752c 100%);}
 </style>
 </head>
 <body>
@@ -2036,8 +2049,46 @@ var playedChars=(function(){
   try{ var c=JSON.parse(store.get('yk_played')||'[]'); return Array.isArray(c)?c:[]; }catch(e){ return []; }
 })();
 function charPlayedCount(){ return playedChars.length; }
+// ★v368 冒険の記録（テスト版のみ）。ユーザー依頼「ヒーローごとに 誕生・ステージの初回クリア・アイテムの初回獲得 を自動で保存し、時系列で振り返れるように。
+//   敗北の記録は不要。ヒーロー固有IDごとに管理。既存の保存機構を優先。過去の日時が不明なものは捏造しない。将来の拡張性」
+//   保存：store（いつもの保存。テスト版は tk_ の領域）の yk_rec ＝ {v:1, since:記録をはじめた時刻, h:{ヒーローID:{n:名前, ev:[{t:時刻, k:種類, …}]}}}
+//     k='born'（how:'make'＝マイヒーローを作った／'first'＝はじめて冒険に出た）／'clear'（s:ステージ, st:★）／'item'（id, n:名前, kind, via:'shop'）
+//     種類をふやすときは k を足して recLine に1行足すだけ（古い記録はそのまま読める）
+//   ヒーローID：8人＝キャラID（men_0 など）／マイヒーロー＝作ったときの ID（mh_…）。いまのマイヒーローは yk_custom_id（無ければ顔の絵で探す）
+//   記録をはじめる前のこと（前から持っていた物・前にクリアした面・前からいたヒーローの誕生日）は のせない。日時がわからないので
+var REC_ON=TEST_MODE, REC_MAX=400;
+var _rec=(function(){ var r=null; try{ r=JSON.parse(store.get('yk_rec')||'null'); }catch(e){} if(!r||typeof r!=='object'||!r.h||typeof r.h!=='object') r={v:1,since:Date.now(),h:{}}; return r; })();
+function recSave(){ if(!REC_ON) return; try{ store.set('yk_rec',JSON.stringify(_rec)); }catch(e){} }
+function recHeroId(){
+  if(selectedChar!=='custom') return selectedChar||null;
+  var id=store.get('yk_custom_id'); if(id) return id;
+  var f=store.get('yk_custom_face'), l=loadCustomList(); for(var i=0;i<l.length;i++) if(l[i].face===f) return l[i].id;
+  return null;
+}
+function recHeroName(id){
+  if(!id) return ''; if(CHAR_NAMES[id]) return CHAR_NAMES[id];
+  var l=loadCustomList(); for(var i=0;i<l.length;i++) if(l[i].id===id) return l[i].name||'マイヒーロー';
+  var h=_rec.h[id]; return (h&&h.n)||'マイヒーロー';
+}
+function recAdd(id,ev){
+  if(!REC_ON||!id) return;
+  try{ var h=_rec.h[id]||(_rec.h[id]={n:'',ev:[]}); h.n=recHeroName(id)||h.n; ev.t=Date.now(); h.ev.push(ev);
+    if(h.ev.length>REC_MAX) h.ev.splice(1,h.ev.length-REC_MAX);   // 多すぎたら古い順に消す（いちばん最初＝誕生は残す）
+    recSave(); }catch(e){}
+}
+function recHas(id,fn){ var h=_rec.h[id]; if(!h) return false; for(var i=0;i<h.ev.length;i++) if(fn(h.ev[i])) return true; return false; }
+function recBorn(id,how){ if(REC_ON && id && !recHas(id,function(e){ return e.k==='born'; })) recAdd(id,{k:'born',how:how}); }
+function recClear(lv,star){ var id=recHeroId(); if(REC_ON && id && !recHas(id,function(e){ return e.k==='clear' && e.s===lv; })) recAdd(id,{k:'clear',s:lv,st:star}); }   // 2回目からは何もしない＝初回の日時のまま
+function recItem(itemId,via){
+  var id=recHeroId(); if(!REC_ON || !id || recHas(id,function(e){ return e.k==='item' && e.id===itemId; })) return;
+  var nm='', kind='', L=[['sword',SWORD_SKINS],['shield',SHIELD_SKINS],['outfit',OUTFIT_SKINS],['perk',PERK_SHOP]], i, j;
+  for(i=0;i<L.length && !kind;i++) for(j=0;j<L[i][1].length;j++) if(L[i][1][j].id===itemId){ kind=L[i][0]; nm=L[i][1][j].name; break; }
+  if(!kind && /^skill\d$/.test(itemId)){ for(j=0;j<SKILL_SHOP.length;j++) if('skill'+SKILL_SHOP[j].lv===itemId){ kind='skill'; nm=SKILL_SHOP[j].name; } }
+  recAdd(id,{k:'item',id:itemId,n:nm||itemId,kind:kind||'item',via:via||'shop'});
+}
 function markCharPlayed(cid){
-  if(playedChars.indexOf(cid)<0){ playedChars.push(cid); store.set('yk_played',JSON.stringify(playedChars)); }
+  if(playedChars.indexOf(cid)<0){ playedChars.push(cid); store.set('yk_played',JSON.stringify(playedChars));
+    if(cid!=='custom') recBorn(cid,'first'); }   // ★v368 8人は「はじめて冒険に出た日」が誕生の記録（マイヒーローは作ったとき）
 }
 // 実績達成チェック（新規解除があればトースト表示＋報酬付与）
 var achToastQueue=[];
@@ -2131,6 +2182,7 @@ function buyItem(id,price){
   if(totalGold<price) return 'poor';
   totalGold-=price; store.set('yk_gold',''+totalGold);
   ownedItems.push(id); store.set('yk_owned',JSON.stringify(ownedItems));
+  recItem(id,'shop');   // ★v368
   return 'ok';
 }
 function equipItem(id,kind){
@@ -2156,6 +2208,7 @@ function buySkillLv(lv,price){
   if(totalGold<price) return 'poor';
   totalGold-=price; store.set('yk_gold',''+totalGold);
   savedSkillLv=lv; store.set('yk_skillLv',''+savedSkillLv);
+  recItem('skill'+lv,'shop');   // ★v368
   return 'ok';
 }
 // ===== 固有スキル（買い切りパッシブ・コイン進行とは別枠）=====
@@ -2178,6 +2231,7 @@ if(TEST_MODE){
   for(var _i=0;_i<SKILL_SHOP.length;_i++){ if(SKILL_SHOP[_i].lv>_tMax) _tMax=SKILL_SHOP[_i].lv; }
   if(savedSkillLv<_tMax){ savedSkillLv=_tMax; store.set('yk_skillLv',''+savedSkillLv); }
   var _tAdd=0;
+  if(store.get('yk_nogrant')!=='1')   // ★v368 冒険の記録の画面で「持ち物を空にする」を押したら、もう配らない（ショップで買って記録を確かめられるように）
   [SWORD_SKINS,OUTFIT_SKINS,SHIELD_SKINS,PERK_SHOP].forEach(function(list){
     for(var _j=0;_j<list.length;_j++){
       var _id=list[_j].id;
@@ -2191,6 +2245,7 @@ function buyPerk(id,price){
   if(totalGold<price) return 'poor';
   totalGold-=price; store.set('yk_gold',''+totalGold);
   ownedItems.push(id); store.set('yk_owned',JSON.stringify(ownedItems));
+  recItem(id,'shop');   // ★v368
   return 'ok';
 }
 // ===== スキル所持セット（累積レベル方式→所持セット方式へ統一）=====
@@ -4855,7 +4910,7 @@ function _showCustomList(){
         saveActiveColors(hero.col||null);   // ★v309 顔より先に。applyCustomHead がこれを読む
         activateCustom(hero.face,function(ok){
           if(ok){
-            try{ store.set('yk_custom_face',hero.face); }catch(err){}
+            try{ store.set('yk_custom_face',hero.face); if(REC_ON) store.set('yk_custom_id',hero.id); }catch(err){}   // ★v368 いまのマイヒーローのID（冒険の記録・テスト版だけ）
             selectedChar='custom'; saveData();
             _showCustomConfirm(false, hero);   // ★v199 ①: heroを渡し名前変更可能に
           } else {
@@ -5134,7 +5189,8 @@ function _mhFinish(st){
   if(st.isNew){
     if(_ccPendingFace){
       var list2=loadCustomList();
-      if(list2.length<CUSTOM_MAX){ list2.push({id:'mh_'+Date.now(), name:st.name, face:_ccPendingFace, col:keep}); saveCustomList(list2); }
+      if(list2.length<CUSTOM_MAX){ var _nid='mh_'+Date.now(); list2.push({id:_nid, name:st.name, face:_ccPendingFace, col:keep}); saveCustomList(list2);
+        if(REC_ON){ try{ store.set('yk_custom_id',_nid); }catch(err){} recBorn(_nid,'make'); } }   // ★v368 いまのマイヒーローのID・誕生の記録（テスト版だけ。本番のセーブは変えない）
       try{ store.set('yk_custom_face',_ccPendingFace); }catch(err){}
       _ccPendingFace=null;
     }
@@ -6216,6 +6272,7 @@ function nextLevel(){
   var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
   setStageStar(level, earnedStar);
   lastClearStar=earnedStar; lastClearScore=stageScore;
+  recClear(level, earnedStar);   // ★v368 冒険の記録（そのヒーローの初回だけ）
   lastTA=null;   // ★v366 タイムアタックの記録（自己ベストより速ければ保存）
   if(TA_ON){ var _tb=_taBest[level], _tn=!_tb || taFr<_tb; if(_tn){ _taBest[level]=taFr; store.set('yk_ta_best',JSON.stringify(_taBest)); } lastTA={f:taFr, best:_tn?taFr:_tb, isNew:_tn&&!!_tb, first:!_tb, medal:taMedal(level,taFr)}; }
   // ★クリアボーナスゴールド：基本10G + 星ごと+5G + ステージ番号×1G
@@ -10049,6 +10106,7 @@ ov.addEventListener('touchstart',function(e){
   else if(gs==='skillpick'){ /* スキル選択ボタンで管理 */ }
   else if(gs==='stageclear'){ /* クリア画面はボタンで管理＝ボタン外タップは無効（誤タップでホームに飛ばない） */ }
   else if(gs==='taready'){ /* ★v367 タイムアタックのスタート前の画面はボタンで管理（ここで doStart すると画面が作り直されてボタンが効かない） */ }
+  else if(gs==='records'||gs==='guide'){ /* ★v368・v369 冒険の記録・攻略チャットはボタンで管理（文字を入力する所もある） */ }
   else if(gs!=='play'){doStart();}
 },{passive:false});
 // ★チュートリアル：タップ＝次へ / 右スワイプ＝前へ / 左スワイプ＝次へ
@@ -10078,6 +10136,7 @@ ov.addEventListener('click',function(e){
   else if(gs==='skillpick'){ /* スキル選択ボタンで管理 */ }
   else if(gs==='stageclear'){ /* クリア画面はボタンで管理＝ボタン外タップは無効（誤タップでホームに飛ばない） */ }
   else if(gs==='taready'){ /* ★v367 タイムアタックのスタート前の画面はボタンで管理（ここで doStart すると画面が作り直されてボタンが効かない） */ }
+  else if(gs==='records'||gs==='guide'){ /* ★v368・v369 冒険の記録・攻略チャットはボタンで管理（文字を入力する所もある） */ }
   else if(gs!=='play'){doStart();}
 });
 
@@ -10489,6 +10548,13 @@ function homeGo(fn){
 // ランキング・実績ボタンのイベント設定
 function bindRankBtn(){
   setTimeout(function(){
+    if(TEST_MODE){   // ★v370 冒険の記録・攻略チャットの丸ボタン（静的HTMLのホームと showTitleScreen のホームの両方に、ここで入れる＝§2-2）
+      var hb=document.querySelector('#overlay.home .home-btns');
+      if(hb && !document.getElementById('recBtn')) hb.insertAdjacentHTML('beforeend','<div id="recBtn" class="homeRound hrRec" aria-label="冒険の記録"><span>📜</span><b>記録</b></div><div id="gdBtn" class="homeRound hrChat" aria-label="攻略チャット"><span>💬</span><b>チャット</b></div>');
+      [['recBtn',function(){ showRecords(); }],['gdBtn',function(){ showGuide(); }]].forEach(function(a){ var el=document.getElementById(a[0]); if(!el || el._b) return; el._b=1;
+        function go(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); sndInit(); homeGo(a[1]); }
+        el.addEventListener('touchstart',go,{passive:false}); el.addEventListener('click',go); });
+    }
     var stb=document.getElementById('homeStartBtn');
     if(stb){
       function goStart(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); sndInit(); titleJingle(); homeGo(startFromTitle); }
@@ -10922,6 +10988,301 @@ function showEnding(star,first){
     _csTap(document.getElementById('edTA'),function(){ TA_ON=true; showStageMap(); });
     _csTap(document.getElementById('edMap'),function(){ TA_ON=false; showStageMap(); });
     _csTap(document.getElementById('edHome'),function(){ gs='title'; showTitleScreen(); });
+  },30);
+}
+
+// ★v368 冒険の記録の画面（テスト版のみ）：ヒーローを選ぶ → 誕生・クリアの数・アイテムの数 → 時系列（古い順）の記録
+function recFmt(t){ var d=new Date(t), z=function(n){ return (n<10?'0':'')+n; }; return d.getFullYear()+'/'+z(d.getMonth()+1)+'/'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes()); }
+function recLine(e,nm){   // [アイコン, 文]。知らない種類（新しい版で足した記録）は null＝出さない
+  if(e.k==='born') return e.how==='make'?['🐣','「'+nm+'」が誕生した！']:['🎉',nm+' と はじめて冒険に出た！'];
+  if(e.k==='clear'){ var w=stageWorld(e.s); return ['🚩','ワールド'+w+'「'+(WORLD_NAMES[w-1]||'')+'」を はじめてクリア！'+(e.st?' <span style="color:#ffd24a">'+new Array(e.st+1).join('★')+'</span>':'')]; }
+  if(e.k==='item'){ var ic={sword:'⚔️',shield:'🛡️',outfit:'👕',perk:'✨',skill:'📈'}[e.kind]||'🎁'; return [ic,'<b>'+_escHtml(e.n||'')+'</b> を手に入れた'+(e.via==='shop'?'<span style="color:#9fb6c2">（ショップ）</span>':'')]; }
+  return null;
+}
+function showRecords(sel){
+  gs='records';
+  var cur=recHeroId(), ids=Object.keys(_rec.h).filter(function(k){ return _rec.h[k] && _rec.h[k].ev && _rec.h[k].ev.length; });
+  if(cur && ids.indexOf(cur)<0) ids.unshift(cur);
+  ids.sort(function(a,b){ return (b===cur)-(a===cur); });   // いまのヒーローを先頭に
+  if(!sel || ids.indexOf(sel)<0) sel=cur||ids[0]||null;
+  var h=sel?_rec.h[sel]:null, ev=(h&&h.ev)?h.ev.slice().sort(function(a,b){ return a.t-b.t; }):[], nm=sel?recHeroName(sel):'';
+  var born=null, nClr=0, nItem=0, i;
+  for(i=0;i<ev.length;i++){ if(ev[i].k==='born' && !born) born=ev[i]; if(ev[i].k==='clear') nClr++; if(ev[i].k==='item') nItem++; }
+  var s='<div style="width:100%;max-width:350px;display:flex;flex-direction:column;align-items:center;padding-bottom:18px">'
+    +'<div class="uiTitle">📜 冒険の記録</div>';
+  if(ids.length>1){   // ヒーローえらび
+    s+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:2px 0 10px">';
+    ids.forEach(function(k){ s+='<div class="recHero uiBtn '+(k===sel?'go':'info')+'" data-id="'+_escHtml(k)+'" style="font-size:12px;min-height:32px;padding:5px 11px">'+_escHtml(recHeroName(k))+'</div>'; });
+    s+='</div>';
+  }
+  if(!sel){ s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:14px;color:#dfeeff;font-size:14px;line-height:1.7">まだ記録がないよ。<br>ヒーローをえらんで 冒険に出かけよう！</div>'; }
+  else {
+    s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:10px 12px;text-align:left">'
+      +'<div style="color:#ffe44d;font-size:18px;font-weight:bold;text-align:center">'+_escHtml(nm)+'</div>'
+      +'<div style="color:#dfeeff;font-size:13px;line-height:1.8;margin-top:4px">🐣 誕生：'+(born?recFmt(born.t):'<span style="color:#9fb6c2">わからない（記録をはじめる前から）</span>')+'<br>'
+        +'🚩 はじめてクリアしたワールド：<b style="color:#ffe44d">'+nClr+'</b> / '+NUM_WORLDS+'<br>'
+        +'🎁 手に入れたアイテム：<b style="color:#ffe44d">'+nItem+'</b></div>'
+    +'</div>';
+    s+='<div style="width:320px;max-width:94%;margin-top:10px;text-align:left">';
+    var shown=0;
+    for(i=0;i<ev.length;i++){ var L=recLine(ev[i],nm); if(!L) continue; shown++;
+      s+='<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-left:2px solid rgba(140,200,255,0.35);margin-left:13px;padding-left:12px;position:relative">'
+        +'<div style="position:absolute;left:-14px;top:5px;width:26px;height:26px;border-radius:50%;background:#173a6a;border:2px solid #8cc8ff;display:flex;align-items:center;justify-content:center;font-size:14px">'+L[0]+'</div>'
+        +'<div style="padding-left:10px"><div style="color:#9fc4e6;font-size:11px">'+recFmt(ev[i].t)+'</div><div style="color:#fff;font-size:14px;line-height:1.5">'+L[1]+'</div></div></div>';
+    }
+    if(!shown) s+='<div style="color:#dfeeff;font-size:13px;text-align:center;padding:10px">まだ記録がないよ。冒険に出かけよう！</div>';
+    s+='</div>';
+  }
+  s+='<div style="color:#9fb6c2;font-size:11px;line-height:1.6;margin-top:12px;max-width:320px">記録は '+recFmt(_rec.since)+' から つけているよ。<br>それより前のことは 日時がわからないので のせていないよ。</div>';
+  if(TEST_MODE){ var ng=(store.get('yk_nogrant')==='1');   // テスト版：持ち物を全部もらった状態だと、ショップで買えない＝アイテムの記録を確かめられないので
+    s+='<div id="recTest" class="uiBtn info" style="width:290px;font-size:12px;min-height:36px;margin-top:12px;opacity:0.85">'+(ng?'🧪 テスト用：持ち物を全部もどす':'🧪 テスト用：持ち物を空にする（ショップで買い直せる）')+'</div>';
+  }
+  s+='<div id="recBack" class="uiBtn info" style="width:180px;margin-top:14px">◀ ホームに戻る</div></div>';
+  ov.className='scrollable opaque'; ov.innerHTML=s; ov.style.display='flex'; ov.scrollTop=0;
+  setTimeout(function(){
+    ov.querySelectorAll('.recHero').forEach(function(el){ _csTap(el,function(){ showRecords(el.dataset.id); }); });
+    _csTap(document.getElementById('recBack'),function(){ gs='title'; showTitleScreen(); });
+    var rt=document.getElementById('recTest');
+    if(rt){ var armed=false; _csTap(rt,function(){
+      if(!armed){ armed=true; rt.textContent='⚠ もう一度おすと 実行（テスト版のセーブだけ）'; return; }
+      if(store.get('yk_nogrant')==='1'){ store.set('yk_nogrant',''); [SWORD_SKINS,OUTFIT_SKINS,SHIELD_SKINS,PERK_SHOP].forEach(function(list){ list.forEach(function(it){ if(it.id && ownedItems.indexOf(it.id)<0) ownedItems.push(it.id); }); }); }
+      else { store.set('yk_nogrant','1'); ownedItems=['normal','silver','default']; equipItem('silver','sword'); equipItem('normal','shield'); equipItem('default','outfit'); }
+      store.set('yk_owned',JSON.stringify(ownedItems)); showRecords(sel);
+    }); }
+  },30);
+}
+
+// ★v369 攻略チャット（テスト版のみ）。ユーザー依頼「文字入力で質問・チャット形式の吹き出し・ステージ/敵/武器/盾/防具などの攻略・今のステージや装備を回答に反映
+//   ・既存コードから正確な攻略情報・子どもにも分かる文・不明は推測しない・最初は外部AIなし（登録済みの攻略データ）・将来 AI 連携や音声入力を足せる形」
+//   しくみ：GUIDE.ask(質問, done) が GUIDE.providers を順に聞き、最初に答えたものを使う。いまは guideLocal（このファイルの中のデータだけ）
+//     AI をつなぐとき：GUIDE.providers.unshift({name:'ai', ask:function(q,ctx,done){ …; done({t:'答え'}) または done(null)＝次へ }})
+//     音声入力をつなぐとき：聞きとった文字で guideSubmit(文字) を呼ぶ
+//   答えの材料はゲームの定数・関数から読む（WORLD_NAMES・lvCfg・SWORD_SKINS・SHIELD_SKINS・OUTFIT_SKINS・PERK_SHOP・SKILL_SHOP・CHARS・STAR_*・TA_*）。
+//   まものが出てくるワールドだけは buildWorld の決まり（groundPool・flyPool）を ENEMY_KB に書き写した（buildWorld を変えたらここも）
+var ENEMY_KB={
+  normal:{n:'ふつうのまもの', w:1, kw:['ふつうのまもの','ざこ'], a:'歩いてくるだけ。ふみつけ か 剣で たおせるよ。'},
+  giant:{n:'おおきいまもの', w:2, kw:['おおき','でか','巨体','きょたい'], a:'からだが大きくて、ぶつかると いたいよ。はなれた所から 剣か、上から ふみつけよう。'},
+  fast:{n:'はやいまもの', w:3, kw:['はやいまもの','速いまもの','はやいてき','速い敵'], a:'足がはやい。あわてず ジャンプで よけて、ふみつけ か 剣で。'},
+  spiky:{n:'トゲトゲ', w:3, kw:['とげ'], a:'トゲがあるから ふめないよ（ふむと ダメージ）。剣で たおそう。'},
+  shooter:{n:'ビームをうつまもの', w:4, kw:['びーむ','うってく','うつまもの','しゅーたー'], a:'ビームを うってくるよ。盾のスキルが あれば、緑ボタンで ガードできる。'},
+  fire:{n:'火のまもの', w:4, kw:['火のまもの','ひのまもの','かぼちゃ','火の玉','ひのたま'], a:'火の玉を なげてくるよ。盾で ガードできる。近づいて 剣か ふみつけ。'},
+  fly:{n:'空をとぶまもの', w:5, kw:['とぶまもの','空のまもの','そらのまもの','こうもり','飛ぶ敵','とぶてき'], a:'空を とんでくるよ。ジャンプして 剣か ふみつけ。'},
+  diver:{n:'急降下するまもの', w:5, kw:['きゅうこうか','急降下','おりてく'], a:'上から いきなり 下りてくるよ。止まらずに 動いて よけよう。'},
+  ghost:{n:'おばけ', w:6, kw:['おばけ','ごーすと','ゆうれい','幽霊'], a:'ふみつけは きかないよ。剣は スキル「無敵」を 持っていると きく。レーザーでも たおせる。むりせず よけてもOK。'},
+  bomber:{n:'ばくだんを落とすまもの', w:6, kw:['ばくだん','爆弾','ぼむ'], a:'ばくだんは 盾で ふせげないよ。真下に いないように しよう。'}
+};
+function gNorm(s){
+  s=String(s||'').replace(/[Ａ-Ｚａ-ｚ０-９]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); }).toLowerCase();
+  s=s.replace(/[ァ-ヶ]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0x60); });   // カタカナ→ひらがな
+  return s.replace(/[\s　、。!！?？]/g,'');
+}
+function gHas(q,kw){ for(var i=0;i<kw.length;i++) if(q.indexOf(kw[i])>=0) return true; return false; }
+function gWorldOf(q){   // 質問の中のワールド番号（なければ 0）
+  var m=q.match(/(?:わーるど|すてーじ|w)(\d{1,2})/) || q.match(/(\d{1,2})(?:めん|面|すてーじ|わーるど|ばんめ)/);
+  if(m){ var n=+m[1]; if(n>=1 && n<=NUM_WORLDS) return n; }
+  for(var i=0;i<WORLD_NAMES.length;i++) if(q.indexOf(gNorm(WORLD_NAMES[i]))>=0) return i+1;
+  return 0;
+}
+function gCtx(){
+  var lv=(level>=1 && level<=MAX_STAGE)?level:(selectedStage||1);
+  var hid=recHeroId(), c=CHARS[selectedChar]||{};
+  return {w:stageWorld(lv), lv:lv, name:recHeroName(hid)||'', cid:selectedChar, trait:c.traitName||'', traitDesc:c.traitDesc||'',
+    sword:eqSword(), shield:eqShield(), outfit:eqOutfit(), skLv:savedSkillLv, gold:totalGold};
+}
+function gEqLine(x){ return 'いまの そうび：'+x.sword.name+'・'+x.shield.name+'・'+x.outfit.name; }
+function gUsable(it){ return !it.hero || selectedChar==='custom'; }
+function gPick(list,x,cur){   // 持っていない・使える物の中で、いちばん安い次の1つ（買えるかどうかも）
+  var best=null; for(var i=0;i<list.length;i++){ var it=list[i]; if(ownedItems.indexOf(it.id)>=0 || !gUsable(it) || !it.price) continue; if(!best || it.price<best.price) best=it; }
+  return best;
+}
+function gItemLine(it){ return (it.icon||'')+' '+it.name+'：'+(it.desc||'')+(it.price?'（'+it.price+'G）':'（さいしょから）')+(it.hero?' ⭐マイヒーロー専用':'')+(ownedItems.indexOf(it.id)>=0?' ✓持ってる':''); }
+function gShop(kind,list,x,curIt){
+  var lines=[], i, named=null;
+  for(i=0;i<list.length;i++) if(x.q.indexOf(gNorm(list[i].name))>=0) named=list[i];
+  if(named){
+    lines.push(gItemLine(named));
+    if(named.hero && selectedChar!=='custom') lines.push('⭐ マイヒーローだけが 使えるよ。');
+    else if(ownedItems.indexOf(named.id)<0) lines.push(x.gold>=named.price?'いま '+x.gold+'G 持ってるから 買えるよ！（ショップ）':'あと '+(named.price-x.gold)+'G で 買えるよ。');
+    else if(curIt.id!==named.id) lines.push('持ってるよ。そうび画面で 付けかえられる。');
+    else lines.push('いま そうびしてるよ！');
+    return lines.join('\n');
+  }
+  lines.push('いまの'+kind+'は '+curIt.name+'（'+(curIt.desc||'')+'）。');
+  var nx=gPick(list,x);
+  if(nx) lines.push('つぎの おすすめは '+nx.icon+' '+nx.name+'：'+nx.desc+'（'+nx.price+'G）。'+(x.gold>=nx.price?'いまの お金で 買えるよ！':'あと '+(nx.price-x.gold)+'G'));
+  else lines.push('使える'+kind+'は ぜんぶ 持ってるよ。そうび画面で 付けかえてね。');
+  lines.push('');
+  for(i=0;i<list.length;i++) lines.push(gItemLine(list[i]));
+  return lines.join('\n');
+}
+function gEnemiesOf(w){ var a=[]; for(var k in ENEMY_KB) if(ENEMY_KB[k].w<=w) a.push(ENEMY_KB[k].n); return a; }
+function gStage(w,x){
+  var s=(w-1)*STAGES_PER_WORLD+1, c=lvCfg(s), L=WORLD_LEN[w-1], st=getStageStar(s), t=[];
+  t.push((WORLD_ICONS[w-1]||'')+' ワールド'+w+'「'+WORLD_NAMES[w-1]+'」'+(w===x.w?'（いまのステージ）':'')+(st?'　'+new Array(st+1).join('★'):''));
+  t.push('・まもの：だいたい '+Math.round(c.enemyN*L)+'体（1体の体力 '+c.enemyHp+'）');
+  t.push('　出てくるのは '+gEnemiesOf(w).join('・'));
+  t.push('・あな：だいたい '+Math.round(c.holes*L)+'こ');
+  t.push('・ボス：体力 '+c.bossHp);
+  t.push('');
+  var tip=[];
+  if(w<=2) tip.push('まものは 上から ふみつけると たおせるよ。コインを10枚とると スキルが ふえる！');
+  if(w>=3) tip.push('トゲトゲは ふめないので 剣で。');
+  if(w>=4) tip.push('ビームや 火の玉は 盾（緑ボタン）で ガード。');
+  if(w>=5) tip.push('空のまものは ジャンプして 剣で。');
+  if(w>=6) tip.push('おばけは 剣が きかないことがある（スキル「無敵」が いる）。ばくだんは 盾で ふせげないよ。');
+  if(c.late) tip.push('浮き台の上や 高い所にも まものが いるよ。地面と 台を 使い分けよう。');
+  if(w>=6){ var pk=0; for(var i=0;i<PERK_SHOP.length;i++) if(hasPerk(PERK_SHOP[i].id)) pk++; if(!pk) tip.push('固有スキル（ショップ）が あると ぐっと楽になるよ。'); }
+  if(w>=9 && x.skLv<2) tip.push('スキル「ソード」を ショップで 先に 買っておこう。');
+  if(w>=7 && !(x.outfit.dmgCut||x.outfit.hpBonus)) tip.push('鎧を 着ると ダメージが へるよ（いまは '+x.outfit.name+'）。');
+  t.push('💡 コツ'); tip.forEach(function(v){ t.push('・'+v); });
+  return t.join('\n');
+}
+function gBoss(w,x){
+  var c=lvCfg((w-1)*STAGES_PER_WORLD+1), t=['🐉 ワールド'+w+' のボス：体力 '+c.bossHp];
+  if(TEST_MODE){
+    t.push('ボスは じゅんばんに 動くよ：');
+    t.push('① 口が 光ったら → 火の玉');
+    t.push('② 頭に「！」が 出たら → 火炎放射');
+    t.push('③ そのあと 地面に下りて 目を回す ＝ チャンス！');
+    t.push('チャンスの間は さわっても いたくないよ。近づいて 剣で きりまくろう！');
+    t.push('');
+    t.push('・火の玉と 火炎放射は 盾（緑ボタン）で ガードできる');
+    t.push('・レーザーは 長くおすほど 太く強い（3秒で3倍）');
+    t.push('・体力が 3わりくらいに へると 覚醒！ 速くなって、ふみつけが きかなくなるよ');
+  } else {
+    t.push('近づくと 火の玉を うってくるよ。盾で ガード、レーザーが よく きく。体力が へると 覚醒して ふみつけが きかなくなる。');
+  }
+  return t.join('\n');
+}
+function gEnemy(k,x){
+  var e=ENEMY_KB[k]; return '👾 '+e.n+'（ワールド'+e.w+'から）\n'+e.a;
+}
+function gChara(x){
+  var t=[], q=x.q;
+  for(var k in CHAR_NAMES){ if(q.indexOf(gNorm(CHAR_NAMES[k]))>=0){ var c=CHARS[k]; return (c.traitIcon||'')+' '+CHAR_NAMES[k]+' の特技：'+c.traitName+'\n'+c.traitDesc; } }
+  if(x.trait) t.push('いまの ヒーロー '+x.name+' の特技は「'+x.trait+'」：'+x.traitDesc);
+  t.push('');
+  for(var k2 in CHAR_NAMES){ var c2=CHARS[k2]; if(c2) t.push((c2.traitIcon||'')+' '+CHAR_NAMES[k2]+'：'+c2.traitDesc); }
+  t.push('⭐ マイヒーロー：そうびで そだてる、じぶんだけの ヒーロー');
+  return t.join('\n');
+}
+function gSkill(x){
+  var t=['📈 コインを 10枚とるごとに スキルが ふえるよ：'];
+  t.push('① 2段ジャンプ → ② ソード → ③ 盾ガード → ④ 巨大レーザー → ⑤ 無敵');
+  t.push('ショップで スキルを 買うと、さいしょから 持って スタートできる（いま：'+(x.skLv?'「'+SKILL_SHOP[x.skLv-1].name+'」まで':'なし')+'）');
+  t.push('');
+  t.push('⚡ レーザー：黄ボタン。1ステージ 2回（ユリアンは スキルを とると 4回）'+(TEST_MODE?'。長くおすほど 太く強い（3秒で3倍）':''));
+  t.push('🔥 コンボ：まものを つづけて 5体 たおすと、ごほうびの 強化（ロングソード・巨大化・3段ジャンプ など）が もらえるよ');
+  return t.join('\n');
+}
+function gPerk(x){
+  var t=['✨ 固有スキル（ショップで 買うと ずっと 使える）'];
+  for(var i=0;i<PERK_SHOP.length;i++){ var p2=PERK_SHOP[i]; t.push(p2.icon+' '+p2.name+'：'+p2.desc+'（'+p2.price+'G）'+(hasPerk(p2.id)?' ✓持ってる':'')); }
+  return t.join('\n');
+}
+var GUIDE_T=[   // 上から順に しらべる。kw がたくさん当たった話題を答える（同じ数なら上の方）
+  {id:'hello', kw:['こんにち','はじめまして','やあ','おはよ','こんばん','はろー']},
+  {id:'thanks', kw:['ありがと','さんきゅ']},
+  {id:'help', kw:['なにができ','なにをきけ','なにがきけ','なにきけ','きけること','なにを聞け','なにが聞け','聞けること','なにをしつもん','つかいかた','へるぷ']},
+  {id:'boss', kw:['ぼす','どらごん','魔王','まおう','かくせい','覚醒','火炎','かえん','ぶれす']},
+  {id:'sword', kw:['剣','けん','そーど','ぶき','武器','攻撃力','こうげきりょく']},
+  {id:'shield', kw:['盾','たて','しーるど','がーど','ぼうぎょ','防御','まもる']},
+  {id:'armor', kw:['鎧','よろい','服','ふく','防具','ぼうぐ','すーつ','ろーぶ']},
+  {id:'perk', kw:['固有','こゆう','まぐねっと','ごーるどぶーすと','あいあんぼでぃ','りじぇね','ふらいと']},
+  {id:'skill', kw:['すきる','2段','にだん','れーざー','無敵','むてき','こんぼ','ろんぐそーど','巨大化','きょだいか','3段']},
+  {id:'chara', kw:['きゃら','とくぎ','特技','とくせい','特性','だれがつよ','だれをえら']},
+  {id:'control', kw:['じゃんぷ','ふみつけ','そうさ','操作','ぼたん','うごかし','とびかた','飛び方','飛行','ひこう','そらをと']},
+  {id:'star', kw:['★','☆','星','ほし','すたー']},
+  {id:'ta', kw:['たいむあたっく','めだる','2周目','にしゅうめ']},
+  {id:'gold', kw:['お金','おかね','ごーるど','かせ','稼']},
+  {id:'stage', kw:['すてーじ','わーるど','面','くりあ','むずかし','かてない','勝てない','すすめない','進めない','あな','穴','いまの','このすてーじ']}   // 「攻略」「こつ」だけでは答えない（ほかのゲームの質問に このゲームの答えをしないため）
+];
+function guideLocal(raw,x){
+  var q=gNorm(raw); x.q=q;
+  if(!q) return null;
+  var w=gWorldOf(q)||0, en=null, k, i, best=null, bs=0;
+  for(k in ENEMY_KB) if(gHas(q,ENEMY_KB[k].kw)) en=en||k;
+  for(k in CHAR_NAMES) if(q.indexOf(gNorm(CHAR_NAMES[k]))>=0) best={id:'chara'};
+  var stN=0;   // ステージの話は いちばん最後の受け皿（「このステージのボス」はボスの答え）
+  if(!best) for(i=0;i<GUIDE_T.length;i++){ var n=0; GUIDE_T[i].kw.forEach(function(v){ if(q.indexOf(v)>=0) n++; }); if(GUIDE_T[i].id==='stage'){ stN=n; continue; } if(n>bs){ bs=n; best=GUIDE_T[i]; } }
+  if(!best && stN) best={id:'stage'};
+  var id=best?best.id:null;
+  if(en && id!=='boss') id='enemy';   // まものの名前が入っていたら まものの答え（「おばけに剣がきかない」など。ボスの話は ボス）
+  if(!id && w) id='stage';
+  var ww=w||x.w, ch=['いまのステージのコツ','ボスのたおし方','おすすめの剣'];
+  switch(id){
+    case 'hello': return {t:'こんにちは、'+(x.name||'ゆうしゃ')+'！ ぼくは 攻略ガイドの フクロウだよ。ステージ・まもの・ボス・剣・盾・よろい・スキルのことを 聞いてね。', c:ch};
+    case 'thanks': return {t:'どういたしまして！ がんばってね！', c:ch};
+    case 'help': return {t:'こんなことに こたえられるよ：\n・ステージのコツ（例：ワールド5のコツ）\n・まもの（例：トゲトゲのたおし方）\n・ボスのたおし方\n・剣・盾・よろいの おすすめ\n・スキル・固有スキル・キャラの特技\n・★のとり方・タイムアタック・お金のかせぎ方', c:ch};
+    case 'boss': return {t:gBoss(ww,x), c:['ワールド'+ww+'のコツ','おすすめの盾','レーザーのつかい方']};
+    case 'enemy': return {t:gEnemy(en,x), c:['ワールド'+ENEMY_KB[en].w+'のコツ','おすすめの剣','ボスのたおし方']};
+    case 'sword': return {t:gShop('剣',SWORD_SKINS,x,x.sword), c:['おすすめの盾','おすすめのよろい','スキルのこと']};
+    case 'shield': return {t:gShop('盾',SHIELD_SKINS,x,x.shield), c:['おすすめの剣','おすすめのよろい','ボスのたおし方']};
+    case 'armor': return {t:gShop('よろい',OUTFIT_SKINS,x,x.outfit), c:['おすすめの剣','おすすめの盾','固有スキル']};
+    case 'perk': return {t:gPerk(x), c:['スキルのこと','お金のかせぎ方']};
+    case 'skill': return {t:gSkill(x), c:['固有スキル','ボスのたおし方']};
+    case 'chara': return {t:gChara(x), c:['スキルのこと','いまのステージのコツ']};
+    case 'control': return {t:'🎮 そうさ\n・十字キー：左右に 歩く'+(TEST_MODE?'（上ボタンで 飛ぶ・飛べるキャラやスキルのとき）':'')+'\n・青ボタン：ジャンプ（スキルで 2段ジャンプ）\n・赤ボタン：剣\n・緑ボタン：ガード（盾スキル）\n・黄ボタン：レーザー'+(TEST_MODE?'（長くおすほど 強い）':'')+'\n・まものの 上に 落ちると ふみつけ！（トゲトゲと おばけは ダメ）', c:ch};
+    case 'star': { var sNow=getStageStar((ww-1)*STAGES_PER_WORLD+1);
+      return {t:'⭐ ★のとり方\n★1：クリア\n★2：まものを '+Math.round(STAR_KILL2*100)+'%以上 たおす か、コインを '+Math.round(STAR_COIN*100)+'%以上 とる\n★3：まものを '+Math.round(STAR_KILL3*100)+'%以上 たおして、コイン '+Math.round(STAR_COIN*100)+'%以上 か ノーダメージ\n（ワールド'+ww+'は いま '+(sNow?new Array(sNow+1).join('★'):'まだ なし')+'）', c:ch}; }
+    case 'ta': { var P=taPar((ww-1)*STAGES_PER_WORLD+1);
+      return {t:'⏱ タイムアタック（ワールド10を クリアすると 遊べる）'+(taUnlocked()?'':'… まだ ひらいてないよ')+'\n・まものを '+TA_NEED_K+'体、コインを '+TA_NEED_C+'枚 とってから ゴール\n・ワールド'+ww+'のメダル：🥇'+taFmt(P[0]*60)+' 🥈'+taFmt(P[1]*60)+' 🥉'+taFmt(P[2]*60)+(_taBest[(ww-1)*STAGES_PER_WORLD+1]?'\n・自己ベスト '+taFmt(_taBest[(ww-1)*STAGES_PER_WORLD+1]):''), c:ch}; }
+    case 'gold': return {t:'💰 お金（G）の ふやし方\n・コイン1枚で 2G'+(hasPerk('goldboost')?'（ゴールドブーストで +50%）':'（固有スキル「ゴールドブースト」で +50%）')+'\n・クリアで 10G＋★1つごとに5G＋ステージの番号ぶん\n・ボスを たおすと +20G\n・じっせきの ごほうび\nいま '+x.gold+'G 持ってるよ。', c:['おすすめの剣','固有スキル']};
+    case 'stage': return {t:gStage(ww,x)+'\n\n'+gEqLine(x), c:['ワールド'+ww+'のボス','おすすめの盾','おすすめのよろい']};
+  }
+  return null;   // わからない → GUIDE が「わからない」と答える（推測しない）
+}
+var GUIDE={
+  providers:[{name:'local', ask:function(q,ctx,done){ done(guideLocal(q,ctx)); }}],
+  ask:function(q,done){ var ctx=gCtx(), ps=GUIDE.providers, i=0;
+    (function next(){ if(i>=ps.length){ done({t:'ごめんね、それは まだ わからないよ。\nステージ・まもの・ボス・剣・盾・よろい・スキル・キャラ のことなら こたえられるよ！', c:['いまのステージのコツ','ボスのたおし方','なにが聞ける？']}); return; }
+      var pv=ps[i++]; try{ pv.ask(q,ctx,function(r){ if(r && r.t) done(r); else next(); }); }catch(e){ next(); } })(); }
+};
+var _gdLog=[];   // この画面を開いている間の会話（保存はしない）
+function gdBubble(who,text){
+  var h=_escHtml(text).replace(/\n/g,'<br>');
+  return who==='me'
+    ? '<div style="display:flex;justify-content:flex-end;margin:6px 0"><div style="max-width:78%;background:#2f7de1;color:#fff;border-radius:16px 16px 4px 16px;padding:8px 11px;font-size:14px;line-height:1.5;text-align:left;box-shadow:0 2px 0 rgba(0,0,0,0.25)">'+h+'</div></div>'
+    : '<div style="display:flex;gap:6px;align-items:flex-start;margin:6px 0"><div style="flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#ffe9a8;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px">🦉</div>'
+      +'<div style="max-width:80%;background:#fffdf4;color:#2a2a3a;border-radius:16px 16px 16px 4px;padding:8px 11px;font-size:14px;line-height:1.55;text-align:left;box-shadow:0 2px 0 rgba(0,0,0,0.25)">'+h+'</div></div>';
+}
+function gdRender(chips){
+  var lg=document.getElementById('gdLog'); if(!lg) return;
+  lg.innerHTML=_gdLog.map(function(m){ return gdBubble(m[0],m[1]); }).join('');
+  lg.scrollTop=lg.scrollHeight;
+  var cp=document.getElementById('gdChips');
+  if(cp && chips){ cp.innerHTML=chips.map(function(c){ return '<div class="gdChip" style="flex:0 0 auto;background:#ffe44d;color:#3a2a00;font-weight:bold;font-size:12px;border-radius:14px;padding:6px 10px;box-shadow:0 2px 0 #b8860b;white-space:nowrap">'+_escHtml(c)+'</div>'; }).join('');
+    cp.querySelectorAll('.gdChip').forEach(function(el){ _csTap(el,function(){ guideSubmit(el.textContent); }); }); }
+}
+function guideSubmit(text){   // 文字入力・ボタン・（将来）音声入力の入口
+  text=String(text||'').trim().slice(0,80); if(!text) return;
+  _gdLog.push(['me',text]); if(_gdLog.length>60) _gdLog.splice(0,_gdLog.length-60);
+  GUIDE.ask(text,function(r){ _gdLog.push(['bot',r.t]); gdRender(r.c||null); });
+}
+function showGuide(){
+  gs='guide';
+  var x=gCtx();
+  if(!_gdLog.length) _gdLog.push(['bot','こんにちは、'+(x.name||'ゆうしゃ')+'！ ぼくは 攻略ガイドの フクロウだよ。\nステージ・まもの・ボス・剣・盾・よろいのことを 聞いてね。下のボタンを おしてもいいよ！']);
+  ov.className='scrollable opaque guideOv';
+  ov.innerHTML='<div id="gdWrap" style="flex:1 1 auto;min-height:0;width:100%;max-width:380px;display:flex;flex-direction:column;gap:6px">'
+    +'<div class="uiTitle" style="flex:0 0 auto;margin:0;font-size:19px">💬 攻略チャット</div>'
+    +'<div style="color:#9fc4e6;font-size:11px;line-height:1.4">'+_escHtml((x.name?x.name+'／':'')+'ワールド'+x.w+'／'+x.sword.name+'・'+x.shield.name+'・'+x.outfit.name)+'</div>'
+    +'<div id="gdLog" style="flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:rgba(0,0,0,0.22);border-radius:14px;padding:4px 8px"></div>'
+    +'<div id="gdChips" style="flex:0 0 auto;display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 2px 5px"></div>'   // 縮まない（縮むとボタンが半分切れた）
+    +'<div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'
+      +'<input id="gdQ" type="text" maxlength="80" enterkeyhint="send" autocomplete="off" placeholder="しつもんを 書いてね（例：ボスのたおし方）" style="flex:1 1 auto;min-width:0;font-size:16px;padding:10px 12px;border-radius:20px;border:2px solid #8cc8ff;background:#fff;color:#222;outline:none">'
+      +'<div id="gdSend" class="uiBtn go" style="flex:0 0 auto;min-height:42px;padding:0 14px;font-size:15px;display:flex;align-items:center">送る</div>'
+    +'</div>'
+    +'<div id="gdBack" class="uiBtn info" style="flex:0 0 auto;align-self:center;width:170px;min-height:38px;font-size:14px">◀ ホームに戻る</div>'
+  +'</div>';
+  ov.style.display='flex'; ov.scrollTop=0;
+  setTimeout(function(){
+    gdRender(['いまのステージのコツ','ボスのたおし方','おすすめの剣','おすすめの盾','トゲトゲのたおし方','★のとり方','なにが聞ける？']);
+    var inp=document.getElementById('gdQ');
+    function send(){ if(!inp) return; var v=inp.value; inp.value=''; guideSubmit(v); }
+    _csTap(document.getElementById('gdSend'),send);
+    if(inp) inp.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); send(); } });
+    _csTap(document.getElementById('gdBack'),function(){ if(inp) inp.blur(); gs='title'; showTitleScreen(); });
   },30);
 }
 
