@@ -4899,7 +4899,7 @@ function _showCustomList(){
         saveActiveColors(hero.col||null);   // ★v309 顔より先に。applyCustomHead がこれを読む
         activateCustom(hero.face,function(ok){
           if(ok){
-            try{ store.set('yk_custom_face',hero.face); store.set('yk_custom_id',hero.id); }catch(err){}   // ★v368 いまのマイヒーローのID（冒険の記録）
+            try{ store.set('yk_custom_face',hero.face); if(REC_ON) store.set('yk_custom_id',hero.id); }catch(err){}   // ★v368 いまのマイヒーローのID（冒険の記録・テスト版だけ）
             selectedChar='custom'; saveData();
             _showCustomConfirm(false, hero);   // ★v199 ①: heroを渡し名前変更可能に
           } else {
@@ -5179,7 +5179,7 @@ function _mhFinish(st){
     if(_ccPendingFace){
       var list2=loadCustomList();
       if(list2.length<CUSTOM_MAX){ var _nid='mh_'+Date.now(); list2.push({id:_nid, name:st.name, face:_ccPendingFace, col:keep}); saveCustomList(list2);
-        try{ store.set('yk_custom_id',_nid); }catch(err){} recBorn(_nid,'make'); }   // ★v368 いまのマイヒーローのID・誕生の記録
+        if(REC_ON){ try{ store.set('yk_custom_id',_nid); }catch(err){} recBorn(_nid,'make'); } }   // ★v368 いまのマイヒーローのID・誕生の記録（テスト版だけ。本番のセーブは変えない）
       try{ store.set('yk_custom_face',_ccPendingFace); }catch(err){}
       _ccPendingFace=null;
     }
