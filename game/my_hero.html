@@ -3220,7 +3220,8 @@ function burst(x,y,col,n){
 function updHUD(){
   var _w=stageWorld(level);   // ★v233 10ワールド=10ステージなので -1 表記は廃止
   document.getElementById('hLv').textContent=_w;
-  document.getElementById('hSc').textContent=('000000'+Math.floor(score)).slice(-6);
+  var _hS=document.getElementById('hSc'); _hS.textContent=TA_ON?taFmt(taFr):('000000'+Math.floor(score)).slice(-6);   // ★v366 タイムアタック中は SCORE の所がタイム
+  if(_hS.previousElementSibling) _hS.previousElementSibling.textContent=TA_ON?'TIME':'SCORE';
   var coinDisp=hasSk(5)
     ? String(p.totalCoins)                      // 全スキル取得後：コイン数のみ（無敵スタンバイの案内は防御ボタンの「むてき」ラベルに集約）
     : p.totalCoins+'/'+((p.skillMilestones||0)+1)*10;  // ★④: 次スキルまで＝コインのマイルストーン基準（購入分と無関係に常に10刻み）
@@ -6084,6 +6085,16 @@ function _drawPreviewFace(ctx2,cid,c,HR,headCY){
 //     ・stageEnemyTotal は1面目の値のまま
 //   → クリア画面に「たおした 442%」のような値が出て、さらに killRate が1を
 //     超えるため★3の条件が常に成立していた（星評価そのものが壊れていた）。
+// ★v366 テスト版：全クリアのあと（ユーザー「ステージ10のクリア後の演出が特別感がない。まだ続くのかなって思ってしまう。
+//   前言ってた裏ステージなのか、コイン無限プレゼントなのか、2周目はタイムトライアルでチャレンジみたいな感じにするとか、続きがほしい」）
+//   ステージ10をクリア → 全クリアの画面（王冠のヒーロー・合計の★・はじめての全クリアは +3000G）→ 2周目「タイムアタック」が遊べる
+//   タイムアタック：ステージ選択で切りかえ。プレイ中は SCORE の所がタイマー。クリアでタイムとメダル（金・銀・銅）と自己ベスト
+var TA_ON=false, taFr=0, lastTA=null, ENDING_GOLD=3000, TA_MEDAL=['','🥉','🥈','🥇'];   // taFr＝経過フレーム（60＝1秒。ポーズ中・クリア画面は数えない）
+var _taBest=(function(){ try{ var o=JSON.parse(store.get('yk_ta_best')||'{}'); return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } })();
+function taUnlocked(){ return TEST_MODE && store.get('yk_ta')==='1'; }
+function taPar(lv){ var w=stageWorld(lv), s=4200*WORLD_LEN[w-1]/264*1.35+10+2*w; return [s,s*1.35,s*1.8]; }   // 金・銀・銅のタイム（秒）。走る速さ 264px/秒 で端まで行く時間×1.35＋ボス（仮。遊んで直す）
+function taMedal(lv,f){ var s=f/60, P=taPar(lv); return s<=P[0]?3:(s<=P[1]?2:(s<=P[2]?1:0)); }
+function taFmt(f){ var s=f/60, m=Math.floor(s/60), r=(s-m*60).toFixed(1); return m+':'+(r.length<4?'0':'')+r; }
 function resetStageStats(){
   stageCoinTotal=cins.length;
   stageEnemyTotal=enms.filter(function(e){return !e.isBoss;}).length + (lvCfg(level).boss?1:0);
@@ -6098,7 +6109,7 @@ function doStart(keepSkill){
   var keep=(keepSkill && !isWorldStart);
   resetP(keep);
   buildWorld(level);
-  cam=0; fr=0;
+  cam=0; fr=0; taFr=0;   // ★v366 タイムアタックは ここから（穴に落ちてやり直しても止めない）
   _btnState={bg:null,binv:null,blas:null,bj:null,ba:null,bu:null,bd:null}; // ボタン状態をリセット
   runNoDamage=true;          // ノーダメ判定開始
   statSet('runGold',0);      // 今回稼いだコインをリセット
@@ -6164,12 +6175,23 @@ function nextLevel(){
   var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
   setStageStar(level, earnedStar);
   lastClearStar=earnedStar; lastClearScore=stageScore;
+  lastTA=null;   // ★v366 タイムアタックの記録（自己ベストより速ければ保存）
+  if(TA_ON){ var _tb=_taBest[level], _tn=!_tb || taFr<_tb; if(_tn){ _taBest[level]=taFr; store.set('yk_ta_best',JSON.stringify(_taBest)); } lastTA={f:taFr, best:_tn?taFr:_tb, isNew:_tn&&!!_tb, first:!_tb, medal:taMedal(level,taFr)}; }
   // ★クリアボーナスゴールド：基本10G + 星ごと+5G + ステージ番号×1G
   statAdd('runGold', 10 + earnedStar*5 + Math.floor(level));
   // 次ステージを解放
   unlockStage(level+1);
   saveData();
   runNoDamage=true;  // 次ステージ用にノーダメ判定リセット
+  // ★v366 テスト版：ステージ10（最後）をクリアしたら全クリアの画面（タイムアタック中はふつうのクリア画面）
+  if(TEST_MODE && level===MAX_STAGE && !TA_ON){
+    var _first=(store.get('yk_ta')!=='1');
+    lastEarnedGold=statGet('runGold'); totalGold+=lastEarnedGold+(_first?ENDING_GOLD:0); store.set('yk_gold',''+totalGold); statSet('runGold',0);
+    store.set('yk_ta','1'); statAdd('allClears',1);
+    if(Math.floor(score)>bestScore) bestScore=Math.floor(score);
+    addRanking(Math.floor(score), selectedChar, level); checkAchievements(); saveData(); _contAdvancePending=false;
+    showEnding(earnedStar,_first); return;
+  }
   // マップ選択プレイ：1ステージクリアで完了（マップに戻る導線のクリア画面）
   if(fromStageMap){
     selectedStage=level+1;  // ★次ステージに確実に設定（クリア画面で「次へ」を押した時のため）
@@ -6495,6 +6517,7 @@ function bossTell(e,bob,flip){   // ★v365 予告とチャンスの印（ctx �
 }
 function update(){
   if(gs!=='play') return;
+  if(TA_ON){ taFr++; if(taFr%6===0){ var _tH=document.getElementById('hSc'); if(_tH) _tH.textContent=taFmt(taFr); } }   // ★v366 タイムアタックのタイマー（0.1秒ごとに表示）
   if(hitStop>0){ hitStop--; return; } // 時を止めて打撃感を出す
   // ★穴落ちフリーズ：手前地面に戻った直後、その場で点滅して操作不可。
   //   前半1秒＝速い点滅（落ちた！）／後半1秒＝ゆっくり点滅（もうすぐ動ける予告）→0で操作復帰。
@@ -10293,6 +10316,7 @@ function showRanking(){
 // タイトル画面を再表示
 function showTitleScreen(){
   gs='title';
+  TA_ON=false;   // ★v366 タイムアタックはステージ選択から
   musScene('J');   // ★v346
   ov.className='home';
   ov.innerHTML=''
@@ -10574,7 +10598,9 @@ function showStageMap(){
   ov.classList.remove('home');
   var h='<div style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;padding-bottom:20px">'
     +'<div class="uiTitle">🗺️ ステージ選択</div>'
-    +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:16px">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
+    +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:'+(taUnlocked()?8:16)+'px">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
+    +(taUnlocked()?'<div style="display:flex;gap:6px;margin-bottom:12px"><div id="mapModeN" class="uiBtn '+(TA_ON?'info':'go')+'" style="width:128px;font-size:13px;min-height:36px">⭐ ふつう</div>'   // ★v366 全クリアのあと
+      +'<div id="mapModeT" class="uiBtn '+(TA_ON?'go':'info')+'" style="width:150px;font-size:13px;min-height:36px">⏱ タイムアタック</div></div>':'')
     // ★v243 ワールドを 2列に。1ワールド=1ステージなので縦1列だと全長1711px（2.5画面分）あった。
     +'<div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">';
   // ★v281 もらったデザインに合わせてカードを作り直し。
@@ -10608,7 +10634,9 @@ function showStageMap(){
         +'<div class="wThumb" style="flex:1 1 auto;min-width:0;aspect-ratio:256/133;border-radius:8px;'
           +'background-position:0 '+((w-1)*100/9).toFixed(3)+'%;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>'
         +'<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;width:52px">'
-          +(unlocked
+          +(unlocked && TA_ON   // ★v366 タイムアタック中は メダルと自己ベスト
+            ? '<div style="font-size:20px;line-height:1">'+(_taBest[s2]?(TA_MEDAL[taMedal(s2,_taBest[s2])]||'⏱'):'⏱')+'</div><div style="font-size:10px;color:#dfeeff;font-weight:bold">'+(_taBest[s2]?taFmt(_taBest[s2]):'--:--')+'</div>'
+            : unlocked
             ? '<div style="font-size:20px;line-height:1">👑</div><div style="letter-spacing:-1px">'+starStr+'</div>'
             : '<div style="font-size:20px;line-height:1;opacity:0.5">🔒</div>')
         +'</div>'
@@ -10628,6 +10656,7 @@ function showStageMap(){
   ov.style.display='flex';
   ov.scrollTop=0;
   setTimeout(function(){
+    ['mapModeN','mapModeT'].forEach(function(id){ var b=document.getElementById(id); if(b) _csTap(b,function(){ var on=(id==='mapModeT'); if(on===TA_ON) return; TA_ON=on; var sc=ov.scrollTop; showStageMap(); ov.scrollTop=sc; }); });   // ★v366
     var cells=ov.querySelectorAll('.stageCell');
     // ★v271 開始ボタンを廃止したので、セルのタップでそのまま開始する。
     //   誤タップ対策は「指が8px以上動いたらスクロール扱いで無視」で担保（下の moved 判定）。
@@ -10724,6 +10753,9 @@ function showStageClear(star, scoreRate){
     else if(_tgt===3) _tip='ダメージを受けずにクリアすると ★3！';
   }
   var _say=(star>=3)?'⭐ パーフェクト！ ⭐':_tip;
+  if(TA_ON && lastTA){ var _P=taPar(level);   // ★v366 タイムアタック：タイム・メダル・自己ベスト（★のヒントの代わり）
+    _say='⏱ '+taFmt(lastTA.f)+' '+(TA_MEDAL[lastTA.medal]||'')+(lastTA.isNew?' <span style="color:#7dff8a">NEW RECORD!</span>':'')
+      +'<div style="font-size:12px;color:#cfe3ff;font-weight:normal;margin-top:2px">ベスト '+taFmt(lastTA.best)+'　🥇'+taFmt(_P[0]*60)+'　🥈'+taFmt(_P[1]*60)+'　🥉'+taFmt(_P[2]*60)+'</div>'; }
   // ★v318 「クリア！」から弾け飛ぶキラキラ。向きは外側の i を回して決め、中の b は同じアニメ（上へ飛ぶ）を使う
   var _bz='', _bn=10+star*2, _gl=['✦','✦','⭐','✨','●'], _co=['#ffe066','#ffffff','#ffd24a','#9fe4ff','#ff9ad5'];
   for(var _k=0;_k<_bn;_k++){
@@ -10789,6 +10821,61 @@ function showStageClear(star, scoreRate){
     }
     tapEv(document.getElementById('scMap'),function(){ _contAdvancePending=false; showStageMap(); });
     tapEv(document.getElementById('scHome'),function(){ _contAdvancePending=false; gs='title'; showTitleScreen(); });
+  },30);
+}
+
+// ★v366 テスト版：全クリアの画面（ステージ10をクリアしたとき。クリア画面の絵・部品をそのまま使う）
+//   上から：全クリア！のプレート → 王冠のヒーロー → ひとこと → 2周目（タイムアタック）の案内とボタン → 合計の★ → ごほうび → ステージ選択・ホーム
+//   ボタン（§10-5）：見てほしい「タイムアタック」を上・大きく（IG の画面でスクロールなしで見える所）。ステージ選択・ホームは下
+function showEnding(star,first){
+  musScene('C'); gs='stageclear';
+  ov.className='scrollable opaque scbg';
+  var cid=selectedChar, nm=(cid!=='custom' && CHAR_NAMES[cid])?CHAR_NAMES[cid]:'勇者';
+  var _sh='text-shadow:0 1px 3px rgba(0,0,0,0.85),0 0 8px rgba(0,0,0,0.5)';
+  var _bz='', _bn=18, _gl=['✦','⭐','✨','👑','●'], _co=['#ffe066','#ffffff','#ffd24a','#9fe4ff','#ff9ad5'];
+  for(var _k=0;_k<_bn;_k++){ var _ang=Math.round(_k*360/_bn+(_k%2?9:-9)), _far=(_k%2===0);
+    _bz+='<i style="transform:rotate('+_ang+'deg)"><b class="'+(_far?'f':'')+'" style="font-size:'+(_far?22:16)+'px;color:'+_co[_k%_co.length]+';animation-delay:'+(0.12+(_k%4)*0.04).toFixed(2)+'s">'+_gl[_k%_gl.length]+'</b></i>'; }
+  var h='<div class="scBg" style="background-image:url('+CLEAR_IMG.bg+')"></div>'
+    +'<div class="scPlate"><div class="clrHalo"></div><img src="'+CLEAR_IMG.plate+'" alt="" onerror="this.style.visibility=\'hidden\'">'
+      +'<div class="scTitle" style="font-size:29px;letter-spacing:1px">全クリア！</div><div class="clrBurst" id="clrBurst">'+_bz+'</div></div>'
+    +'<div style="color:#bfe6ff;font-size:12px;font-weight:bold;letter-spacing:2px;margin:-2px 0 0;'+_sh+'">ALL CLEAR</div>'
+    +'<div style="position:relative;width:200px;height:150px;margin-top:6px">'
+      +'<div style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);width:110px;height:20px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(255,225,120,0.75),rgba(200,150,30,0.25) 70%,rgba(0,0,0,0) 100%)"></div>'
+      +'<canvas id="edHero" width="200" height="145" style="position:absolute;left:0;top:5px"></canvas>'
+      +'<div style="position:absolute;left:50%;top:-10px;margin-left:-19px;font-size:34px;line-height:1;animation:starPop 0.6s cubic-bezier(.2,1.5,.4,1) 0.5s both">👑</div></div>'
+    +'<div style="color:#ffe9a8;font-size:17px;font-weight:bold;line-height:1.5;margin-top:4px;'+_sh+'">魔王ドラゴンを倒した！<br>王国に平和が戻った！</div>'
+    +'<div style="color:#dfeeff;font-size:13px;margin-top:2px;'+_sh+'">ありがとう、'+_escHtml(nm)+'！</div>'
+    // 2周目の案内とボタン（見てほしい所を上に）
+    +'<div style="width:324px;max-width:94%;margin:8px auto 0;padding:9px 12px;border-radius:14px;box-sizing:border-box;background:rgba(10,28,60,0.78);border:2px solid #7dff8a;box-shadow:0 0 14px rgba(125,255,138,0.35)">'
+      +'<div style="color:#7dff8a;font-size:15px;font-weight:bold">'+(first?'🔓 2周目「タイムアタック」解放！':'⏱ 2周目「タイムアタック」')+'</div>'
+      +'<div style="color:#dfeeff;font-size:12px;line-height:1.6;margin-top:3px">ステージを速くクリアして<br>🥇金・🥈銀・🥉銅のメダルを集めよう！</div>'
+    +'</div>'
+    +'<div id="edTA" class="uiBtn go" style="width:250px;font-size:16px;min-height:52px;margin-top:10px">⏱ タイムアタックに挑戦</div>'
+    +'<div style="color:#ffd24a;font-size:14px;font-weight:bold;margin-top:12px;'+_sh+'">⭐ 合計 '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
+    +'<div class="scDiv"><b></b></div>'
+    +'<div class="scRew">'
+      +(first?'<div style="display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:26px">🎁</span><span style="color:#ffd24a;font-size:26px;font-weight:900">+'+(ENDING_GOLD+lastEarnedGold)+'G</span></div>'
+        +'<div style="color:#cda84a;font-size:12px;font-weight:bold">全クリアのごほうび '+ENDING_GOLD+'G ＋ このステージ '+lastEarnedGold+'G</div>'
+       :'<div style="display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:26px">💰</span><span style="color:#ffd24a;font-size:26px;font-weight:900">+'+lastEarnedGold+'G</span></div>')
+      +'<div style="color:#bda86a;font-size:12px;margin-top:3px">所持 '+totalGold+'G</div>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:14px;width:100%">'
+      +'<div id="edMap" class="uiBtn info" style="width:236px">🗺️ ステージを選ぶ</div>'
+      +'<div id="edHome" class="uiBtn info" style="width:190px">🏠 ホームに戻る</div>'
+    +'</div>';
+  ov.innerHTML=h; ov.style.display='flex'; ov.scrollTop=0;
+  setTimeout(function(){
+    try{   // 王冠のヒーロー（そうび画面と同じ描き方。服・剣・盾も今の装備）
+      var cv=document.getElementById('edHero'), g=cv&&_hiDpiCanvas(cv);
+      if(g){ var o={sword:eqSword(), shield:eqShield()}, of=eqOutfit();
+        if(of && of.body && cid!=='women_3'){ if(NEW_BODY_ON && armorReady(of.id)){ o.armor=of.id; o.trim=getTrim(cid); } else { var c0=CHARS[cid], tn=of.body[3]; o.body=of.body[1]; o.leg=_blendHex(c0.leg[0],tn,0.65); o.boot=_blendHex(c0.boot[0],tn,0.75); } }
+        else if(cid!=='custom'){ o.body=presetCol(cid,'body'); o.leg=presetCol(cid,'leg'); o.boot=presetCol(cid,'boot'); }
+        var ob=_blurK; _blurK=cv._r||1; drawCharPreview(g,100,139,cid,false,2.1,false,false,null,o); _blurK=ob; }
+    }catch(e){}
+    setTimeout(function(){ var bz=document.getElementById('clrBurst'); if(bz&&bz.parentNode) bz.parentNode.removeChild(bz); },1700);
+    _csTap(document.getElementById('edTA'),function(){ TA_ON=true; showStageMap(); });
+    _csTap(document.getElementById('edMap'),function(){ TA_ON=false; showStageMap(); });
+    _csTap(document.getElementById('edHome'),function(){ gs='title'; showTitleScreen(); });
   },30);
 }
 
