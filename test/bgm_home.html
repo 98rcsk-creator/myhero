@@ -32,6 +32,7 @@ p+.hd{margin-top:0}.hd{width:100%;max-width:340px;font-size:12px;color:#ffe44d;m
 <button class="bt" data-id="W8">8　海底<small>ゆらゆら。オカリナとハープ＋低音を足した</small></button>
 <button class="bt" data-id="W9">9　魔界<small>速くて暗い。低い金管と太鼓＋低音を足した</small></button>
 <button class="bt" data-id="W10">10　天空神殿<small>書き直し：最終決戦。速い短調、金管・合唱・太鼓</small></button>
+<button class="bt" data-id="U">⏱　運動会（タイムアタック）<small>新しい：せわしない運動会。速いギャロップ、ピッコロとトランペット、小太鼓</small></button>
 <div class="hd">前に決めた5曲（ゲームのテスト版に入っている）</div>
 <button class="bt" data-id="J">ホーム</button>
 <button class="bt" data-id="K">キャラ選択</button>
@@ -266,7 +267,21 @@ var MUS=(function(){
     inner:Q([[['viola',0,0.035],['choir',-12,0.02]],[['viola',0,0.035],['choir',0,0.025]],[['viola',0,0.035],['choir',-12,0.02]],[['viola',0,0.035],['choir',0,0.03]]]),
     fan:Q([null,null,[['tromb',-12,0.03]],[['tromb',-12,0.035]]]),
     bassDbl:Q([[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]]]),
-    runLv:Q([0.9,0.9,1,1]), crash:[0,8,16,24], crashV:0.04 }
+    runLv:Q([0.9,0.9,1,1]), crash:[0,8,16,24], crashV:0.04 },
+   // ★11回目 U 運動会（タイムアタックのステージ・ユーザー「運動会感ある せわしないBGM」）。ハ長調・176・メロディは全部オリジナル（有名な運動会の曲はなぞらない）
+   //   16分音符でかけ回るメロディ（ピッコロ→トランペット）、オンパのベース、16分のピチカート、裏拍のハイハット、8小節ごとにスネアの連打でなだれこむ
+   U:{ tempo:176, vol:1.6, lk:1.15, pad:0.016, harp:0, bass:0.13, bassPat:'march', run:0.034, snare:0.040, hat:0.011, timp:0.12, timpHit:[0,8,16,24], timpRoll:[],
+    sRoll:[7,15,23,31], crash:[0,8,16,24], crashV:0.04, triOn:Q([1,1,1,1]), triV:0.008, runLv:Q([0.8,0.9,0.9,1]),
+    chords:['C','G','C','G C','F','C','D G','G', 'Am','E','Am','E Am','F','C','D','G', 'C','G','F','C','F','C','G','C'],
+    mel:['C5/1 D5/1 E5/1 F5/1 G5/2 G5/2 A5/2 G5/2 E5/2 C5/2','D5/2 B4/2 D5/2 G5/2 F5/2 D5/2 B4/4','C5/1 D5/1 E5/1 F5/1 G5/2 G5/2 A5/2 G5/2 C6/2 G5/2','B5/2 A5/2 G5/2 F5/2 E5/2 D5/2 C5/4',
+         'A5/2 A5/2 A5/2 G5/2 F5/2 A5/2 C6/4','G5/2 G5/2 G5/2 F5/2 E5/2 G5/2 C6/4','F#5/2 A5/2 D6/2 C6/2 B5/2 A5/2 G5/2 F#5/2','G5/2 B5/2 D6/2 B5/2 G5/4 -/4',
+         'E5/1 F5/1 E5/1 D5/1 C5/2 E5/2 A5/2 E5/2 C5/2 E5/2','E5/1 F#5/1 G#5/1 A5/1 B5/2 G#5/2 E5/4 -/4','E5/1 F5/1 E5/1 D5/1 C5/2 E5/2 A5/2 C6/2 B5/2 A5/2','G#5/2 B5/2 E6/2 D6/2 C6/2 B5/2 A5/4',
+         'C6/2 A5/2 F5/2 A5/2 C6/2 A5/2 F5/2 A5/2','C6/2 G5/2 E5/2 G5/2 C6/2 G5/2 E5/2 G5/2','D6/1 C6/1 B5/1 A5/1 G5/1 F#5/1 E5/1 D5/1 C5/2 D5/2 E5/2 F#5/2','G5/4 D5/2 G5/2 B5/4 -/4',
+         'C6/2 C6/2 C6/2 B5/2 C6/2 D6/2 E6/4','D6/2 D6/2 D6/2 C6/2 B5/2 A5/2 G5/4','A5/2 B5/2 C6/2 A5/2 F5/2 A5/2 C6/2 F6/2','E6/2 D6/2 C6/2 B5/2 C6/2 G5/2 E5/4',
+         'F5/1 G5/1 A5/1 B5/1 C6/2 A5/2 F5/2 A5/2 C6/4','E5/1 F5/1 G5/1 A5/1 B5/2 G5/2 E5/2 G5/2 C6/4','D6/1 C6/1 B5/1 A5/1 G5/1 F5/1 E5/1 D5/1 B4/2 D5/2 G5/2 B5/2','C6/4 G5/2 E5/2 C5/4 -/4'],
+    lead:Q([[['picc',0,0.06],['violin',0,0.10],['glock',12,0.025]],[['trumpet',0,0.11],['violin',0,0.08]],[['picc',0,0.06],['violin',0,0.10],['clar',-12,0.05]],[['trumpet',0,0.12],['violin',0,0.10],['horn',-12,0.08],['glock',12,0.03]]]),
+    fan:Q([null,[['trumpet',-12,0.03]],null,[['trumpet',-12,0.035],['tromb',-12,0.03]]]),
+    bassDbl:Q([[['tuba',0.04]],[['tuba',0.04]],[['tuba',0.04]],[['tuba',0.045]]]) }
   };
   for(var _s in STG){ STG[_s].form=FORM; if(STG[_s].snare===undefined) STG[_s].snare=0; if(STG[_s].timp===undefined) STG[_s].timp=0; SONGS[_s]=STG[_s]; }
 

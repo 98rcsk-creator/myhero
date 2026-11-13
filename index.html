@@ -1676,7 +1676,21 @@ var MUS=(function(){
     inner:Q([[['viola',0,0.035],['choir',-12,0.02]],[['viola',0,0.035],['choir',0,0.025]],[['viola',0,0.035],['choir',-12,0.02]],[['viola',0,0.035],['choir',0,0.03]]]),
     fan:Q([null,null,[['tromb',-12,0.03]],[['tromb',-12,0.035]]]),
     bassDbl:Q([[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]],[['contra',0.05],['tuba',0.035]]]),
-    runLv:Q([0.9,0.9,1,1]), crash:[0,8,16,24], crashV:0.04 }
+    runLv:Q([0.9,0.9,1,1]), crash:[0,8,16,24], crashV:0.04 },
+   // ★11回目 U 運動会（タイムアタックのステージ・ユーザー「運動会感ある せわしないBGM」）。ハ長調・176・メロディは全部オリジナル（有名な運動会の曲はなぞらない）
+   //   16分音符でかけ回るメロディ（ピッコロ→トランペット）、オンパのベース、16分のピチカート、裏拍のハイハット、8小節ごとにスネアの連打でなだれこむ
+   U:{ tempo:176, vol:1.6, lk:1.15, pad:0.016, harp:0, bass:0.13, bassPat:'march', run:0.034, snare:0.040, hat:0.011, timp:0.12, timpHit:[0,8,16,24], timpRoll:[],
+    sRoll:[7,15,23,31], crash:[0,8,16,24], crashV:0.04, triOn:Q([1,1,1,1]), triV:0.008, runLv:Q([0.8,0.9,0.9,1]),
+    chords:['C','G','C','G C','F','C','D G','G', 'Am','E','Am','E Am','F','C','D','G', 'C','G','F','C','F','C','G','C'],
+    mel:['C5/1 D5/1 E5/1 F5/1 G5/2 G5/2 A5/2 G5/2 E5/2 C5/2','D5/2 B4/2 D5/2 G5/2 F5/2 D5/2 B4/4','C5/1 D5/1 E5/1 F5/1 G5/2 G5/2 A5/2 G5/2 C6/2 G5/2','B5/2 A5/2 G5/2 F5/2 E5/2 D5/2 C5/4',
+         'A5/2 A5/2 A5/2 G5/2 F5/2 A5/2 C6/4','G5/2 G5/2 G5/2 F5/2 E5/2 G5/2 C6/4','F#5/2 A5/2 D6/2 C6/2 B5/2 A5/2 G5/2 F#5/2','G5/2 B5/2 D6/2 B5/2 G5/4 -/4',
+         'E5/1 F5/1 E5/1 D5/1 C5/2 E5/2 A5/2 E5/2 C5/2 E5/2','E5/1 F#5/1 G#5/1 A5/1 B5/2 G#5/2 E5/4 -/4','E5/1 F5/1 E5/1 D5/1 C5/2 E5/2 A5/2 C6/2 B5/2 A5/2','G#5/2 B5/2 E6/2 D6/2 C6/2 B5/2 A5/4',
+         'C6/2 A5/2 F5/2 A5/2 C6/2 A5/2 F5/2 A5/2','C6/2 G5/2 E5/2 G5/2 C6/2 G5/2 E5/2 G5/2','D6/1 C6/1 B5/1 A5/1 G5/1 F#5/1 E5/1 D5/1 C5/2 D5/2 E5/2 F#5/2','G5/4 D5/2 G5/2 B5/4 -/4',
+         'C6/2 C6/2 C6/2 B5/2 C6/2 D6/2 E6/4','D6/2 D6/2 D6/2 C6/2 B5/2 A5/2 G5/4','A5/2 B5/2 C6/2 A5/2 F5/2 A5/2 C6/2 F6/2','E6/2 D6/2 C6/2 B5/2 C6/2 G5/2 E5/4',
+         'F5/1 G5/1 A5/1 B5/1 C6/2 A5/2 F5/2 A5/2 C6/4','E5/1 F5/1 G5/1 A5/1 B5/2 G5/2 E5/2 G5/2 C6/4','D6/1 C6/1 B5/1 A5/1 G5/1 F5/1 E5/1 D5/1 B4/2 D5/2 G5/2 B5/2','C6/4 G5/2 E5/2 C5/4 -/4'],
+    lead:Q([[['picc',0,0.06],['violin',0,0.10],['glock',12,0.025]],[['trumpet',0,0.11],['violin',0,0.08]],[['picc',0,0.06],['violin',0,0.10],['clar',-12,0.05]],[['trumpet',0,0.12],['violin',0,0.10],['horn',-12,0.08],['glock',12,0.03]]]),
+    fan:Q([null,[['trumpet',-12,0.03]],null,[['trumpet',-12,0.035],['tromb',-12,0.03]]]),
+    bassDbl:Q([[['tuba',0.04]],[['tuba',0.04]],[['tuba',0.04]],[['tuba',0.045]]]) }
   };
   for(var _s in STG){ STG[_s].form=FORM; if(STG[_s].snare===undefined) STG[_s].snare=0; if(STG[_s].timp===undefined) STG[_s].timp=0; SONGS[_s]=STG[_s]; }
 
@@ -1905,7 +1919,7 @@ function musScene(id){
 }
 // ★v349 ポーズ・画面を閉じたとき：止めて、どこまで鳴らしたかを覚える（戻ったら続きから。ボス曲の「ドン・ドドドン」の入りを毎回やり直さない）
 function _musHold(){ var r=MUS.stop(); if(r && r.id!=='C') _musPos=r; }
-function _stageTune(){ return 'W'+stageWorld(level); }   // ★v349 ステージの道中の曲（W1〜W10）
+function _stageTune(){ return TA_ON?'U':'W'+stageWorld(level); }   // ★v371 タイムアタックは運動会の曲 U   // ★v349 ステージの道中の曲（W1〜W10）
 function _bossFight(){ for(var i=0;i<enms.length;i++){ var e=enms[i]; if(e.isBoss && !e.dead && e._bgm) return true; } return false; }
 MUS.onEnd=function(id){ if(_musWant===id) _musWant=null; };   // クリアのファンファーレは1回で終わり
 // iPhone は「指を離した瞬間」からしか音を出せない。最初のタップで音を解錠して、その場面の曲を鳴らす
@@ -2674,7 +2688,7 @@ function lvCfg(lv){
   // ★v230 「ボス本体の配置」と「密度を絞る」を別フラグに分離。
   //   v230では両方 isBossStage で挙動完全不変。v231で bossDensity だけ
   //   本物のボス面に絞り、10ステージ化しても全ステージが薄くならないようにする。
-  var bossFight   = isBossStage(s);   // ボス配置・WORLD表示・咆哮・グレース無敵
+  var bossFight   = isBossStage(s) && !TA_ON;   // ボス配置・WORLD表示・咆哮・グレース無敵（★v371 タイムアタックの運動会ステージはボスなし）
   var bossDensity = false;             // ★v231 全ステージがボス面になるため密度絞りは無効化（中ボスCP実装v232まで）
   var boss=bossFight;                 // ★後方互換：lvCfg外は cfg.boss を bossFight として参照
   var w=stageWorld(s);
@@ -2757,7 +2771,7 @@ function buildWorld(lv){
   //   ＝後半ワールドがずっと平坦なままだった。
   //   W1は起伏なし、W2で旧来とほぼ同じ、W10でキャップちょうど、になるよう線形に配り直す。
   //   （W1〜W3は「低学年でもクリアできる易しさ」が要件なので、ここはほぼ据え置き）
-  var maxH=   lvW<=1 ? 0 : Math.round(45+(lvW-2)*(135-45)/8);      // W2=45 → W10=135
+  var maxH=   (lvW<=1 || TA_ON) ? 0 : Math.round(45+(lvW-2)*(135-45)/8);      // W2=45 → W10=135（★v371 運動会のグラウンドは平ら）
   var SEG=    Math.round(Math.max(95, 150-(lvW-1)*(150-95)/9));    // W1=150 → W10=95
   var stepMax=lvW<=1 ? 0 : Math.round(22+(lvW-2)*(50-22)/8);       // W2=22 → W10=50
   var segs=Math.ceil((GOAL_X+600)/SEG);
@@ -3282,7 +3296,7 @@ function burst(x,y,col,n){
 // ===== HUD =====
 function updHUD(){
   var _w=stageWorld(level);   // ★v233 10ワールド=10ステージなので -1 表記は廃止
-  document.getElementById('hLv').textContent=_w;
+  document.getElementById('hLv').textContent=TA_ON?'🏃':_w;
   document.getElementById('hSc').textContent=('000000'+Math.floor(score)).slice(-6);   // ★v367 タイムは taBox に移したので、ここは いつも SCORE
   var coinDisp=hasSk(5)
     ? String(p.totalCoins)                      // 全スキル取得後：コイン数のみ（無敵スタンバイの案内は防御ボタンの「むてき」ラベルに集約）
@@ -6154,8 +6168,12 @@ function _drawPreviewFace(ctx2,cid,c,HR,headCY){
 //   タイムアタック：ステージ選択で切りかえ。プレイ中は SCORE の所がタイマー。クリアでタイムとメダル（金・銀・銅）と自己ベスト
 var TA_ON=false, taFr=0, lastTA=null, ENDING_GOLD=3000, TA_MEDAL=['','🥉','🥈','🥇'];   // taFr＝経過フレーム（60＝1秒。ポーズ中・クリア画面は数えない）
 var _taBest=(function(){ try{ var o=JSON.parse(store.get('yk_ta_best')||'{}'); return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } })();
-function taUnlocked(){ return TEST_MODE && store.get('yk_ta')==='1'; }
-function taPar(lv){ var w=stageWorld(lv), s=4200*WORLD_LEN[w-1]/264*1.35+10+2*w; return [s,s*1.35,s*1.8]; }   // 金・銀・銅のタイム（秒）。走る速さ 264px/秒 で端まで行く時間×1.35＋ボス（仮。遊んで直す）
+// ★v371 テスト版：タイムアタックは「運動会ステージ」1つだけ（ユーザー「ステージは1つだけでOK。運動会感あるせわしないBGM・背景も運動会みたいに」）
+//   TA_BASE＝ステージの中身（敵の数・強さ・長さ）を借りるステージ（3＝洞窟と同じ）。ボスなし・地面は平ら・背景は bgUndokai・曲は U
+//   TA_KEY＝自己ベストを入れる名前（yk_ta_best の中）。TA_TEST_OPEN＝テストのあいだは ワールド10をクリアしなくても遊べる（本番にするときは 0）
+var TA_BASE=3, TA_BG=11, TA_KEY='U', TA_TEST_OPEN=1;
+function taUnlocked(){ return TEST_MODE && (TA_TEST_OPEN || store.get('yk_ta')==='1'); }
+function taPar(){ var s=4200*WORLD_LEN[TA_BASE-1]/264*1.35+8; return [s,s*1.35,s*1.8]; }   // 金・銀・銅のタイム（秒）。走る速さ 264px/秒 で端まで行く時間×1.35＋8秒（★v371 ボスなし。仮。遊んで直す）
 function taMedal(lv,f){ var s=f/60, P=taPar(lv); return s<=P[0]?3:(s<=P[1]?2:(s<=P[2]?1:0)); }
 // ★v367 タイムアタックのクリア条件（ユーザー「スタート前に、モンスター最低10体撃破・コイン最低20個獲得が条件でタイムトライアル。時間は画面の中央上部にわかりやすく大きめに」）
 //   そのステージにそれより少ないときは、ある数まで（クリアできない面を作らない）。ボスも1体に数える（stageEnemyKilled と同じ）
@@ -6203,15 +6221,15 @@ function doStart(keepSkill){
 }
 function showTAIntro(){
   gs='taready';
-  var w=stageWorld(level), P=taPar(level), n=taNeed(), b=_taBest[level];
+  var P=taPar(), n=taNeed(), b=_taBest[TA_KEY];
   ov.className='scrollable';
   ov.innerHTML='<div class="uiTitle" style="font-size:22px">⏱ タイムアタック</div>'
-    +'<div style="color:#bfe6ff;font-size:14px;font-weight:bold;margin:2px 0 10px">ワールド'+w+'：'+WORLD_NAMES[w-1]+'</div>'
+    +'<div style="color:#bfe6ff;font-size:15px;font-weight:bold;margin:2px 0 10px">🏃 運動会ステージ</div>'
     +'<div class="uiPanel" style="width:300px;max-width:92%;padding:12px 14px;text-align:left">'
       +'<div style="color:#ffd24a;font-size:15px;font-weight:bold;text-align:center;margin-bottom:8px">クリアの条件</div>'
       +'<div style="font-size:16px;font-weight:bold;color:#fff;line-height:1.9">👾 モンスターを <span style="color:#ffe44d;font-size:20px">'+n.k+'体</span> たおす<br>'
         +coinIconHTML()+' コインを <span style="color:#ffe44d;font-size:20px">'+n.c+'枚</span> とる</div>'
-      +'<div style="font-size:12px;color:#cfe3ff;margin-top:6px;line-height:1.6">両方そろえて ゴール！（ボスも倒す）<br>足りないと ゴールを通れないよ</div>'
+      +'<div style="font-size:12px;color:#cfe3ff;margin-top:6px;line-height:1.6">両方そろえて ゴール！<br>足りないと ゴールを通れないよ</div>'
     +'</div>'
     +'<div style="color:#dfeeff;font-size:13px;margin-top:10px;line-height:1.8">🥇 '+taFmt(P[0]*60)+'　🥈 '+taFmt(P[1]*60)+'　🥉 '+taFmt(P[2]*60)+'<br>'
       +'自己ベスト '+(b?taFmt(b)+' '+(TA_MEDAL[taMedal(level,b)]||''):'まだなし')+'</div>'
@@ -6270,15 +6288,15 @@ function nextLevel(){
   else if(starKill2 || starCoin2) earnedStar=2;
   // 表示用に残す指標（クリア画面のバー表示が参照する）
   var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
-  setStageStar(level, earnedStar);
+  if(!TA_ON) setStageStar(level, earnedStar);   // ★v371 タイムアタック（運動会ステージ）は★・冒険の記録・解放・ランキングを動かさない
   lastClearStar=earnedStar; lastClearScore=stageScore;
-  recClear(level, earnedStar);   // ★v368 冒険の記録（そのヒーローの初回だけ）
+  if(!TA_ON) recClear(level, earnedStar);   // ★v368 冒険の記録（そのヒーローの初回だけ）
   lastTA=null;   // ★v366 タイムアタックの記録（自己ベストより速ければ保存）
-  if(TA_ON){ var _tb=_taBest[level], _tn=!_tb || taFr<_tb; if(_tn){ _taBest[level]=taFr; store.set('yk_ta_best',JSON.stringify(_taBest)); } lastTA={f:taFr, best:_tn?taFr:_tb, isNew:_tn&&!!_tb, first:!_tb, medal:taMedal(level,taFr)}; }
+  if(TA_ON){ var _tb=_taBest[TA_KEY], _tn=!_tb || taFr<_tb; if(_tn){ _taBest[TA_KEY]=taFr; store.set('yk_ta_best',JSON.stringify(_taBest)); } lastTA={f:taFr, best:_tn?taFr:_tb, isNew:_tn&&!!_tb, first:!_tb, medal:taMedal(level,taFr)}; }
   // ★クリアボーナスゴールド：基本10G + 星ごと+5G + ステージ番号×1G
   statAdd('runGold', 10 + earnedStar*5 + Math.floor(level));
   // 次ステージを解放
-  unlockStage(level+1);
+  if(!TA_ON) unlockStage(level+1);
   saveData();
   runNoDamage=true;  // 次ステージ用にノーダメ判定リセット
   // ★v366 テスト版：ステージ10（最後）をクリアしたら全クリアの画面（タイムアタック中はふつうのクリア画面）
@@ -6292,11 +6310,11 @@ function nextLevel(){
   }
   // マップ選択プレイ：1ステージクリアで完了（マップに戻る導線のクリア画面）
   if(fromStageMap){
-    selectedStage=level+1;  // ★次ステージに確実に設定（クリア画面で「次へ」を押した時のため）
+    selectedStage=TA_ON?TA_BASE:level+1;  // ★次ステージに確実に設定（クリア画面で「次へ」を押した時のため）。★v371 タイムアタックは「もう一回」用に同じステージ
     lastEarnedGold=statGet('runGold'); totalGold+=lastEarnedGold; store.set('yk_gold',''+totalGold);
     statSet('runGold',0);
     if(Math.floor(score)>bestScore) bestScore=Math.floor(score);
-    addRanking(Math.floor(score), selectedChar, level);
+    if(!TA_ON) addRanking(Math.floor(score), selectedChar, level);
     checkAchievements();
     saveData();
     showStageClear(earnedStar, stageScore);
@@ -7024,7 +7042,7 @@ function update(){
   // ★v367 タイムアタック：条件が足りないとゴールを通れない（1秒ごとに「あと〇〇！」）
   if(TA_ON && p.x+pw()>GOAL_X-10 && !taCondOK()){ p.x=GOAL_X-10-pw(); if(p.vx>0) p.vx=0; p.bossFreeze=false; if(fr%60===0) pops.push({x:p.x+pw()/2,y:p.y-22,txt:taRestTxt(),life:55,ml:55,col:'#ffe44d',sz:14,glow:true}); }
   // ゴール（LV5はボス撃破後のみ有効）
-  if(p.x+pw()>GOAL_X-10 && !(isBossStage(level) && !bossDefeated) && !(TA_ON && !taCondOK())){
+  if(p.x+pw()>GOAL_X-10 && !(isBossStage(level) && !TA_ON && !bossDefeated) && !(TA_ON && !taCondOK())){
     score+=500+(6-level)*150;
     // 固有スキル リジェネ：ステージクリアでHP+20回復。
     // ★v199(shop③): HP満タン(ノーダメージ)クリア時は回復の代わりに最大HPを+20して恒久強化
@@ -7176,7 +7194,7 @@ function update(){
       else if(e.x<e.pl.x){ e.x=e.pl.x; e.moveDir=1; }
       else if(e.x+e.w>e.pl.x+e.pl.w){ e.x=e.pl.x+e.pl.w-e.w; e.moveDir=-1; }
     }
-    if(TEST_MODE && e.type!=='boss' && isBossStage(level)){ var _bzx=GOAL_X-BOSS_CLEAR; if(e.x+e.w>_bzx){ e.x=_bzx-e.w; if(e.moveDir!==undefined) e.moveDir=-1; if(e.diving) e.diveVx=-Math.abs(e.diveVx||0); } }   // ★v362 ボスのまわりに入らせない（歩く敵は引き返す・急降下も押し戻す）
+    if(TEST_MODE && e.type!=='boss' && isBossStage(level) && !TA_ON){ var _bzx=GOAL_X-BOSS_CLEAR; if(e.x+e.w>_bzx){ e.x=_bzx-e.w; if(e.moveDir!==undefined) e.moveDir=-1; if(e.diving) e.diveVx=-Math.abs(e.diveVx||0); } }   // ★v362 ボスのまわりに入らせない（歩く敵は引き返す・急降下も押し戻す）
     // ★飛行敵（コウモリ系）は地面に埋まらないよう、ローカル地面の少し上にclamp。
     //   下めに飛ぶのはOK・埋没のみ防止。穴の上(_surf>GROUND+10)はclampしない。
     if(e.type==='fly'||e.type==='bomber'||e.type==='diver'){
@@ -9384,6 +9402,98 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
   ctx.fill();
 }
 
+// ★v371 テスト版：タイムアタックの「運動会ステージ」の背景（ユーザー「背景も運動会みたいな背景にする」）。bgDraw の 11 番
+//   奥から：青空 → 雲 → 校舎（時計台は9時）→ 植えこみ → グラウンド（白線・コーン）→ 紅白のテントと応援する子ども（赤組・白組の帽子）→ 万国旗
+//   同じ色はまとめて1パス（§1-7。図形ごとに moveTo）。どれも面積が小さいので焼き置き（ストリップ）はしない（§1-23）
+//   校舎は「浅い視差＋クランプ」（§1-9）：cam*0.03 で 最大260pxだけ左へ＝ステージの最後まで画面に残る
+function bgUndokai(){
+  var i, j, k, x, y, n;
+  // ① 空（帯のキャッシュを1回貼る）
+  fillSky(ctx,[0,'#3a9ae8',0.6,'#86cdf7',1,'#dff4ff']);
+  // ② 雲（1パス。自走 15px/秒＋視差 cam*0.05）
+  ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath();
+  for(i=0;i<4;i++){
+    x=((i*230+40+fr*0.25-cam*0.05)%(W+240)+W+240)%(W+240)-120; y=32+(i%2)*24;
+    ctx.moveTo(x+26,y); ctx.arc(x,y,26,0,Math.PI*2);
+    ctx.moveTo(x+48,y+6); ctx.arc(x+28,y+6,20,0,Math.PI*2);
+    ctx.moveTo(x-6,y+8); ctx.arc(x-24,y+8,18,0,Math.PI*2);
+  }
+  ctx.fill();
+  // ③ 校舎（3階建て・まん中に時計台）
+  var sx=250-Math.min(260,cam*0.03), sy=170;
+  ctx.fillStyle='#c9b998'; ctx.fillRect(sx-156,sy-6,312,8);
+  ctx.fillStyle='#f3ead6'; ctx.beginPath(); ctx.rect(sx-150,sy,300,92); ctx.rect(sx-26,sy-46,52,48); ctx.fill();
+  ctx.fillStyle='#e2d5b8'; ctx.beginPath(); ctx.rect(sx-150,sy+29,300,3); ctx.rect(sx-150,sy+59,300,3); ctx.fill();
+  ctx.fillStyle='#7fb8de'; ctx.beginPath();
+  for(j=0;j<3;j++) for(i=0;i<10;i++) ctx.rect(sx-142+i*29,sy+7+j*30,19,15);
+  ctx.fill();
+  ctx.fillStyle='#d0503c'; ctx.beginPath(); ctx.moveTo(sx-32,sy-46); ctx.lineTo(sx,sy-72); ctx.lineTo(sx+32,sy-46); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(sx,sy-24,14,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#6a5a48'; ctx.lineWidth=2; ctx.beginPath();
+  ctx.moveTo(sx+14,sy-24); ctx.arc(sx,sy-24,14,0,Math.PI*2);
+  ctx.moveTo(sx,sy-24); ctx.lineTo(sx,sy-34); ctx.moveTo(sx,sy-24); ctx.lineTo(sx-7,sy-24);
+  ctx.stroke(); ctx.lineWidth=1;
+  // ④ 植えこみ（視差 cam*0.08。こぶの大きさは場所で決まる＝スクロールしても変わらない）
+  var hb=cam*0.08, h0=Math.floor(hb/44)-1, r;
+  ctx.fillStyle='#4f9a3c'; ctx.beginPath(); ctx.rect(0,252,W,26);
+  for(n=h0;n<h0+12;n++){ x=n*44-hb; r=22+(((n%3)+3)%3)*3; ctx.moveTo(x+r,258); ctx.arc(x,258,r,0,Math.PI*2); }
+  ctx.fill();
+  ctx.fillStyle='#6dbb4f'; ctx.beginPath();
+  for(n=h0;n<h0+12;n++){ x=n*44-hb; r=12+(((n%3)+3)%3)*2; ctx.moveTo(x-6+r,250); ctx.arc(x-6,250,r,0,Math.PI*2); }
+  ctx.fill();
+  // ⑤ グラウンド（土・白線2本・コーン 視差 cam*0.45）
+  ctx.fillStyle='#dcbb8a'; ctx.fillRect(0,272,W,GROUND-270);
+  ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fillRect(0,300,W,2); ctx.fillRect(0,320,W,2);
+  var cb=cam*0.45, c0=Math.floor(cb/180)-1;
+  ctx.fillStyle='#ff7a1a'; ctx.beginPath();
+  for(k=c0;k<c0+4;k++){ x=k*180+60-cb; ctx.moveTo(x-6,319); ctx.lineTo(x,304); ctx.lineTo(x+6,319); ctx.closePath(); }
+  ctx.fill();
+  // ⑥ 紅白のテントと応援する子ども（視差 cam*0.2。帽子はテントごとに赤組・白組。子どもは はねて応援）
+  var tb=cam*0.2, t0=Math.floor(tb/250)-1, tx=[], tn=[];
+  for(k=t0;k<t0+4;k++){ x=k*250+120-tb; if(x+84>0 && x-84<W){ tx.push(x); tn.push(k); } }
+  ctx.fillStyle='rgba(40,30,20,0.22)'; ctx.beginPath();
+  for(i=0;i<tx.length;i++) ctx.rect(tx[i]-78,250,156,40);
+  ctx.fill();
+  ctx.fillStyle='#9aa0a8'; ctx.beginPath();
+  for(i=0;i<tx.length;i++){ ctx.rect(tx[i]-78,244,4,48); ctx.rect(tx[i]+74,244,4,48); }
+  ctx.fill();
+  var kid=function(fn){ for(i=0;i<tx.length;i++) for(j=0;j<10;j++) fn(tx[i]-65+j*14.4, Math.sin(fr*0.3+j*1.7+tn[i])*1.6, ((tn[i]%2)+2)%2); };
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); kid(function(kx,dy){ ctx.rect(kx-4,273+dy,8,10); }); ctx.fill();
+  ctx.fillStyle='#f6d2ac'; ctx.beginPath(); kid(function(kx,dy){ ctx.moveTo(kx+4.5,269+dy); ctx.arc(kx,269+dy,4.5,0,Math.PI*2); }); ctx.fill();
+  ctx.fillStyle='#e0352f'; ctx.beginPath(); kid(function(kx,dy,tm){ if(!tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
+  ctx.fillStyle='#fafafa'; ctx.beginPath(); kid(function(kx,dy,tm){ if(tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
+  ctx.fillStyle='#ffffff'; ctx.beginPath();
+  for(i=0;i<tx.length;i++){ x=tx[i]; ctx.moveTo(x-64,226); ctx.lineTo(x+64,226); ctx.lineTo(x+82,246); ctx.lineTo(x-82,246); ctx.closePath(); ctx.rect(x-82,246,164,7); }
+  ctx.fill();
+  ctx.fillStyle='#e0352f'; ctx.beginPath();
+  for(i=0;i<tx.length;i++){ x=tx[i];
+    for(k=0;k<8;k+=2){ ctx.moveTo(x-64+16*k,226); ctx.lineTo(x-64+16*(k+1),226); ctx.lineTo(x-82+20.5*(k+1),246); ctx.lineTo(x-82+20.5*k,246); ctx.closePath(); }
+    for(k=1;k<8;k+=2) ctx.rect(x-82+20.5*k,246,20.5,7);
+  }
+  ctx.fill();
+  // ⑦ 万国旗（視差 cam*0.55。柱と柱のあいだで ロープがたるむ。白い旗には赤い丸）
+  var fb=cam*0.55, f0=Math.floor(fb/300);
+  var FC=['#ffffff','#e8443a','#3a6fe0','#f6c432','#3fae5a','#a24ee0'];
+  ctx.fillStyle='#e8e8e8'; ctx.beginPath();
+  for(k=f0;k<f0+3;k++){ x=k*300-fb; ctx.rect(x-2,38,4,GROUND-38); }
+  ctx.fill();
+  ctx.strokeStyle='rgba(70,60,50,0.8)'; ctx.beginPath();
+  for(k=f0;k<f0+2;k++){ x=k*300-fb; ctx.moveTo(x,40); ctx.quadraticCurveTo(x+150,110,x+300,40); }
+  ctx.stroke();
+  for(var ci=0;ci<FC.length;ci++){
+    ctx.fillStyle=FC[ci]; ctx.beginPath();
+    for(k=f0;k<f0+2;k++){ x=k*300-fb;
+      for(j=0;j<14;j++){
+        var ft=(j+0.5)/14, fx=x+300*ft, fy=40+140*ft*(1-ft)+Math.sin(fr*0.12+j)*0.8, fc=((k*14+j)%6+6)%6;
+        if(fc===ci) ctx.rect(fx-6,fy,12,9);
+        else if(ci===1 && fc===0){ ctx.moveTo(fx+2.6,fy+4.5); ctx.arc(fx,fy+4.5,2.6,0,Math.PI*2); }
+      }
+    }
+    if(ci===3) for(k=f0;k<f0+3;k++){ x=k*300-fb; ctx.moveTo(x+4,37); ctx.arc(x,37,4,0,Math.PI*2); }   // 柱のてっぺんの金の玉
+    ctx.fill();
+  }
+}
+
 function bgDraw(w){
   switch(w){
     case 1:  bgGrass();    break;  // 草原（既存・一致）
@@ -9396,6 +9506,7 @@ function bgDraw(w){
     case 8:  bgSea();      break;  // ★v251 海底（新規・一致）
     case 9:  bgHell();     break;  // ★v252 魔界（新規・一致）
     case 10: bgTemple();   break;  // ★v253 天空神殿（新規・一致）
+    case 11: bgUndokai();  break;  // ★v371 テスト版：タイムアタックの運動会ステージ（TA_BG）
     default: bgGrass();
   }
 }
@@ -9409,10 +9520,10 @@ function draw(){
     ctx.translate(sx,sy);
   }
   // ===== 背景（★v234 ワールド1:1。実体は bgDraw() → 各 bgXxx()）=====
-  bgDraw(stageWorld(level));
+  bgDraw(TA_ON?TA_BG:stageWorld(level));   // ★v371 タイムアタックは運動会
 
   // ===== 背景テーマ着色（アンロックした背景で雰囲気チェンジ）=====
-  if(equippedBG!=='grass'){
+  if(equippedBG!=='grass' && !TA_ON){
     var th=getBGTheme();
     // 空エリア（地面より上）にテーマグラデを重ねて雰囲気を変える
     var tg=gradL(ctx,0,0,0,GROUND,[0,'rgba('+hexToRgb(th.sky[0])+',0.78)',0.55,'rgba('+hexToRgb(th.sky[1])+',0.62)',1,'rgba('+hexToRgb(th.sky[2])+',0.30)']);
@@ -9457,11 +9568,11 @@ function draw(){
       // ★以前は[level-1]で5要素しかなく、stage6以降でundefined色になり
       //   地面が透けて見えていた（⑥の原因）。ワールド(1-10)単位で参照し、
       //   範囲外にならないようclampする。
-      var _gw=Math.min(10,Math.max(1,stageWorld(level)))-1;
-      var gndCol =['#2d6a4f','#5a3a1a','#1a2a40','#3a4a58','#5a1a10','#3a0a28','#0d3a3a','#3a1010','#3a0830','#3a3010'][_gw];
-      var gndBot =['#1a4030','#3a2410','#0e1825','#243640','#3a1008','#240618','#062424','#240808','#240420','#241e08'][_gw];
-      var topCol =['#52b788','#9a6a30','#3a5a80','#6a8aa8','#aa3322','#7a3068','#1aa0a0','#aa3030','#aa3088','#aa9030'][_gw];
-      var topLit =['#6dd89e','#bb8a44','#5278a8','#8aaac8','#cc5533','#9a4088','#3ac0c0','#cc4444','#cc44aa','#ccaa44'][_gw];
+      var _gw=TA_ON?10:Math.min(10,Math.max(1,stageWorld(level)))-1;   // ★v371 11番目＝運動会のトラック（白いライン）
+      var gndCol =['#2d6a4f','#5a3a1a','#1a2a40','#3a4a58','#5a1a10','#3a0a28','#0d3a3a','#3a1010','#3a0830','#3a3010','#c98a52'][_gw];
+      var gndBot =['#1a4030','#3a2410','#0e1825','#243640','#3a1008','#240618','#062424','#240808','#240420','#241e08','#a86c3c'][_gw];
+      var topCol =['#52b788','#9a6a30','#3a5a80','#6a8aa8','#aa3322','#7a3068','#1aa0a0','#aa3030','#aa3088','#aa9030','#e7c08a'][_gw];
+      var topLit =['#6dd89e','#bb8a44','#5278a8','#8aaac8','#cc5533','#9a4088','#3ac0c0','#cc4444','#cc44aa','#ccaa44','#ffffff'][_gw];
       // ★v259 坂タイルは上面を斜めに描く（sL→sR）。平らなタイルは従来どおり矩形。
       var _yL=(t.sL===undefined)?t.y:t.sL, _yR=(t.sR===undefined)?t.y:t.sR;
       var _slp=(_yL!==_yR);
@@ -9500,13 +9611,13 @@ function draw(){
       }
     } else if(t.side){
       // 段差崖面（ワールド色に合わせる）
-      var _sw=Math.min(10,Math.max(1,stageWorld(level)))-1;
-      ctx.fillStyle=['#1a4a30','#3a2410','#0e1825','#243640','#3a1008','#240618','#062424','#240808','#240420','#241e08'][_sw];
+      var _sw=TA_ON?10:Math.min(10,Math.max(1,stageWorld(level)))-1;
+      ctx.fillStyle=['#1a4a30','#3a2410','#0e1825','#243640','#3a1008','#240618','#062424','#240808','#240420','#241e08','#7a4a28'][_sw];
       ctx.fillRect(tx,t.y,t.w,t.h);
       ctx.fillStyle='rgba(0,0,0,0.35)';ctx.fillRect(tx+1,t.y,t.w-2,t.h);
     } else {
       // ★v262 浮き台をワールド別のデザインに（当たり判定は矩形のまま・見た目だけ）
-      drawPlat(tx,t,Math.min(10,Math.max(1,stageWorld(level))));
+      drawPlat(tx,t,TA_ON?1:Math.min(10,Math.max(1,stageWorld(level))));   // ★v371 運動会は草原の台
     }
   }
 
@@ -9580,7 +9691,7 @@ function draw(){
     // ★敵スプライト描画（まもの図鑑のフィギュア質感に置き換え）
     var spr=ENEMY_SPR[e.type];
     // ★v240 ワールド別スプライトがあれば優先（無ければ上の従来絵のまま）
-    var _wSet=ENEMY_SPR_W[stageWorld(level)];
+    var _wSet=ENEMY_SPR_W[TA_ON?1:stageWorld(level)];   // ★v371 運動会は草原のまもの（ふつうの絵）
     if(_wSet && _wSet[e.type] && _wSet[e.type].length){
       var _wArr=_wSet[e.type]; spr=_wArr[(e.sprS||0)%_wArr.length];
     }
@@ -10719,6 +10830,7 @@ function showStageMap(){
   //   1カード = [色帯のタイトル行] + [ワールド絵(.wThumb)] + [王冠と星]。
   //   星・ロック・王冠は今までどおり実データから作る（絵に焼き込んでいない）。
   //   タップ判定は .stageCell のまま＝v272の「タップで即開始」を維持。
+  if(TA_ON) h+=taCardHTML(); else   // ★v371
   for(var w=1;w<=NUM_WORLDS;w++){
     var wColors=['#7ec850','#e0883c','#9a7adc','#7ec0ee','#ff6644','#a060d0','#88c0ff','#40c0b0','#c04080','#ffcc44'];
     var wc=wColors[w-1];
@@ -10746,9 +10858,7 @@ function showStageMap(){
         +'<div class="wThumb" style="flex:1 1 auto;min-width:0;aspect-ratio:256/133;border-radius:8px;'
           +'background-position:0 '+((w-1)*100/9).toFixed(3)+'%;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>'
         +'<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;width:52px">'
-          +(unlocked && TA_ON   // ★v366 タイムアタック中は メダルと自己ベスト
-            ? '<div style="font-size:20px;line-height:1">'+(_taBest[s2]?(TA_MEDAL[taMedal(s2,_taBest[s2])]||'⏱'):'⏱')+'</div><div style="font-size:10px;color:#dfeeff;font-weight:bold">'+(_taBest[s2]?taFmt(_taBest[s2]):'--:--')+'</div>'
-            : unlocked
+          +(unlocked   // ★v371 タイムアタックのメダルと自己ベストは taCardHTML（運動会ステージ1枚）へ
             ? '<div style="font-size:20px;line-height:1">👑</div><div style="letter-spacing:-1px">'+starStr+'</div>'
             : '<div style="font-size:20px;line-height:1;opacity:0.5">🔒</div>')
         +'</div>'
@@ -10811,6 +10921,24 @@ function showStageMap(){
       bb.addEventListener('click',back);
     }
   },30);
+}
+// ★v371 ステージ選択（タイムアタック）のカード：運動会ステージ1枚（2列のグリッドを横いっぱい）。絵は CSS の帯（空・植えこみ・グラウンド・トラック）＋万国旗
+function taCardHTML(){
+  var b=_taBest[TA_KEY], c='#ff6a5a';
+  return '<div class="stageCell" data-stage="'+TA_BASE+'" data-unlocked="1" style="grid-column:1/-1;position:relative;width:100%;border-radius:14px;overflow:hidden;box-sizing:border-box;'
+      +'border:2px solid '+c+';background:linear-gradient(180deg,'+c+'2e,rgba(10,24,52,0.85));box-shadow:0 3px 8px rgba(0,0,0,0.4);cursor:pointer">'
+    +'<div style="display:flex;align-items:center;gap:6px;padding:6px 9px;background:linear-gradient(90deg,'+c+'66,rgba(255,255,255,0))">'
+      +'<span style="font-size:18px;line-height:1">🏃</span><span style="color:#fff;font-size:14px;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.6)">運動会ステージ</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:6px 9px 4px">'
+      +'<div style="flex:1 1 auto;min-width:0;aspect-ratio:256/110;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.5);position:relative;overflow:hidden;'
+        +'background:linear-gradient(180deg,#58aef0 0,#a8dcfa 56%,#4f9a3c 56%,#4f9a3c 66%,#dcbb8a 66%,#dcbb8a 84%,#fff 84%,#fff 86%,#c98a52 86%)">'
+        +'<div style="position:absolute;left:0;right:0;top:16%;height:8px;background:repeating-linear-gradient(90deg,#e8443a 0 9px,transparent 9px 13px,#3a6fe0 13px 22px,transparent 22px 26px,#f6c432 26px 35px,transparent 35px 39px,#3fae5a 39px 48px,transparent 48px 52px)"></div>'
+        +'<div style="position:absolute;left:10%;bottom:6%;font-size:26px;line-height:1">🏃</div><div style="position:absolute;right:8%;bottom:8%;font-size:22px;line-height:1">🏁</div></div>'
+      +'<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;width:56px">'
+        +'<div style="font-size:24px;line-height:1">'+(b?(TA_MEDAL[taMedal(0,b)]||'⏱'):'⏱')+'</div><div style="font-size:11px;color:#dfeeff;font-weight:bold">'+(b?taFmt(b):'--:--')+'</div></div>'
+    +'</div>'
+    +'<div style="color:#ffe9a8;font-size:12px;font-weight:bold;padding:0 9px 8px">👾 '+TA_NEED_K+'体 ＋ '+coinIconHTML()+' '+TA_NEED_C+'枚 で ゴール！</div>'
+  +'</div>';
 }
 // マップから特定ステージで開始（キャラ選択へ）
 function startStageFromMap(s){
@@ -10883,14 +11011,14 @@ function showStageClear(star, scoreRate){
       +'<div style="font-size:11px;color:#9fb6c2;margin-top:1px;white-space:nowrap">'+lab+'</div></div></div>';
   };
   var nextStage=level+1;
-  var hasNext=(nextStage<=MAX_STAGE);
+  var hasNext=(nextStage<=MAX_STAGE) && !TA_ON;   // ★v371 タイムアタックは次へ ではなく もう一回
   var _sh='text-shadow:0 1px 3px rgba(0,0,0,0.85),0 0 8px rgba(0,0,0,0.5)';
   var h='<div class="scBg" style="background-image:url('+CLEAR_IMG.bg+')"></div>'
     +'<div class="scPlate"><div class="clrHalo"></div>'
       +'<img src="'+CLEAR_IMG.plate+'" alt="" onerror="this.style.visibility=\'hidden\'">'
       +'<div class="scTitle">クリア！</div><div class="clrBurst" id="clrBurst">'+_bz+'</div></div>'
-    +'<div style="color:#bfe6ff;font-size:12px;font-weight:bold;letter-spacing:2px;margin:-2px 0 2px;'+_sh+'">WORLD '+_w+'</div>'
-    +starHTML
+    +'<div style="color:#bfe6ff;font-size:12px;font-weight:bold;letter-spacing:2px;margin:-2px 0 2px;'+_sh+'">'+(TA_ON?'🏃 運動会ステージ':'WORLD '+_w)+'</div>'
+    +((TA_ON && lastTA)?'<div style="font-size:50px;line-height:1.1">'+(TA_MEDAL[lastTA.medal]||'⏱')+'</div>':starHTML)
     +(_say?'<div style="color:#ffe9a8;font-size:16px;font-weight:bold;line-height:1.4;max-width:94%;'+_sh+'">'+_say+'</div>':'')
     +'<div class="scDiv"><b></b></div>'
     +'<div style="display:flex;gap:8px;width:324px;max-width:94%;margin:0 auto">'
@@ -10906,6 +11034,9 @@ function showStageClear(star, scoreRate){
       +'<div style="color:#bda86a;font-size:12px;margin-top:3px">スコア '+Math.floor(score)+'　・　所持 '+totalGold+'G</div>'
     +'</div>';
   h+='<div style="display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:14px;width:100%">';
+  if(TA_ON){
+    h+='<div id="scRetry" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px">⏱ もう一回</div>';
+  }
   if(hasNext){
     h+='<div id="scNext" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px">▶ 次へ進む</div>';
   }
@@ -10931,6 +11062,7 @@ function showStageClear(star, scoreRate){
         doStart(true);
       });
     }
+    if(TA_ON) tapEv(document.getElementById('scRetry'),function(){ _contAdvancePending=false; fromStageMap=true; selectedStage=TA_BASE; doStart(); });   // ★v371 同じキャラで すぐ もう一回（スタート前の画面から）
     tapEv(document.getElementById('scMap'),function(){ _contAdvancePending=false; showStageMap(); });
     tapEv(document.getElementById('scHome'),function(){ _contAdvancePending=false; gs='title'; showTitleScreen(); });
   },30);
@@ -11225,8 +11357,8 @@ function guideLocal(raw,x){
     case 'control': return {t:'🎮 そうさ\n・十字キー：左右に 歩く'+(TEST_MODE?'（上ボタンで 飛ぶ・飛べるキャラやスキルのとき）':'')+'\n・青ボタン：ジャンプ（スキルで 2段ジャンプ）\n・赤ボタン：剣\n・緑ボタン：ガード（盾スキル）\n・黄ボタン：レーザー'+(TEST_MODE?'（長くおすほど 強い）':'')+'\n・まものの 上に 落ちると ふみつけ！（トゲトゲと おばけは ダメ）', c:ch};
     case 'star': { var sNow=getStageStar((ww-1)*STAGES_PER_WORLD+1);
       return {t:'⭐ ★のとり方\n★1：クリア\n★2：まものを '+Math.round(STAR_KILL2*100)+'%以上 たおす か、コインを '+Math.round(STAR_COIN*100)+'%以上 とる\n★3：まものを '+Math.round(STAR_KILL3*100)+'%以上 たおして、コイン '+Math.round(STAR_COIN*100)+'%以上 か ノーダメージ\n（ワールド'+ww+'は いま '+(sNow?new Array(sNow+1).join('★'):'まだ なし')+'）', c:ch}; }
-    case 'ta': { var P=taPar((ww-1)*STAGES_PER_WORLD+1);
-      return {t:'⏱ タイムアタック（ワールド10を クリアすると 遊べる）'+(taUnlocked()?'':'… まだ ひらいてないよ')+'\n・まものを '+TA_NEED_K+'体、コインを '+TA_NEED_C+'枚 とってから ゴール\n・ワールド'+ww+'のメダル：🥇'+taFmt(P[0]*60)+' 🥈'+taFmt(P[1]*60)+' 🥉'+taFmt(P[2]*60)+(_taBest[(ww-1)*STAGES_PER_WORLD+1]?'\n・自己ベスト '+taFmt(_taBest[(ww-1)*STAGES_PER_WORLD+1]):''), c:ch}; }
+    case 'ta': { var P=taPar();   // ★v371 運動会ステージ1つ
+      return {t:'⏱ タイムアタック（🏃 運動会ステージ）'+(taUnlocked()?'\n・ステージ選択の「⏱ タイムアタック」から 遊べるよ':'… まだ ひらいてないよ（ワールド10を クリアすると 遊べる）')+'\n・まものを '+TA_NEED_K+'体、コインを '+TA_NEED_C+'枚 とってから ゴール\n・メダル：🥇'+taFmt(P[0]*60)+' 🥈'+taFmt(P[1]*60)+' 🥉'+taFmt(P[2]*60)+(_taBest[TA_KEY]?'\n・自己ベスト '+taFmt(_taBest[TA_KEY]):''), c:ch}; }
     case 'gold': return {t:'💰 お金（G）の ふやし方\n・コイン1枚で 2G'+(hasPerk('goldboost')?'（ゴールドブーストで +50%）':'（固有スキル「ゴールドブースト」で +50%）')+'\n・クリアで 10G＋★1つごとに5G＋ステージの番号ぶん\n・ボスを たおすと +20G\n・じっせきの ごほうび\nいま '+x.gold+'G 持ってるよ。', c:['おすすめの剣','固有スキル']};
     case 'stage': return {t:gStage(ww,x)+'\n\n'+gEqLine(x), c:['ワールド'+ww+'のボス','おすすめの盾','おすすめのよろい']};
   }
