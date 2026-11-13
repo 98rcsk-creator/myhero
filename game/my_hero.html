@@ -36,6 +36,11 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #hpTxt{position:absolute;left:0;right:0;top:0;line-height:14px;text-align:center;
   font-size:9px;font-weight:bold;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.9);}
 #cv{display:block;width:390px;height:390px;flex-shrink:0;}
+/* ★v367 タイムアタックのタイマー：ゲーム画面の上の真ん中に大きく（位置は taBoxPos がゲーム画面に合わせる）。下に条件の進み具合 */
+#taBox{position:fixed;display:none;z-index:6;pointer-events:none;transform:translateX(-50%);text-align:center;font-weight:900;white-space:nowrap;}
+#taT{font-size:30px;line-height:1;color:#fff;letter-spacing:1px;font-variant-numeric:tabular-nums;text-shadow:2px 0 0 #0a1a3a,-2px 0 0 #0a1a3a,0 2px 0 #0a1a3a,0 -2px 0 #0a1a3a,0 0 8px rgba(0,0,0,0.7);}
+#taC{display:inline-block;margin-top:4px;font-size:12px;color:#fff;background:rgba(10,20,45,0.62);border-radius:10px;padding:2px 9px;}
+#taC b{color:#7dff8a;}
 #pad{width:390px;height:210px;background:linear-gradient(160deg,#15151f 0%,#0a0a12 60%,#06060c 100%);
   display:flex;align-items:flex-end;
   justify-content:space-between;padding:0 16px 8px;flex-shrink:0;
@@ -889,6 +894,7 @@ function showErrEarly(msg){ mkBanner('⚠ '+msg); }
   <div id="hPause" style="margin-left:4px;font-size:16px;padding:3px 9px;border:1px solid #556;border-radius:8px;background:#1c1c2e;color:#dde;user-select:none;-webkit-user-select:none">⏸</div>
 </div>
 <canvas id="cv" width="390" height="390"></canvas>
+<div id="taBox"><div id="taT">0:00.0</div><div id="taC"></div></div>
 <div id="pad">
   <div id="dpad">
     <div id="dpadBase"></div>
@@ -3165,6 +3171,8 @@ function onBossDefeated(e){
   bossClearMsg=180;  // 保険：ゴール到達が間に合わなくても約3秒後にクリア
   bossClearPending=true;
   p.bossFreeze=true;
+  if(TA_ON && !taCondOK()){ bossClearMsg=0; bossClearPending=false; p.bossFreeze=false;   // ★v367 タイムアタックで条件が足りない：自動クリアせず、そのまま集めに行ける
+    pops.push({x:e.x+e.w/2,y:e.y+e.h*0.35,txt:taRestTxt()+' 集めてゴールへ',life:110,ml:110,col:'#7dff8a',sz:15,glow:true}); }
   e.breathTimer=0;              // ★残存ブレスを消す（撃破後の理不尽被弾防止）
   p.ifrm=Math.max(p.ifrm,150);  // ★勝利演出中は無敵
 }
@@ -3220,8 +3228,7 @@ function burst(x,y,col,n){
 function updHUD(){
   var _w=stageWorld(level);   // ★v233 10ワールド=10ステージなので -1 表記は廃止
   document.getElementById('hLv').textContent=_w;
-  var _hS=document.getElementById('hSc'); _hS.textContent=TA_ON?taFmt(taFr):('000000'+Math.floor(score)).slice(-6);   // ★v366 タイムアタック中は SCORE の所がタイム
-  if(_hS.previousElementSibling) _hS.previousElementSibling.textContent=TA_ON?'TIME':'SCORE';
+  document.getElementById('hSc').textContent=('000000'+Math.floor(score)).slice(-6);   // ★v367 タイムは taBox に移したので、ここは いつも SCORE
   var coinDisp=hasSk(5)
     ? String(p.totalCoins)                      // 全スキル取得後：コイン数のみ（無敵スタンバイの案内は防御ボタンの「むてき」ラベルに集約）
     : p.totalCoins+'/'+((p.skillMilestones||0)+1)*10;  // ★④: 次スキルまで＝コインのマイルストーン基準（購入分と無関係に常に10刻み）
@@ -6094,6 +6101,16 @@ var _taBest=(function(){ try{ var o=JSON.parse(store.get('yk_ta_best')||'{}'); r
 function taUnlocked(){ return TEST_MODE && store.get('yk_ta')==='1'; }
 function taPar(lv){ var w=stageWorld(lv), s=4200*WORLD_LEN[w-1]/264*1.35+10+2*w; return [s,s*1.35,s*1.8]; }   // 金・銀・銅のタイム（秒）。走る速さ 264px/秒 で端まで行く時間×1.35＋ボス（仮。遊んで直す）
 function taMedal(lv,f){ var s=f/60, P=taPar(lv); return s<=P[0]?3:(s<=P[1]?2:(s<=P[2]?1:0)); }
+// ★v367 タイムアタックのクリア条件（ユーザー「スタート前に、モンスター最低10体撃破・コイン最低20個獲得が条件でタイムトライアル。時間は画面の中央上部にわかりやすく大きめに」）
+//   そのステージにそれより少ないときは、ある数まで（クリアできない面を作らない）。ボスも1体に数える（stageEnemyKilled と同じ）
+var TA_NEED_K=10, TA_NEED_C=20, _taVis=false;
+function taNeed(){ return {k:Math.min(TA_NEED_K,stageEnemyTotal), c:Math.min(TA_NEED_C,stageCoinTotal)}; }
+function taCondOK(){ var n=taNeed(); return stageEnemyKilled>=n.k && stageCoinGot>=n.c; }
+function taRestTxt(){ var n=taNeed(), a=[]; if(stageEnemyKilled<n.k) a.push('👾'+(n.k-stageEnemyKilled)+'体'); if(stageCoinGot<n.c) a.push('コイン'+(n.c-stageCoinGot)+'枚'); return 'あと '+a.join('・')+'！'; }
+function taBoxPos(){ var b=document.getElementById('taBox'), r=document.getElementById('cv').getBoundingClientRect(); if(b){ b.style.left=(r.left+r.width/2)+'px'; b.style.top=(r.top+6)+'px'; } }
+function taBoxUpd(){ var n=taNeed(), t=document.getElementById('taT'), c=document.getElementById('taC'); if(!t||!c) return; t.textContent=taFmt(taFr);
+  var kk=stageEnemyKilled>=n.k, cc=stageCoinGot>=n.c;
+  c.innerHTML=(kk?'<b>✓ ':'')+'👾 '+Math.min(stageEnemyKilled,n.k)+'/'+n.k+(kk?'</b>':'')+'　'+(cc?'<b>✓ ':'')+coinIconHTML()+' '+Math.min(stageCoinGot,n.c)+'/'+n.c+(cc?'</b>':''); }
 function taFmt(f){ var s=f/60, m=Math.floor(s/60), r=(s-m*60).toFixed(1); return m+':'+(r.length<4?'0':'')+r; }
 function resetStageStats(){
   stageCoinTotal=cins.length;
@@ -6120,11 +6137,35 @@ function doStart(keepSkill){
   if(!seenTutorial){
     // 初回：チュートリアルを表示（見終わったらplay開始）
     startTutorial('play'); // 初回：チュートリアル→プレイ開始
+  } else if(TA_ON){
+    showTAIntro();   // ★v367 タイムアタック：スタート前に条件を見せる。タイマーはスタートを押してから
   } else {
     gs='play';
     ov.style.display='none';
     bgmRestart();
   }
+}
+function showTAIntro(){
+  gs='taready';
+  var w=stageWorld(level), P=taPar(level), n=taNeed(), b=_taBest[level];
+  ov.className='scrollable';
+  ov.innerHTML='<div class="uiTitle" style="font-size:22px">⏱ タイムアタック</div>'
+    +'<div style="color:#bfe6ff;font-size:14px;font-weight:bold;margin:2px 0 10px">ワールド'+w+'：'+WORLD_NAMES[w-1]+'</div>'
+    +'<div class="uiPanel" style="width:300px;max-width:92%;padding:12px 14px;text-align:left">'
+      +'<div style="color:#ffd24a;font-size:15px;font-weight:bold;text-align:center;margin-bottom:8px">クリアの条件</div>'
+      +'<div style="font-size:16px;font-weight:bold;color:#fff;line-height:1.9">👾 モンスターを <span style="color:#ffe44d;font-size:20px">'+n.k+'体</span> たおす<br>'
+        +coinIconHTML()+' コインを <span style="color:#ffe44d;font-size:20px">'+n.c+'枚</span> とる</div>'
+      +'<div style="font-size:12px;color:#cfe3ff;margin-top:6px;line-height:1.6">両方そろえて ゴール！（ボスも倒す）<br>足りないと ゴールを通れないよ</div>'
+    +'</div>'
+    +'<div style="color:#dfeeff;font-size:13px;margin-top:10px;line-height:1.8">🥇 '+taFmt(P[0]*60)+'　🥈 '+taFmt(P[1]*60)+'　🥉 '+taFmt(P[2]*60)+'<br>'
+      +'自己ベスト '+(b?taFmt(b)+' '+(TA_MEDAL[taMedal(level,b)]||''):'まだなし')+'</div>'
+    +'<div id="taGo" class="uiBtn go" style="width:236px;font-size:18px;min-height:54px;margin-top:14px">▶ スタート！</div>'
+    +'<div id="taBack" class="uiBtn info" style="width:160px;margin-top:10px">◀ もどる</div>';
+  ov.style.display='flex'; ov.scrollTop=0;
+  setTimeout(function(){
+    _csTap(document.getElementById('taGo'),function(){ taFr=0; gs='play'; ov.style.display='none'; bgmRestart(); });
+    _csTap(document.getElementById('taBack'),function(){ showStageMap(); });
+  },30);
 }
 
 // ★穴落ち復活の安全地点を探す：最後の安全Xから左へ下がり、足元＆前後が地面の所を返す（縁での即再落下を防止）
@@ -6517,7 +6558,7 @@ function bossTell(e,bob,flip){   // ★v365 予告とチャンスの印（ctx �
 }
 function update(){
   if(gs!=='play') return;
-  if(TA_ON){ taFr++; if(taFr%6===0){ var _tH=document.getElementById('hSc'); if(_tH) _tH.textContent=taFmt(taFr); } }   // ★v366 タイムアタックのタイマー（0.1秒ごとに表示）
+  if(TA_ON){ taFr++; if(taFr%6===0) taBoxUpd(); }   // ★v366 タイムアタックのタイマー（0.1秒ごとに表示。★v367 ゲーム画面の上の真ん中＝taBox）
   if(hitStop>0){ hitStop--; return; } // 時を止めて打撃感を出す
   // ★穴落ちフリーズ：手前地面に戻った直後、その場で点滅して操作不可。
   //   前半1秒＝速い点滅（落ちた！）／後半1秒＝ゆっくり点滅（もうすぐ動ける予告）→0で操作復帰。
@@ -6923,8 +6964,10 @@ function update(){
   var ab=p.atkT>0?{x:p.dir>0?p.x+pw():p.x-aw,y:p.y-ph()*0.12,w:aw,h:ph()*0.95}:null; // 上方向に拡張＝空中の飛行敵にも届く
   if(p.plunge){ ab={x:p.x-8,y:p.y+ph()*0.4,w:pw()+16,h:ph()*0.9}; } // 急降下中は真下に判定
 
+  // ★v367 タイムアタック：条件が足りないとゴールを通れない（1秒ごとに「あと〇〇！」）
+  if(TA_ON && p.x+pw()>GOAL_X-10 && !taCondOK()){ p.x=GOAL_X-10-pw(); if(p.vx>0) p.vx=0; p.bossFreeze=false; if(fr%60===0) pops.push({x:p.x+pw()/2,y:p.y-22,txt:taRestTxt(),life:55,ml:55,col:'#ffe44d',sz:14,glow:true}); }
   // ゴール（LV5はボス撃破後のみ有効）
-  if(p.x+pw()>GOAL_X-10 && !(isBossStage(level) && !bossDefeated)){
+  if(p.x+pw()>GOAL_X-10 && !(isBossStage(level) && !bossDefeated) && !(TA_ON && !taCondOK())){
     score+=500+(6-level)*150;
     // 固有スキル リジェネ：ステージクリアでHP+20回復。
     // ★v199(shop③): HP満タン(ノーダメージ)クリア時は回復の代わりに最大HPを+20して恒久強化
@@ -9899,6 +9942,7 @@ function loop(ts){
   try{
     while(_acc>=_STEP){ update(); _acc-=_STEP; }
   }catch(eU){ showErr('update',eU); }
+  var _tv=(TA_ON && gs==='play'); if(_tv!==_taVis){ _taVis=_tv; var _tb=document.getElementById('taBox'); if(_tb){ if(_tv){ taBoxPos(); taBoxUpd(); } _tb.style.display=_tv?'block':'none'; } }   // ★v367 タイマーはプレイ中だけ
   // ═══ ★v226-A: 全景描画のスキップ ═══
   // ☆安全性の根拠: draw()内に performance.now / Date.now の参照が0件（実測）。
   //   つまり draw() はゲーム状態の純粋関数で、update()が止まっている間は
@@ -10004,6 +10048,7 @@ ov.addEventListener('touchstart',function(e){
   else if(gs==='dead'||gs==='clear'){ gs='title'; showTitleScreen(); }
   else if(gs==='skillpick'){ /* スキル選択ボタンで管理 */ }
   else if(gs==='stageclear'){ /* クリア画面はボタンで管理＝ボタン外タップは無効（誤タップでホームに飛ばない） */ }
+  else if(gs==='taready'){ /* ★v367 タイムアタックのスタート前の画面はボタンで管理（ここで doStart すると画面が作り直されてボタンが効かない） */ }
   else if(gs!=='play'){doStart();}
 },{passive:false});
 // ★チュートリアル：タップ＝次へ / 右スワイプ＝前へ / 左スワイプ＝次へ
@@ -10032,6 +10077,7 @@ ov.addEventListener('click',function(e){
   else if(gs==='dead'||gs==='clear'){ gs='title'; showTitleScreen(); }
   else if(gs==='skillpick'){ /* スキル選択ボタンで管理 */ }
   else if(gs==='stageclear'){ /* クリア画面はボタンで管理＝ボタン外タップは無効（誤タップでホームに飛ばない） */ }
+  else if(gs==='taready'){ /* ★v367 タイムアタックのスタート前の画面はボタンで管理（ここで doStart すると画面が作り直されてボタンが効かない） */ }
   else if(gs!=='play'){doStart();}
 });
 
