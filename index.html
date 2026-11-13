@@ -2638,7 +2638,7 @@ function lvCfg(lv){
     enemyN:   bossDensity?Math.round(enemyN*0.6):((TEST_MODE && LATE_TEST[w])?LATE_TEST[w].en:enemyN),  // ★v230 密度側（★v364 テスト版の W8〜W10 は LATE_TEST）
     enemySpd: enemySpd,
     enemyHp:  enemyHp,
-    bossHp:   5 + Math.round(d*8),                 // W1≈6 / W6≈9 / W10≈15
+    bossHp:   TEST_MODE?(6+Math.round(d*16)):(5 + Math.round(d*8)),   // W1≈6 / W6≈9 / W10≈15（★v365 テスト版は約1.8倍：W1 7・W5 12・W8 19・W10 23）
     hasFast:  w>=3,   // ★v232 旧 d>=0.14(実質 W3) → ワールド番号ベースへ
     hasFlying:w>=5,   // ★v232 旧 d>=0.18(W3) → W5へ（W1-3を低学年向けに）
     hasBomber:w>=6,   // ★v232 旧 d>=0.45(W6) と同値。表記を揃えただけ
@@ -2684,6 +2684,7 @@ function buildWorld(lv){
     rndW=Math.max(cfg.holeMinW,rndW);
     var hx=Math.round(500+sp*(i+1));
     if(hx+rndW>holeLimit) continue;  // ゴール/ボス手前には穴を作らない
+    if(TEST_MODE && cfg.bossFight && hx+rndW>GOAL_X-BOSS_CLEAR) continue;   // ★v365 テスト版：ボスのまわり（小物を置かない所）には穴も作らない。前は W5 から上の全部の面で、ボスの手前に穴があり、剣で近づけなかった
     holes.push({x:hx, w:rndW});
   }
 
@@ -3060,9 +3061,9 @@ function buildWorld(lv){
       dead:false, dy:0,
       type:'boss',
       elem:elemOf(lvW),                     // ★v247 ボスの火球も属性に合わせる
-      shootInterval:100, shootTimer:30,
+      shootInterval:TEST_MODE?0:100, shootTimer:30,   // ★v365 テスト版は bossAI が撃つ（ふつうの撃ち方は使わない）
       shootBurst:3, shootBurstTimer:0,
-      isBoss:true,
+      isBoss:true, bp:'hover', bt:90, bseq:0,
     });
     // ボス戦エリアの足場（ジャンプで弾を避けたり上から斬撃できるように）
     var bossPlats=[
@@ -6412,6 +6413,86 @@ function moveY(ent,ew,eh,limitStep){
 }
 
 // ===== 更新 =====
+// ★v365 テスト版のボス（ユーザー「ボスが弱すぎる＝体力なさすぎる。剣だとボスに届かない。剣で行くなら体力を削られるのは良いけど、攻撃の隙がなさすぎる。
+//   攻撃できるタイミングを作って。攻撃のパターンやタイミングを全体的に見直したい」）。前は「近づくとずっと追いかけてくる・さわるとダメージ・火の玉は一定間隔・炎は2.5秒ごと」で止まる時間がなかった
+//   順番：ただよう → 火の玉（予告：口が光る）→ ただよう → 火炎放射（予告：頭に「！」・口がチラつく）→ ひと休み（地面に降りて目を回す＝チャンス。追いかけない・さわっても平気）→ くり返し
+//   覚醒（体力 35% 以下）：テンポが速く、火の玉5方向・炎が大きく長い・ひと休みが短い。追いかけるときは主人公の手前30pxで止まる（ボスからはぶつからない）
+var BOSS_T={hover:[90,55], fireW:[30,20], breathW:[42,30], breath:[60,80], rest:[150,100]};   // [ふつう, 覚醒]（フレーム。60＝1秒）
+function bossBreathHit(e){   // 火炎放射の5つの円（描画と同じ式）と主人公が重なるか
+  var fl=(p.x>e.x+e.w/2)?-1:1, am=e.rage?1.25:1;
+  for(var k=0;k<5;k++){ var cx=e.x+e.w/2+fl*(-0.46-0.12*k)*e.w, cy=e.y+e.h*0.38, cr=e.w*(0.15+0.055*k)*am,
+    nx=Math.max(p.x,Math.min(cx,p.x+pw())), ny=Math.max(p.y,Math.min(cy,p.y+ph())); if((nx-cx)*(nx-cx)+(ny-cy)*(ny-cy)<cr*cr) return true; }
+  return false;
+}
+function bossAI(e){
+  if(e.bossHome===undefined) e.bossHome=e.x;
+  if(NEW_BGM_ON && !e._bgm && e.x-cam<W+80){ e._bgm=true; musScene('X'); }   // ★v346 ボス曲（前と同じ）
+  if(!e.rage && e.hp<=Math.max(3,Math.round(e.maxHp*0.35))){   // 覚醒
+    e.rage=true; shake=Math.max(shake,12); hitStop=Math.max(hitStop,8); SFX.bossRoar();
+    pops.push({x:e.x+e.w/2,y:e.y-30,txt:'RAGE MODE!!',life:70,ml:70,col:'#ff44ff'});
+    burst(e.x+e.w/2,e.y+e.h/2,'#cc00ff',24); burst(e.x+e.w/2,e.y+e.h/2,'#ff44ff',16);
+    if(e.bp==='rest'){ e.bp='hover'; e.bt=BOSS_T.hover[1]; }
+  }
+  var R=e.rage?1:0, gy=getGroundY(e.x+e.w/2); if(gy>GROUND+10) gy=GROUND;
+  // 高さ：ひと休みは地面に降りる。ほかはふわふわ（前と同じ上下）
+  var ty=(e.bp==='rest')?gy-e.h:gy-e.h-Math.abs(Math.sin(fr*(e.rage?0.08:0.04)))*(e.rage?22:14);
+  e.y+=(ty-e.y)*0.2;
+  // 横：ただよう間だけ動く。主人公の手前30pxで止まる
+  if(e.bp==='hover'){
+    var pl=(p.x+pw()/2<e.x+e.w/2), gap=pl?(e.x-(p.x+pw())):(p.x-(e.x+e.w)), sp=e.rage?0.9:0.6;
+    if(Math.abs(p.x-e.x)<420){ if(gap>30) e.x+=pl?-sp:sp; }
+    else e.x+=(e.bossHome-e.x)*(e.rage?0.04:0.02);
+  }
+  if(e.rage && fr%3===0) ptcl.push({x:e.x+Math.random()*e.w,y:e.y+Math.random()*e.h,vx:(Math.random()-0.5),vy:-(0.5+Math.random()),life:20,ml:20,col:'#cc00ff',r:2+Math.random()*2});
+  // 画面に入るまでは待つ（遠くで撃たない）
+  if(e.x-cam>W+40) return;
+  // ひと休み中に最大体力の25%（2以上）削られたら起きる（1回のチャンスで倒しきれないように。ヘッドレスで W5 のボスが1回のチャンスで倒れた）
+  if(e.bp==='rest' && e.rHp0!==undefined && e.hp<=e.rHp0-Math.max(2,Math.round(e.maxHp*0.25))){ e.bp='hover'; e.bt=BOSS_T.hover[R]; SFX.bossRoar(); shake=Math.max(shake,6);
+    pops.push({x:e.x+e.w/2,y:e.y+e.h*0.3,txt:'おこった！',life:50,ml:50,col:'#ff7a5a',sz:15}); return; }
+  if(--e.bt>0){
+    if(e.bp==='breath' && p.ifrm<=0 && bossBreathHit(e)){   // 火炎放射：火の玉の3分の1（v362 と同じ）。ガードで防げる
+      if(p.st==='guard'){ if(e._bgC!==e.bseq){ e._bgC=e.bseq; p.guardEffect=30; SFX.guard(); burst(p.x+pw()/2,p.y+ph()*0.3,'#aaddff',8); } }
+      else { takeDamage(Math.max(1,Math.round(calcDamage('fire')/3))); updHUD(); if(p.hp<=0){ showGameOver(); } }
+    }
+    if(e.bp==='fire' && e.bt===40) bossVolley(e);   // 2回目の火の玉
+    return;
+  }
+  // 次の段へ
+  if(e.bp==='hover'){
+    e.bseq++;
+    e.bp=(e.bseq%2)?'fireW':'breathW';   // 火の玉と火炎放射をこうたいに（火炎放射のあとは必ずひと休み）
+    e.bt=BOSS_T[e.bp][R];
+    if(e.bp==='breathW'){ SFX.bossRoar(); }
+  } else if(e.bp==='fireW'){ e.bp='fire'; e.bt=80; bossVolley(e); }
+  else if(e.bp==='fire'){ e.bp='hover'; e.bt=BOSS_T.hover[R]; }
+  else if(e.bp==='breathW'){ e.bp='breath'; e.bt=BOSS_T.breath[R]; shake=Math.max(shake,4); }
+  else if(e.bp==='breath'){ e.bp='rest'; e.bt=BOSS_T.rest[R]; e.rHp0=e.hp; pops.push({x:e.x+e.w/2,y:e.y-20,txt:'チャンス！',life:60,ml:60,col:'#7dff8a',sz:16,glow:true}); }
+  else { e.bp='hover'; e.bt=BOSS_T.hover[R]; }
+}
+function bossVolley(e){   // 火の玉：ふつう3方向・覚醒5方向（大きさは v357 と同じ）
+  var dirB=(p.x+pw()/2>e.x+e.w/2)?1:-1, bSpdB=3.4, spread=e.rage?[-0.5,-0.25,0,0.25,0.5]:[-0.34,0,0.34], bfr=6*Math.min(2.8,Math.max(1,e.h/88*0.75));
+  for(var bk=0;bk<spread.length;bk++) bullets.push({x:e.x+(dirB>0?e.w:0), y:e.y+e.h*0.42, vx:dirB*bSpdB*Math.cos(spread[bk]), vy:bSpdB*Math.sin(spread[bk])-0.6, type:'fire', elem:e.elem||'fire', life:150, r:bfr, hr:6+(bfr-6)*0.6});
+  SFX.hit();
+}
+function bossTell(e,bob,flip){   // ★v365 予告とチャンスの印（ctx はボスの足元が原点）
+  var mx=flip*(-e.w*0.46), my=-e.h*0.62+bob, k, bx0=e.x+e.w/2-cam, tx=Math.max(70-bx0,Math.min(W-70-bx0,mx));   // tx＝文字の横位置（口の側・画面の中におさめる）
+  if(e.bp==='fireW'){   // 火の玉の予告：口が光ってふくらむ
+    var q=1-e.bt/BOSS_T.fireW[e.rage?1:0];
+    ctx.save(); ctx.globalAlpha=0.55+0.35*Math.sin(fr*0.6); ctx.fillStyle='#ffd23a'; ctx.beginPath(); ctx.arc(mx,my,e.w*(0.04+0.07*q),0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=0.95; ctx.fillStyle='#fffbe0'; ctx.beginPath(); ctx.arc(mx,my,e.w*(0.02+0.03*q),0,Math.PI*2); ctx.fill(); ctx.restore();
+  } else if(e.bp==='breathW'){   // 火炎放射の予告：頭の上に「！」・口から炎がチラつく
+    ctx.save(); ctx.fillStyle=e.rage?'#ff66ff':'#ff6a00'; ctx.globalAlpha=0.8;
+    ctx.beginPath(); for(k=0;k<3;k++){ var fx=mx+flip*(-k*e.w*0.05), fr2=e.w*(0.035+0.02*k)*(0.8+0.3*Math.sin(fr*0.9+k)); ctx.moveTo(fx+fr2,my); ctx.arc(fx,my,fr2,0,Math.PI*2); } ctx.fill();
+    ctx.globalAlpha=1; ctx.font='bold 30px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.lineWidth=4; ctx.strokeStyle='#3a0a00'; ctx.fillStyle='#ffe44d';
+    var ey=Math.max(my-e.h*0.22, 44-(e.y+e.h))+Math.sin(fr*0.4)*3; ctx.strokeText('！',tx,ey); ctx.fillText('！',tx,ey); ctx.restore();   // 口の上。大きいボスは画面の上にはみ出すので、画面の中に止める
+  } else if(e.bp==='rest'){   // ひと休み：頭のまわりを星が回る＋「チャンス」の文字
+    ctx.save(); ctx.font='bold 16px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#ffe44d';
+    var hy=my-e.h*0.12;   // 目のあたり（口の少し上）
+    for(k=0;k<3;k++){ var a=fr*0.12+k*Math.PI*2/3; ctx.fillText('★',mx*0.8+Math.cos(a)*e.w*0.14,hy+Math.sin(a)*e.w*0.05); }
+    ctx.font='bold 13px sans-serif'; ctx.lineWidth=3; ctx.strokeStyle='#073a12'; ctx.fillStyle='#7dff8a'; ctx.globalAlpha=0.75+0.25*Math.sin(fr*0.25);
+    var ty2=Math.max(my-e.h*0.25, 58-(e.y+e.h)); ctx.strokeText('いまだ！ きりつけろ！',tx,ty2); ctx.fillText('いまだ！ きりつけろ！',tx,ty2); ctx.restore();
+  }
+}
 function update(){
   if(gs!=='play') return;
   if(hitStop>0){ hitStop--; return; } // 時を止めて打撃感を出す
@@ -6914,6 +6995,8 @@ function update(){
       e.vx=checkHole(e,e.vx);
       e.vy+=GRAV; e.x+=e.vx*(e.onG?slopeSpd(e.x+e.w/2,e.vx>0?1:-1):1); e.onG=false;  // ★v260 坂で加減速
       moveY(e,e.w,e.h);
+    } else if(e.type==='boss' && TEST_MODE){
+      bossAI(e);   // ★v365 テスト版：決まった順番で動く（予告→攻撃→ひと休み＝チャンス）
     } else if(e.type==='boss'){
       // ボスドラゴン：定位置付近でゆっくり上下＋プレイヤーへ寄る
       if(e.bossHome===undefined) e.bossHome=e.x;
@@ -7027,18 +7110,7 @@ function update(){
       }
     }
 
-    // ★v362 テスト版：ふだんの火炎放射（2.5秒ごとに0.4秒。描画の breathingB と同じ間）も攻撃にする（ユーザー「火の玉は攻撃として機能してるけど、火炎放射は演出になってる。
-    //   火の玉の攻撃力の3分の1ぐらいでいいし、火炎放射もダメージとして立派な攻撃に」）。前は覚醒ブレス（breathTimer）だけ当たっていた
-    //   当たりは描いている5つの円そのまま（向き・位置・大きさを描画と同じ式で。ゆれ±3px は入れない）。ダメージ＝火の玉の3分の1。ガード中は防げる
-    if(TEST_MODE && e.type==='boss' && !(e.breathTimer>0) && (fr%150)<24 && p.ifrm<=0){
-      var _bfl=(p.x>e.x+e.w/2)?-1:1, _bhit=false;
-      for(var _brk=0;_brk<5 && !_bhit;_brk++){ var _bcx=e.x+e.w/2+_bfl*(-0.46-0.12*_brk)*e.w, _bcy=e.y+e.h*0.38, _bcr=e.w*(0.15+0.055*_brk),
-        _bnx=Math.max(p.x,Math.min(_bcx,p.x+pw())), _bny=Math.max(p.y,Math.min(_bcy,p.y+ph())); _bhit=((_bnx-_bcx)*(_bnx-_bcx)+(_bny-_bcy)*(_bny-_bcy)<_bcr*_bcr); }
-      if(_bhit){
-        if(p.st==='guard'){ if(e._bgC!==Math.floor(fr/150)){ e._bgC=Math.floor(fr/150); p.guardEffect=30; SFX.guard(); burst(p.x+pw()/2,p.y+ph()*0.3,'#aaddff',8); } }
-        else { takeDamage(Math.max(1,Math.round(calcDamage('fire')/3))); updHUD(); if(p.hp<=0){ showGameOver(); } }
-      }
-    }
+    // ★v362 のふだんの火炎放射の当たりは、v365 で bossAI（火炎放射の間だけ・bossBreathHit）に移した
     // ★覚醒ブレスの持続・当たり判定・演出（ボスの向く側へ薙ぐ）
     if(e.type==='boss' && e.breathTimer>0){
       e.breathTimer--;
@@ -7147,6 +7219,8 @@ function update(){
         if(SFX&&SFX.guard) SFX.guard();   // 「弾かれた」感の軽い音
         pops.push({x:e.x+e.w/2,y:e.y-10,txt:'きかない！',life:34,ml:34,col:'#cf9bff'});
         burst(p.x+pw()/2,p.y+ph(),'#cf9bff',7);
+      } else if(e.isBoss && e.bp==='rest'){
+        // ★v365 テスト版：ひと休み中のボスは さわっても平気（近づいて斬るチャンス）
       } else if(p.ifrm<=0 && p.stompGrace<=0){
       // 全ての敵の体当たり（物理接触）でダメージ。被弾後はifrm(約1.5秒)無敵で連続被弾を防ぐ。
       // 盾スキル(LV3+)でガード中は体当たりを防御（射撃同様）。
@@ -9401,10 +9475,11 @@ function draw(){
       ctx.fillStyle='#c0392b';ctx.beginPath();ctx.arc(0,-e.h*0.5+bob,e.w*0.5,0,Math.PI*2);ctx.fill();
     }
     if(e.type==='boss'){
-      var isRageB=e.rage, breathingB=(e.breathTimer>0)||((fr%150)<24);
+      var isRageB=e.rage, breathingB=TEST_MODE?(e.bp==='breath'):((e.breathTimer>0)||((fr%150)<24));   // ★v365 テスト版は火炎放射の間だけ
+      if(TEST_MODE) bossTell(e,bob,flip);   // ★v365 予告とチャンスの印
       if(breathingB){
         ctx.save();ctx.translate(0,bob);ctx.scale(flip,1);
-        var bfx=-e.w*0.46, bfy=-e.h*0.62, bAmp=(e.breathTimer>0?1.4:1);
+        var bfx=-e.w*0.46, bfy=-e.h*0.62, bAmp=TEST_MODE?(e.rage?1.25:1):(e.breathTimer>0?1.4:1);
         ctx.shadowColor=isRageB?'#aa00ff':'#ff3300';ctx.shadowBlur=20;ctx.globalAlpha=0.9;
         for(var bk=0;bk<5;bk++){
           ctx.fillStyle=isRageB?(bk%2?'#ff99ff':'#cc44ff'):(bk%2?'#ffdd00':'#ff6a00');
@@ -9416,7 +9491,7 @@ function draw(){
       ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(-hbw/2-2,hbY,hbw+4,9);
       ctx.fillStyle=isRageB?'#cc44ff':'#ff3322';ctx.fillRect(-hbw/2,hbY+2,hbw*hpR,5);
       ctx.fillStyle='#ffd24a';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='alphabetic';
-      ctx.fillText((isRageB?'覚醒 ':'BOSS ')+e.hp+'/'+e.maxHp,0,hbY-3);
+      ctx.fillText((isRageB?'覚醒 ':'BOSS ')+(TEST_MODE?Math.ceil(e.hp):e.hp)+'/'+e.maxHp,0,hbY-3);   // ★v365 レーザーで小数になるので切り上げ
     }
 
     // HP表示
