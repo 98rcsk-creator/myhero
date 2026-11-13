@@ -848,6 +848,17 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #overlay.home #achBtn{position:absolute;left:50.8%;width:19.0%;top:calc(60% + 16.65vw);height:21.62vw;}
 #overlay.home #rankBtn{position:absolute;left:71.3%;width:19.3%;top:calc(60% + 16.65vw);height:21.62vw;}
 #overlay.home #howtoBtn{position:absolute;left:22.2%;width:55.5%;top:calc(60% + 43.67vw);height:10.59vw;}
+/* ★v370 テスト版：冒険の記録・攻略チャットの丸ボタン（ユーザー依頼「新しい2つは円形・右端か左端・既存のボタンやロゴと重ならない・押しやすい大きさ」）
+   「あそびかた」と同じ高さ（中心＝60% + 48.97vw）の左右の空き（左はし〜22.2%／77.7%〜右はし）のまん中に置く。絵の座標と同じ式なので機種でずれない。
+   実測：IG 390×674 は上のボタン4つの下から13px・画面の下まで50px／SE 375×548 は13px・8px あく。直径 14.5vw（IG 57px・SE 54px）。動きは付けない（§10） */
+#overlay.home .homeRound{position:absolute;top:calc(60% + 41.72vw);width:14.5vw;height:14.5vw;margin-left:-7.25vw;border-radius:50%;box-sizing:border-box;
+  border:3px solid #fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;
+  box-shadow:0 4px 0 rgba(10,30,80,0.55),0 6px 10px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;transition:transform .09s ease,filter .09s ease;}
+#overlay.home .homeRound span{font-size:6vw;line-height:1;}
+#overlay.home .homeRound b{font-size:2.6vw;line-height:1.2;color:#fff;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,0.7);white-space:nowrap;}
+#overlay.home .homeRound:active{transform:scale(0.92);filter:brightness(1.12);}
+#overlay.home .hrRec{left:11.1%;background:radial-gradient(circle at 35% 28%,#8fc2ff 0%,#3b72e6 55%,#2147a6 100%);}   /* 青（オレンジだと📜の色と近くて見えにくかった） */
+#overlay.home .hrChat{left:88.85%;background:radial-gradient(circle at 35% 28%,#9ff0a8 0%,#33b84f 55%,#16752c 100%);}
 </style>
 </head>
 <body>
@@ -10537,6 +10548,13 @@ function homeGo(fn){
 // ランキング・実績ボタンのイベント設定
 function bindRankBtn(){
   setTimeout(function(){
+    if(TEST_MODE){   // ★v370 冒険の記録・攻略チャットの丸ボタン（静的HTMLのホームと showTitleScreen のホームの両方に、ここで入れる＝§2-2）
+      var hb=document.querySelector('#overlay.home .home-btns');
+      if(hb && !document.getElementById('recBtn')) hb.insertAdjacentHTML('beforeend','<div id="recBtn" class="homeRound hrRec" aria-label="冒険の記録"><span>📜</span><b>記録</b></div><div id="gdBtn" class="homeRound hrChat" aria-label="攻略チャット"><span>💬</span><b>チャット</b></div>');
+      [['recBtn',function(){ showRecords(); }],['gdBtn',function(){ showGuide(); }]].forEach(function(a){ var el=document.getElementById(a[0]); if(!el || el._b) return; el._b=1;
+        function go(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); sndInit(); homeGo(a[1]); }
+        el.addEventListener('touchstart',go,{passive:false}); el.addEventListener('click',go); });
+    }
     var stb=document.getElementById('homeStartBtn');
     if(stb){
       function goStart(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); sndInit(); titleJingle(); homeGo(startFromTitle); }
