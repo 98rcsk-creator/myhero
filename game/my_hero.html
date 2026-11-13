@@ -9403,9 +9403,14 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
 }
 
 // ★v371 テスト版：タイムアタックの「運動会ステージ」の背景（ユーザー「背景も運動会みたいな背景にする」）。bgDraw の 11 番
-//   奥から：青空 → 雲 → 校舎（時計台は9時）→ 植えこみ → グラウンド（白線・コーン）→ 紅白のテントと応援する子ども（赤組・白組の帽子）→ 万国旗
+//   奥から：青空 → 雲 → 校舎（時計台は9時）→ 植えこみ → グラウンド（白線）→ 紅白のテントと応援する子ども（赤組・白組の帽子）→ 万国旗
 //   同じ色はまとめて1パス（§1-7。図形ごとに moveTo）。どれも面積が小さいので焼き置き（ストリップ）はしない（§1-23）
 //   校舎は「浅い視差＋クランプ」（§1-9）：cam*0.03 で 最大260pxだけ左へ＝ステージの最後まで画面に残る
+//   ★v372 背景を「遠くにかすんだ絵」に（実機「背景がパキっとしすぎててプレイ画面が見にくい。背景は背景として、ステージが綺麗になるように」）
+//     遊ぶ帯（地面から上185px）の細かさ（となりの画素との明るさの差の平均）が 7.89 で、草原 1.36・森 2.12・雪山 3.45 の 2.3〜5.8倍あった → 2.9 に
+//     やったこと：色を空の青（#b4daf3）へ 28〜80% まぜる（白くとばさない）・窓は1階5枚に・テントのしまは4本に・子どもは8人に
+//     ・地面まで立つ万国旗の柱・コーン・テントの足・階の線は なくした（遊ぶ所を横切る はっきりした線）・万国旗の視差 0.55→0.3
+//     色を変えるときは 1色ずつではなく まぜる割合ごとに（校舎 0.68・窓 0.8・植えこみ 0.5・土 0.28・テント 0.48・子ども 0.6・旗 0.45）
 function bgUndokai(){
   var i, j, k, x, y, n;
   // ① 空（帯のキャッシュを1回貼る）
@@ -9419,77 +9424,65 @@ function bgUndokai(){
     ctx.moveTo(x-6,y+8); ctx.arc(x-24,y+8,18,0,Math.PI*2);
   }
   ctx.fill();
-  // ③ 校舎（3階建て・まん中に時計台）
+  // ③ 校舎（3階建て・まん中に時計台。遠くにかすんで見える色）
   var sx=250-Math.min(260,cam*0.03), sy=170;
-  ctx.fillStyle='#c9b998'; ctx.fillRect(sx-156,sy-6,312,8);
-  ctx.fillStyle='#f3ead6'; ctx.beginPath(); ctx.rect(sx-150,sy,300,92); ctx.rect(sx-26,sy-46,52,48); ctx.fill();
-  ctx.fillStyle='#e2d5b8'; ctx.beginPath(); ctx.rect(sx-150,sy+29,300,3); ctx.rect(sx-150,sy+59,300,3); ctx.fill();
-  ctx.fillStyle='#7fb8de'; ctx.beginPath();
-  for(j=0;j<3;j++) for(i=0;i<10;i++) ctx.rect(sx-142+i*29,sy+7+j*30,19,15);
+  ctx.fillStyle='#bbcfd6'; ctx.fillRect(sx-156,sy-6,312,8);
+  ctx.fillStyle='#c8dfea'; ctx.beginPath(); ctx.rect(sx-150,sy,300,92); ctx.rect(sx-26,sy-46,52,48); ctx.fill();
+  ctx.fillStyle='#a9d3ef'; ctx.beginPath();
+  for(j=0;j<3;j++) for(i=0;i<5;i++) ctx.rect(sx-141+i*58,sy+7+j*30,50,15);
   ctx.fill();
-  ctx.fillStyle='#d0503c'; ctx.beginPath(); ctx.moveTo(sx-32,sy-46); ctx.lineTo(sx,sy-72); ctx.lineTo(sx+32,sy-46); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#bdaeb8'; ctx.beginPath(); ctx.moveTo(sx-32,sy-46); ctx.lineTo(sx,sy-72); ctx.lineTo(sx+32,sy-46); ctx.closePath(); ctx.fill();
   ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(sx,sy-24,14,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#6a5a48'; ctx.lineWidth=2; ctx.beginPath();
+  ctx.strokeStyle='#9cb1bc'; ctx.lineWidth=2; ctx.beginPath();
   ctx.moveTo(sx+14,sy-24); ctx.arc(sx,sy-24,14,0,Math.PI*2);
   ctx.moveTo(sx,sy-24); ctx.lineTo(sx,sy-34); ctx.moveTo(sx,sy-24); ctx.lineTo(sx-7,sy-24);
   ctx.stroke(); ctx.lineWidth=1;
   // ④ 植えこみ（視差 cam*0.08。こぶの大きさは場所で決まる＝スクロールしても変わらない）
   var hb=cam*0.08, h0=Math.floor(hb/44)-1, r;
-  ctx.fillStyle='#4f9a3c'; ctx.beginPath(); ctx.rect(0,252,W,26);
+  ctx.fillStyle='#82ba98'; ctx.beginPath(); ctx.rect(0,252,W,26);
   for(n=h0;n<h0+12;n++){ x=n*44-hb; r=22+(((n%3)+3)%3)*3; ctx.moveTo(x+r,258); ctx.arc(x,258,r,0,Math.PI*2); }
   ctx.fill();
-  ctx.fillStyle='#6dbb4f'; ctx.beginPath();
+  ctx.fillStyle='#90caa1'; ctx.beginPath();
   for(n=h0;n<h0+12;n++){ x=n*44-hb; r=12+(((n%3)+3)%3)*2; ctx.moveTo(x-6+r,250); ctx.arc(x-6,250,r,0,Math.PI*2); }
   ctx.fill();
-  // ⑤ グラウンド（土・白線2本・コーン 視差 cam*0.45）
-  ctx.fillStyle='#dcbb8a'; ctx.fillRect(0,272,W,GROUND-270);
-  ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fillRect(0,300,W,2); ctx.fillRect(0,320,W,2);
-  var cb=cam*0.45, c0=Math.floor(cb/180)-1;
-  ctx.fillStyle='#ff7a1a'; ctx.beginPath();
-  for(k=c0;k<c0+4;k++){ x=k*180+60-cb; ctx.moveTo(x-6,319); ctx.lineTo(x,304); ctx.lineTo(x+6,319); ctx.closePath(); }
-  ctx.fill();
-  // ⑥ 紅白のテントと応援する子ども（視差 cam*0.2。帽子はテントごとに赤組・白組。子どもは はねて応援）
+  // ⑤ グラウンド（土・うすい白線2本）
+  ctx.fillStyle='#d1c4a7'; ctx.fillRect(0,272,W,GROUND-270);
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(0,300,W,2); ctx.fillRect(0,320,W,2);
+  // ⑥ 紅白のテントと応援する子ども（視差 cam*0.2。帽子はテントごとに赤組・白組。子どもは 小さく はねる）
   var tb=cam*0.2, t0=Math.floor(tb/250)-1, tx=[], tn=[];
   for(k=t0;k<t0+4;k++){ x=k*250+120-tb; if(x+84>0 && x-84<W){ tx.push(x); tn.push(k); } }
-  ctx.fillStyle='rgba(40,30,20,0.22)'; ctx.beginPath();
-  for(i=0;i<tx.length;i++) ctx.rect(tx[i]-78,250,156,40);
+  ctx.fillStyle='rgba(60,70,90,0.07)'; ctx.beginPath();
+  for(i=0;i<tx.length;i++) ctx.rect(tx[i]-78,250,156,36);
   ctx.fill();
-  ctx.fillStyle='#9aa0a8'; ctx.beginPath();
-  for(i=0;i<tx.length;i++){ ctx.rect(tx[i]-78,244,4,48); ctx.rect(tx[i]+74,244,4,48); }
-  ctx.fill();
-  var kid=function(fn){ for(i=0;i<tx.length;i++) for(j=0;j<10;j++) fn(tx[i]-65+j*14.4, Math.sin(fr*0.3+j*1.7+tn[i])*1.6, ((tn[i]%2)+2)%2); };
-  ctx.fillStyle='#ffffff'; ctx.beginPath(); kid(function(kx,dy){ ctx.rect(kx-4,273+dy,8,10); }); ctx.fill();
-  ctx.fillStyle='#f6d2ac'; ctx.beginPath(); kid(function(kx,dy){ ctx.moveTo(kx+4.5,269+dy); ctx.arc(kx,269+dy,4.5,0,Math.PI*2); }); ctx.fill();
-  ctx.fillStyle='#e0352f'; ctx.beginPath(); kid(function(kx,dy,tm){ if(!tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
-  ctx.fillStyle='#fafafa'; ctx.beginPath(); kid(function(kx,dy,tm){ if(tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
-  ctx.fillStyle='#ffffff'; ctx.beginPath();
+  var kid=function(fn){ for(i=0;i<tx.length;i++) for(j=0;j<8;j++) fn(tx[i]-63+j*18, Math.sin(fr*0.2+j*1.7+tn[i])*1.0, ((tn[i]%2)+2)%2); };
+  ctx.fillStyle='#e4f2fb'; ctx.beginPath(); kid(function(kx,dy){ ctx.rect(kx-4,273+dy,8,10); }); ctx.fill();
+  ctx.fillStyle='#ced7d7'; ctx.beginPath(); kid(function(kx,dy){ ctx.moveTo(kx+4.5,269+dy); ctx.arc(kx,269+dy,4.5,0,Math.PI*2); }); ctx.fill();
+  ctx.fillStyle='#c698a5'; ctx.beginPath(); kid(function(kx,dy,tm){ if(!tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
+  ctx.fillStyle='#e1eef7'; ctx.beginPath(); kid(function(kx,dy,tm){ if(tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
+  ctx.fillStyle='#ebf5fc'; ctx.beginPath();
   for(i=0;i<tx.length;i++){ x=tx[i]; ctx.moveTo(x-64,226); ctx.lineTo(x+64,226); ctx.lineTo(x+82,246); ctx.lineTo(x-82,246); ctx.closePath(); ctx.rect(x-82,246,164,7); }
   ctx.fill();
-  ctx.fillStyle='#e0352f'; ctx.beginPath();
+  ctx.fillStyle='#cb848d'; ctx.beginPath();
   for(i=0;i<tx.length;i++){ x=tx[i];
-    for(k=0;k<8;k+=2){ ctx.moveTo(x-64+16*k,226); ctx.lineTo(x-64+16*(k+1),226); ctx.lineTo(x-82+20.5*(k+1),246); ctx.lineTo(x-82+20.5*k,246); ctx.closePath(); }
-    for(k=1;k<8;k+=2) ctx.rect(x-82+20.5*k,246,20.5,7);
+    for(k=0;k<4;k+=2){ ctx.moveTo(x-64+32*k,226); ctx.lineTo(x-64+32*(k+1),226); ctx.lineTo(x-82+41*(k+1),246); ctx.lineTo(x-82+41*k,246); ctx.closePath(); }
+    for(k=1;k<4;k+=2) ctx.rect(x-82+41*k,246,41,7);
   }
   ctx.fill();
-  // ⑦ 万国旗（視差 cam*0.55。柱と柱のあいだで ロープがたるむ。白い旗には赤い丸）
-  var fb=cam*0.55, f0=Math.floor(fb/300);
-  var FC=['#ffffff','#e8443a','#3a6fe0','#f6c432','#3fae5a','#a24ee0'];
-  ctx.fillStyle='#e8e8e8'; ctx.beginPath();
-  for(k=f0;k<f0+3;k++){ x=k*300-fb; ctx.rect(x-2,38,4,GROUND-38); }
-  ctx.fill();
-  ctx.strokeStyle='rgba(70,60,50,0.8)'; ctx.beginPath();
-  for(k=f0;k<f0+2;k++){ x=k*300-fb; ctx.moveTo(x,40); ctx.quadraticCurveTo(x+150,110,x+300,40); }
+  // ⑦ 万国旗（視差 cam*0.3。ロープがたるむ。白い旗には赤い丸。柱は立てない＝遊ぶ所を横切る線を作らない）
+  var fb=cam*0.3, f0=Math.floor(fb/300);
+  var FC=['#ddeefa','#d1888d','#719fe9','#d8ce89','#74c29f','#aa8de9'];
+  ctx.strokeStyle='rgba(90,100,120,0.35)'; ctx.beginPath();
+  for(k=f0;k<f0+2;k++){ x=k*300-fb; ctx.moveTo(x,30); ctx.quadraticCurveTo(x+150,100,x+300,30); }
   ctx.stroke();
   for(var ci=0;ci<FC.length;ci++){
     ctx.fillStyle=FC[ci]; ctx.beginPath();
     for(k=f0;k<f0+2;k++){ x=k*300-fb;
-      for(j=0;j<14;j++){
-        var ft=(j+0.5)/14, fx=x+300*ft, fy=40+140*ft*(1-ft)+Math.sin(fr*0.12+j)*0.8, fc=((k*14+j)%6+6)%6;
+      for(j=0;j<12;j++){
+        var ft=(j+0.5)/12, fx=x+300*ft, fy=30+140*ft*(1-ft), fc=((k*12+j)%6+6)%6;
         if(fc===ci) ctx.rect(fx-6,fy,12,9);
         else if(ci===1 && fc===0){ ctx.moveTo(fx+2.6,fy+4.5); ctx.arc(fx,fy+4.5,2.6,0,Math.PI*2); }
       }
     }
-    if(ci===3) for(k=f0;k<f0+3;k++){ x=k*300-fb; ctx.moveTo(x+4,37); ctx.arc(x,37,4,0,Math.PI*2); }   // 柱のてっぺんの金の玉
     ctx.fill();
   }
 }
