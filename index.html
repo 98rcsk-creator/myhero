@@ -11120,8 +11120,8 @@ function showEnding(star,first){
 function recFmt(t){ var d=new Date(t), z=function(n){ return (n<10?'0':'')+n; }; return d.getFullYear()+'/'+z(d.getMonth()+1)+'/'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes()); }
 function recLine(e,nm){   // [アイコン, 文]。知らない種類（新しい版で足した記録）は null＝出さない
   if(e.k==='born') return e.how==='make'?['🐣','「'+nm+'」が誕生した！']:['🎉',nm+' と はじめて冒険に出た！'];
-  if(e.k==='clear'){ var w=stageWorld(e.s); return ['🚩','ワールド'+w+'「'+(WORLD_NAMES[w-1]||'')+'」を はじめてクリア！'+(e.st?' <span style="color:#ffd24a">'+new Array(e.st+1).join('★')+'</span>':'')]; }
-  if(e.k==='item'){ var ic={sword:'⚔️',shield:'🛡️',outfit:'👕',perk:'✨',skill:'📈'}[e.kind]||'🎁'; return [ic,'<b>'+_escHtml(e.n||'')+'</b> を手に入れた'+(e.via==='shop'?'<span style="color:#9fb6c2">（ショップ）</span>':'')]; }
+  if(e.k==='clear'){ var w=stageWorld(e.s); return ['🚩','ワールド'+w+'「'+(WORLD_NAMES[w-1]||'')+'」<span style="white-space:nowrap"> はじめてクリア！</span>'+(e.st?' <span style="color:#ffd24a;white-space:nowrap">'+new Array(e.st+1).join('★')+'</span>':'')]; }
+  if(e.k==='item'){ var ic={sword:'⚔️',shield:'🛡️',outfit:'👕',perk:'✨',skill:'📈'}[e.kind]||'🎁'; return [ic,'<b>'+_escHtml(e.n||'')+'</b> を手に入れた'+(e.via==='shop'?'<span style="color:#9fb6c2;white-space:nowrap">（ショップ）</span>':'')]; }
   return null;
 }
 function showRecords(sel){
@@ -11133,43 +11133,47 @@ function showRecords(sel){
   var h=sel?_rec.h[sel]:null, ev=(h&&h.ev)?h.ev.slice().sort(function(a,b){ return a.t-b.t; }):[], nm=sel?recHeroName(sel):'';
   var born=null, nClr=0, nItem=0, i;
   for(i=0;i<ev.length;i++){ if(ev[i].k==='born' && !born) born=ev[i]; if(ev[i].k==='clear') nClr++; if(ev[i].k==='item') nItem++; }
-  var s='<div style="width:100%;max-width:350px;display:flex;flex-direction:column;align-items:center;padding-bottom:18px">'
-    +'<div class="uiTitle">📜 冒険の記録</div>';
-  if(ids.length>1){   // ヒーローえらび
-    s+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:2px 0 10px">';
+  // ★v373 見た目を作り直し（実機「見にくい。もっとシンプルに。ボタンっぽいデザインが多くて、ホンマのボタンと見分けがつきにくい」）
+  //   ボタンの形（角丸の箱・ふち・影）をしているのは 押せるものだけ：ヒーローえらび・ホームに戻る。
+  //   見出し・ヒーローのまとめ・あしあと は 箱に入れず、文字と細い線だけ（前は 見出しのプレート・まとめのパネル・丸いアイコンのふち が全部ボタンに見えた）
+  var _ln='border-bottom:1px solid rgba(255,255,255,0.13)';
+  var _row=function(l,v){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 2px;'+_ln+'"><span style="color:#b4c6dc;font-size:13px">'+l+'</span><span style="color:#fff;font-size:15px;font-weight:bold;text-align:right">'+v+'</span></div>'; };
+  var s='<div style="width:320px;max-width:92%;display:flex;flex-direction:column;align-items:stretch;padding:6px 0 18px;text-align:left">'
+    +'<div style="color:#fff;font-size:21px;font-weight:900;letter-spacing:1px;text-align:center;margin:4px 0 14px">📜 冒険の記録</div>';
+  if(ids.length>1){   // ヒーローえらび（押せる）
+    s+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 14px">';
     ids.forEach(function(k){ s+='<div class="recHero uiBtn '+(k===sel?'go':'info')+'" data-id="'+_escHtml(k)+'" style="font-size:12px;min-height:32px;padding:5px 11px">'+_escHtml(recHeroName(k))+'</div>'; });
     s+='</div>';
   }
-  if(!sel){ s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:14px;color:#dfeeff;font-size:14px;line-height:1.7">まだ記録がないよ。<br>ヒーローをえらんで 冒険に出かけよう！</div>'; }
+  if(!sel){ s+='<div style="color:#dfeeff;font-size:14px;line-height:1.8;text-align:center;padding:18px 0">まだ記録がないよ。<br>ヒーローをえらんで 冒険に出かけよう！</div>'; }
   else {
-    s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:10px 12px;text-align:left">'
-      +'<div style="color:#ffe44d;font-size:18px;font-weight:bold;text-align:center">'+_escHtml(nm)+'</div>'
-      +'<div style="color:#dfeeff;font-size:13px;line-height:1.8;margin-top:4px">🐣 誕生：'+(born?recFmt(born.t):'<span style="color:#9fb6c2">わからない（記録をはじめる前から）</span>')+'<br>'
-        +'🚩 はじめてクリアしたワールド：<b style="color:#ffe44d">'+nClr+'</b> / '+NUM_WORLDS+'<br>'
-        +'🎁 手に入れたアイテム：<b style="color:#ffe44d">'+nItem+'</b></div>'
-    +'</div>';
-    s+='<div style="width:320px;max-width:94%;margin-top:10px;text-align:left">';
+    s+='<div style="color:#ffe44d;font-size:20px;font-weight:bold;padding:0 2px 6px;'+_ln+'">'+_escHtml(nm)+'</div>'
+      +_row('誕生', born?recFmt(born.t):'<span style="color:#9fb6c2;font-weight:normal">わからない</span>')
+      +_row('クリアしたワールド', '<span style="color:#ffe44d">'+nClr+'</span> / '+NUM_WORLDS)
+      +_row('手に入れたアイテム', '<span style="color:#ffe44d">'+nItem+'</span>');
+    s+='<div style="color:#8fa6bd;font-size:12px;font-weight:bold;letter-spacing:2px;margin:20px 2px 2px">あしあと</div>';
     var shown=0;
     for(i=0;i<ev.length;i++){ var L=recLine(ev[i],nm); if(!L) continue; shown++;
-      s+='<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-left:2px solid rgba(140,200,255,0.35);margin-left:13px;padding-left:12px;position:relative">'
-        +'<div style="position:absolute;left:-14px;top:5px;width:26px;height:26px;border-radius:50%;background:#173a6a;border:2px solid #8cc8ff;display:flex;align-items:center;justify-content:center;font-size:14px">'+L[0]+'</div>'
-        +'<div style="padding-left:10px"><div style="color:#9fc4e6;font-size:11px">'+recFmt(ev[i].t)+'</div><div style="color:#fff;font-size:14px;line-height:1.5">'+L[1]+'</div></div></div>';
+      s+='<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 2px;'+_ln+'">'
+        +'<div style="flex:0 0 24px;text-align:center;font-size:17px;line-height:1.35">'+L[0]+'</div>'
+        +'<div style="min-width:0"><div style="color:#fff;font-size:14px;line-height:1.5">'+L[1]+'</div><div style="color:#8fa6bd;font-size:11px;margin-top:1px">'+recFmt(ev[i].t)+'</div></div></div>';
     }
-    if(!shown) s+='<div style="color:#dfeeff;font-size:13px;text-align:center;padding:10px">まだ記録がないよ。冒険に出かけよう！</div>';
-    s+='</div>';
+    if(!shown) s+='<div style="color:#dfeeff;font-size:13px;padding:12px 2px">まだ ないよ。冒険に出かけよう！</div>';
   }
-  s+='<div style="color:#9fb6c2;font-size:11px;line-height:1.6;margin-top:12px;max-width:320px">記録は '+recFmt(_rec.since)+' から つけているよ。<br>それより前のことは 日時がわからないので のせていないよ。</div>';
+  s+='<div style="color:#8fa6bd;font-size:11px;line-height:1.7;margin-top:16px;padding:0 2px">記録は '+recFmt(_rec.since)+' から。<br>それより前は 日時がわからないので のせていないよ。</div>';
+  s+='<div id="recBack" class="uiBtn info" style="width:200px;margin:22px auto 0">◀ ホームに戻る</div>';
   if(TEST_MODE){ var ng=(store.get('yk_nogrant')==='1');   // テスト版：持ち物を全部もらった状態だと、ショップで買えない＝アイテムの記録を確かめられないので
-    s+='<div id="recTest" class="uiBtn info" style="width:290px;font-size:12px;min-height:36px;margin-top:12px;opacity:0.85">'+(ng?'🧪 テスト用：持ち物を全部もどす':'🧪 テスト用：持ち物を空にする（ショップで買い直せる）')+'</div>';
+    //   ★v373 ふつうのボタンと同じ見た目だった（しかも文字が はみ出していた）→ いちばん下に、点線の小さい文字で（テストの道具だと分かるように）
+    s+='<div id="recTest" style="align-self:center;margin-top:26px;padding:7px 12px;border:1px dashed rgba(160,180,200,0.45);border-radius:6px;color:#8fa6bd;font-size:11px;line-height:1.5;text-align:center;cursor:pointer">🧪 テスト用：'+(ng?'持ち物を全部もどす':'持ち物を空にする<br>（ショップで買い直して 記録をためす）')+'</div>';
   }
-  s+='<div id="recBack" class="uiBtn info" style="width:180px;margin-top:14px">◀ ホームに戻る</div></div>';
+  s+='</div>';
   ov.className='scrollable opaque'; ov.innerHTML=s; ov.style.display='flex'; ov.scrollTop=0;
   setTimeout(function(){
     ov.querySelectorAll('.recHero').forEach(function(el){ _csTap(el,function(){ showRecords(el.dataset.id); }); });
     _csTap(document.getElementById('recBack'),function(){ gs='title'; showTitleScreen(); });
     var rt=document.getElementById('recTest');
     if(rt){ var armed=false; _csTap(rt,function(){
-      if(!armed){ armed=true; rt.textContent='⚠ もう一度おすと 実行（テスト版のセーブだけ）'; return; }
+      if(!armed){ armed=true; rt.textContent='⚠ もう一度おすと 実行（テスト版のセーブだけ）'; rt.style.color='#ffd24a'; rt.style.borderColor='#ffd24a'; return; }
       if(store.get('yk_nogrant')==='1'){ store.set('yk_nogrant',''); [SWORD_SKINS,OUTFIT_SKINS,SHIELD_SKINS,PERK_SHOP].forEach(function(list){ list.forEach(function(it){ if(it.id && ownedItems.indexOf(it.id)<0) ownedItems.push(it.id); }); }); }
       else { store.set('yk_nogrant','1'); ownedItems=['normal','silver','default']; equipItem('silver','sword'); equipItem('normal','shield'); equipItem('default','outfit'); }
       store.set('yk_owned',JSON.stringify(ownedItems)); showRecords(sel);
