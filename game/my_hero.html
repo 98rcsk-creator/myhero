@@ -852,13 +852,15 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
    「あそびかた」と同じ高さ（中心＝60% + 48.97vw）の左右の空き（左はし〜22.2%／77.7%〜右はし）のまん中に置く。絵の座標と同じ式なので機種でずれない。
    実測：IG 390×674 は上のボタン4つの下から13px・画面の下まで50px／SE 375×548 は13px・8px あく。直径 14.5vw（IG 57px・SE 54px）。動きは付けない（§10） */
 #overlay.home .homeRound{position:absolute;top:calc(60% + 41.72vw);width:14.5vw;height:14.5vw;margin-left:-7.25vw;border-radius:50%;box-sizing:border-box;
-  border:3px solid #fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;
-  box-shadow:0 4px 0 rgba(10,30,80,0.55),0 6px 10px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;transition:transform .09s ease,filter .09s ease;}
+  border:1.5px solid #1a234c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;
+  background:linear-gradient(180deg,#7080b0 0%,#465684 45%,#26325e 100%);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.26),0 3px 0 rgba(8,14,36,0.6),0 5px 9px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;transition:transform .09s ease,filter .09s ease;}
 #overlay.home .homeRound span{font-size:6vw;line-height:1;}
 #overlay.home .homeRound b{font-size:2.6vw;line-height:1.2;color:#fff;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,0.7);white-space:nowrap;}
 #overlay.home .homeRound:active{transform:scale(0.92);filter:brightness(1.12);}
-#overlay.home .hrRec{left:11.1%;background:radial-gradient(circle at 35% 28%,#8fc2ff 0%,#3b72e6 55%,#2147a6 100%);}   /* 青（オレンジだと📜の色と近くて見えにくかった） */
-#overlay.home .hrChat{left:88.85%;background:radial-gradient(circle at 35% 28%,#9ff0a8 0%,#33b84f 55%,#16752c 100%);}
+/* ★v374 白いふち・青と緑の原色をやめて、上の四角いボタン4つ（絵に描かれた あい色 #7080b0→#1a234c）と同じ色に（実機「位置は完璧。白縁が無駄に目立ちすぎ。取ってつけたみたいに主張がすごい。背景に馴染むように」） */
+#overlay.home .hrRec{left:11.1%;}
+#overlay.home .hrChat{left:88.85%;}
 </style>
 </head>
 <body>
