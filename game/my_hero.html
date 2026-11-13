@@ -2036,8 +2036,46 @@ var playedChars=(function(){
   try{ var c=JSON.parse(store.get('yk_played')||'[]'); return Array.isArray(c)?c:[]; }catch(e){ return []; }
 })();
 function charPlayedCount(){ return playedChars.length; }
+// ★v368 冒険の記録（テスト版のみ）。ユーザー依頼「ヒーローごとに 誕生・ステージの初回クリア・アイテムの初回獲得 を自動で保存し、時系列で振り返れるように。
+//   敗北の記録は不要。ヒーロー固有IDごとに管理。既存の保存機構を優先。過去の日時が不明なものは捏造しない。将来の拡張性」
+//   保存：store（いつもの保存。テスト版は tk_ の領域）の yk_rec ＝ {v:1, since:記録をはじめた時刻, h:{ヒーローID:{n:名前, ev:[{t:時刻, k:種類, …}]}}}
+//     k='born'（how:'make'＝マイヒーローを作った／'first'＝はじめて冒険に出た）／'clear'（s:ステージ, st:★）／'item'（id, n:名前, kind, via:'shop'）
+//     種類をふやすときは k を足して recLine に1行足すだけ（古い記録はそのまま読める）
+//   ヒーローID：8人＝キャラID（men_0 など）／マイヒーロー＝作ったときの ID（mh_…）。いまのマイヒーローは yk_custom_id（無ければ顔の絵で探す）
+//   記録をはじめる前のこと（前から持っていた物・前にクリアした面・前からいたヒーローの誕生日）は のせない。日時がわからないので
+var REC_ON=TEST_MODE, REC_MAX=400;
+var _rec=(function(){ var r=null; try{ r=JSON.parse(store.get('yk_rec')||'null'); }catch(e){} if(!r||typeof r!=='object'||!r.h||typeof r.h!=='object') r={v:1,since:Date.now(),h:{}}; return r; })();
+function recSave(){ if(!REC_ON) return; try{ store.set('yk_rec',JSON.stringify(_rec)); }catch(e){} }
+function recHeroId(){
+  if(selectedChar!=='custom') return selectedChar||null;
+  var id=store.get('yk_custom_id'); if(id) return id;
+  var f=store.get('yk_custom_face'), l=loadCustomList(); for(var i=0;i<l.length;i++) if(l[i].face===f) return l[i].id;
+  return null;
+}
+function recHeroName(id){
+  if(!id) return ''; if(CHAR_NAMES[id]) return CHAR_NAMES[id];
+  var l=loadCustomList(); for(var i=0;i<l.length;i++) if(l[i].id===id) return l[i].name||'マイヒーロー';
+  var h=_rec.h[id]; return (h&&h.n)||'マイヒーロー';
+}
+function recAdd(id,ev){
+  if(!REC_ON||!id) return;
+  try{ var h=_rec.h[id]||(_rec.h[id]={n:'',ev:[]}); h.n=recHeroName(id)||h.n; ev.t=Date.now(); h.ev.push(ev);
+    if(h.ev.length>REC_MAX) h.ev.splice(1,h.ev.length-REC_MAX);   // 多すぎたら古い順に消す（いちばん最初＝誕生は残す）
+    recSave(); }catch(e){}
+}
+function recHas(id,fn){ var h=_rec.h[id]; if(!h) return false; for(var i=0;i<h.ev.length;i++) if(fn(h.ev[i])) return true; return false; }
+function recBorn(id,how){ if(REC_ON && id && !recHas(id,function(e){ return e.k==='born'; })) recAdd(id,{k:'born',how:how}); }
+function recClear(lv,star){ var id=recHeroId(); if(REC_ON && id && !recHas(id,function(e){ return e.k==='clear' && e.s===lv; })) recAdd(id,{k:'clear',s:lv,st:star}); }   // 2回目からは何もしない＝初回の日時のまま
+function recItem(itemId,via){
+  var id=recHeroId(); if(!REC_ON || !id || recHas(id,function(e){ return e.k==='item' && e.id===itemId; })) return;
+  var nm='', kind='', L=[['sword',SWORD_SKINS],['shield',SHIELD_SKINS],['outfit',OUTFIT_SKINS],['perk',PERK_SHOP]], i, j;
+  for(i=0;i<L.length && !kind;i++) for(j=0;j<L[i][1].length;j++) if(L[i][1][j].id===itemId){ kind=L[i][0]; nm=L[i][1][j].name; break; }
+  if(!kind && /^skill\d$/.test(itemId)){ for(j=0;j<SKILL_SHOP.length;j++) if('skill'+SKILL_SHOP[j].lv===itemId){ kind='skill'; nm=SKILL_SHOP[j].name; } }
+  recAdd(id,{k:'item',id:itemId,n:nm||itemId,kind:kind||'item',via:via||'shop'});
+}
 function markCharPlayed(cid){
-  if(playedChars.indexOf(cid)<0){ playedChars.push(cid); store.set('yk_played',JSON.stringify(playedChars)); }
+  if(playedChars.indexOf(cid)<0){ playedChars.push(cid); store.set('yk_played',JSON.stringify(playedChars));
+    if(cid!=='custom') recBorn(cid,'first'); }   // ★v368 8人は「はじめて冒険に出た日」が誕生の記録（マイヒーローは作ったとき）
 }
 // 実績達成チェック（新規解除があればトースト表示＋報酬付与）
 var achToastQueue=[];
@@ -2131,6 +2169,7 @@ function buyItem(id,price){
   if(totalGold<price) return 'poor';
   totalGold-=price; store.set('yk_gold',''+totalGold);
   ownedItems.push(id); store.set('yk_owned',JSON.stringify(ownedItems));
+  recItem(id,'shop');   // ★v368
   return 'ok';
 }
 function equipItem(id,kind){
@@ -2156,6 +2195,7 @@ function buySkillLv(lv,price){
   if(totalGold<price) return 'poor';
   totalGold-=price; store.set('yk_gold',''+totalGold);
   savedSkillLv=lv; store.set('yk_skillLv',''+savedSkillLv);
+  recItem('skill'+lv,'shop');   // ★v368
   return 'ok';
 }
 // ===== 固有スキル（買い切りパッシブ・コイン進行とは別枠）=====
@@ -2178,6 +2218,7 @@ if(TEST_MODE){
   for(var _i=0;_i<SKILL_SHOP.length;_i++){ if(SKILL_SHOP[_i].lv>_tMax) _tMax=SKILL_SHOP[_i].lv; }
   if(savedSkillLv<_tMax){ savedSkillLv=_tMax; store.set('yk_skillLv',''+savedSkillLv); }
   var _tAdd=0;
+  if(store.get('yk_nogrant')!=='1')   // ★v368 冒険の記録の画面で「持ち物を空にする」を押したら、もう配らない（ショップで買って記録を確かめられるように）
   [SWORD_SKINS,OUTFIT_SKINS,SHIELD_SKINS,PERK_SHOP].forEach(function(list){
     for(var _j=0;_j<list.length;_j++){
       var _id=list[_j].id;
@@ -2191,6 +2232,7 @@ function buyPerk(id,price){
   if(totalGold<price) return 'poor';
   totalGold-=price; store.set('yk_gold',''+totalGold);
   ownedItems.push(id); store.set('yk_owned',JSON.stringify(ownedItems));
+  recItem(id,'shop');   // ★v368
   return 'ok';
 }
 // ===== スキル所持セット（累積レベル方式→所持セット方式へ統一）=====
@@ -4855,7 +4897,7 @@ function _showCustomList(){
         saveActiveColors(hero.col||null);   // ★v309 顔より先に。applyCustomHead がこれを読む
         activateCustom(hero.face,function(ok){
           if(ok){
-            try{ store.set('yk_custom_face',hero.face); }catch(err){}
+            try{ store.set('yk_custom_face',hero.face); store.set('yk_custom_id',hero.id); }catch(err){}   // ★v368 いまのマイヒーローのID（冒険の記録）
             selectedChar='custom'; saveData();
             _showCustomConfirm(false, hero);   // ★v199 ①: heroを渡し名前変更可能に
           } else {
@@ -5134,7 +5176,8 @@ function _mhFinish(st){
   if(st.isNew){
     if(_ccPendingFace){
       var list2=loadCustomList();
-      if(list2.length<CUSTOM_MAX){ list2.push({id:'mh_'+Date.now(), name:st.name, face:_ccPendingFace, col:keep}); saveCustomList(list2); }
+      if(list2.length<CUSTOM_MAX){ var _nid='mh_'+Date.now(); list2.push({id:_nid, name:st.name, face:_ccPendingFace, col:keep}); saveCustomList(list2);
+        try{ store.set('yk_custom_id',_nid); }catch(err){} recBorn(_nid,'make'); }   // ★v368 いまのマイヒーローのID・誕生の記録
       try{ store.set('yk_custom_face',_ccPendingFace); }catch(err){}
       _ccPendingFace=null;
     }
@@ -6216,6 +6259,7 @@ function nextLevel(){
   var stageScore=Math.min(1, killRate*0.5 + coinRate*0.25 + hpRate*0.25);
   setStageStar(level, earnedStar);
   lastClearStar=earnedStar; lastClearScore=stageScore;
+  recClear(level, earnedStar);   // ★v368 冒険の記録（そのヒーローの初回だけ）
   lastTA=null;   // ★v366 タイムアタックの記録（自己ベストより速ければ保存）
   if(TA_ON){ var _tb=_taBest[level], _tn=!_tb || taFr<_tb; if(_tn){ _taBest[level]=taFr; store.set('yk_ta_best',JSON.stringify(_taBest)); } lastTA={f:taFr, best:_tn?taFr:_tb, isNew:_tn&&!!_tb, first:!_tb, medal:taMedal(level,taFr)}; }
   // ★クリアボーナスゴールド：基本10G + 星ごと+5G + ステージ番号×1G
@@ -10049,6 +10093,7 @@ ov.addEventListener('touchstart',function(e){
   else if(gs==='skillpick'){ /* スキル選択ボタンで管理 */ }
   else if(gs==='stageclear'){ /* クリア画面はボタンで管理＝ボタン外タップは無効（誤タップでホームに飛ばない） */ }
   else if(gs==='taready'){ /* ★v367 タイムアタックのスタート前の画面はボタンで管理（ここで doStart すると画面が作り直されてボタンが効かない） */ }
+  else if(gs==='records'||gs==='guide'){ /* ★v368・v369 冒険の記録・攻略チャットはボタンで管理（文字を入力する所もある） */ }
   else if(gs!=='play'){doStart();}
 },{passive:false});
 // ★チュートリアル：タップ＝次へ / 右スワイプ＝前へ / 左スワイプ＝次へ
@@ -10078,6 +10123,7 @@ ov.addEventListener('click',function(e){
   else if(gs==='skillpick'){ /* スキル選択ボタンで管理 */ }
   else if(gs==='stageclear'){ /* クリア画面はボタンで管理＝ボタン外タップは無効（誤タップでホームに飛ばない） */ }
   else if(gs==='taready'){ /* ★v367 タイムアタックのスタート前の画面はボタンで管理（ここで doStart すると画面が作り直されてボタンが効かない） */ }
+  else if(gs==='records'||gs==='guide'){ /* ★v368・v369 冒険の記録・攻略チャットはボタンで管理（文字を入力する所もある） */ }
   else if(gs!=='play'){doStart();}
 });
 
@@ -10922,6 +10968,67 @@ function showEnding(star,first){
     _csTap(document.getElementById('edTA'),function(){ TA_ON=true; showStageMap(); });
     _csTap(document.getElementById('edMap'),function(){ TA_ON=false; showStageMap(); });
     _csTap(document.getElementById('edHome'),function(){ gs='title'; showTitleScreen(); });
+  },30);
+}
+
+// ★v368 冒険の記録の画面（テスト版のみ）：ヒーローを選ぶ → 誕生・クリアの数・アイテムの数 → 時系列（古い順）の記録
+function recFmt(t){ var d=new Date(t), z=function(n){ return (n<10?'0':'')+n; }; return d.getFullYear()+'/'+z(d.getMonth()+1)+'/'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes()); }
+function recLine(e,nm){   // [アイコン, 文]。知らない種類（新しい版で足した記録）は null＝出さない
+  if(e.k==='born') return e.how==='make'?['🐣','「'+nm+'」が誕生した！']:['🎉',nm+' と はじめて冒険に出た！'];
+  if(e.k==='clear'){ var w=stageWorld(e.s); return ['🚩','ワールド'+w+'「'+(WORLD_NAMES[w-1]||'')+'」を はじめてクリア！'+(e.st?' <span style="color:#ffd24a">'+new Array(e.st+1).join('★')+'</span>':'')]; }
+  if(e.k==='item'){ var ic={sword:'⚔️',shield:'🛡️',outfit:'👕',perk:'✨',skill:'📈'}[e.kind]||'🎁'; return [ic,'<b>'+_escHtml(e.n||'')+'</b> を手に入れた'+(e.via==='shop'?'<span style="color:#9fb6c2">（ショップ）</span>':'')]; }
+  return null;
+}
+function showRecords(sel){
+  gs='records';
+  var cur=recHeroId(), ids=Object.keys(_rec.h).filter(function(k){ return _rec.h[k] && _rec.h[k].ev && _rec.h[k].ev.length; });
+  if(cur && ids.indexOf(cur)<0) ids.unshift(cur);
+  ids.sort(function(a,b){ return (b===cur)-(a===cur); });   // いまのヒーローを先頭に
+  if(!sel || ids.indexOf(sel)<0) sel=cur||ids[0]||null;
+  var h=sel?_rec.h[sel]:null, ev=(h&&h.ev)?h.ev.slice().sort(function(a,b){ return a.t-b.t; }):[], nm=sel?recHeroName(sel):'';
+  var born=null, nClr=0, nItem=0, i;
+  for(i=0;i<ev.length;i++){ if(ev[i].k==='born' && !born) born=ev[i]; if(ev[i].k==='clear') nClr++; if(ev[i].k==='item') nItem++; }
+  var s='<div style="width:100%;max-width:350px;display:flex;flex-direction:column;align-items:center;padding-bottom:18px">'
+    +'<div class="uiTitle">📜 冒険の記録</div>';
+  if(ids.length>1){   // ヒーローえらび
+    s+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:2px 0 10px">';
+    ids.forEach(function(k){ s+='<div class="recHero uiBtn '+(k===sel?'go':'info')+'" data-id="'+_escHtml(k)+'" style="font-size:12px;min-height:32px;padding:5px 11px">'+_escHtml(recHeroName(k))+'</div>'; });
+    s+='</div>';
+  }
+  if(!sel){ s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:14px;color:#dfeeff;font-size:14px;line-height:1.7">まだ記録がないよ。<br>ヒーローをえらんで 冒険に出かけよう！</div>'; }
+  else {
+    s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:10px 12px;text-align:left">'
+      +'<div style="color:#ffe44d;font-size:18px;font-weight:bold;text-align:center">'+_escHtml(nm)+'</div>'
+      +'<div style="color:#dfeeff;font-size:13px;line-height:1.8;margin-top:4px">🐣 誕生：'+(born?recFmt(born.t):'<span style="color:#9fb6c2">わからない（記録をはじめる前から）</span>')+'<br>'
+        +'🚩 はじめてクリアしたワールド：<b style="color:#ffe44d">'+nClr+'</b> / '+NUM_WORLDS+'<br>'
+        +'🎁 手に入れたアイテム：<b style="color:#ffe44d">'+nItem+'</b></div>'
+    +'</div>';
+    s+='<div style="width:320px;max-width:94%;margin-top:10px;text-align:left">';
+    var shown=0;
+    for(i=0;i<ev.length;i++){ var L=recLine(ev[i],nm); if(!L) continue; shown++;
+      s+='<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-left:2px solid rgba(140,200,255,0.35);margin-left:13px;padding-left:12px;position:relative">'
+        +'<div style="position:absolute;left:-14px;top:5px;width:26px;height:26px;border-radius:50%;background:#173a6a;border:2px solid #8cc8ff;display:flex;align-items:center;justify-content:center;font-size:14px">'+L[0]+'</div>'
+        +'<div style="padding-left:10px"><div style="color:#9fc4e6;font-size:11px">'+recFmt(ev[i].t)+'</div><div style="color:#fff;font-size:14px;line-height:1.5">'+L[1]+'</div></div></div>';
+    }
+    if(!shown) s+='<div style="color:#dfeeff;font-size:13px;text-align:center;padding:10px">まだ記録がないよ。冒険に出かけよう！</div>';
+    s+='</div>';
+  }
+  s+='<div style="color:#9fb6c2;font-size:11px;line-height:1.6;margin-top:12px;max-width:320px">記録は '+recFmt(_rec.since)+' から つけているよ。<br>それより前のことは 日時がわからないので のせていないよ。</div>';
+  if(TEST_MODE){ var ng=(store.get('yk_nogrant')==='1');   // テスト版：持ち物を全部もらった状態だと、ショップで買えない＝アイテムの記録を確かめられないので
+    s+='<div id="recTest" class="uiBtn info" style="width:290px;font-size:12px;min-height:36px;margin-top:12px;opacity:0.85">'+(ng?'🧪 テスト用：持ち物を全部もどす':'🧪 テスト用：持ち物を空にする（ショップで買い直せる）')+'</div>';
+  }
+  s+='<div id="recBack" class="uiBtn info" style="width:180px;margin-top:14px">◀ ホームに戻る</div></div>';
+  ov.className='scrollable opaque'; ov.innerHTML=s; ov.style.display='flex'; ov.scrollTop=0;
+  setTimeout(function(){
+    ov.querySelectorAll('.recHero').forEach(function(el){ _csTap(el,function(){ showRecords(el.dataset.id); }); });
+    _csTap(document.getElementById('recBack'),function(){ gs='title'; showTitleScreen(); });
+    var rt=document.getElementById('recTest');
+    if(rt){ var armed=false; _csTap(rt,function(){
+      if(!armed){ armed=true; rt.textContent='⚠ もう一度おすと 実行（テスト版のセーブだけ）'; return; }
+      if(store.get('yk_nogrant')==='1'){ store.set('yk_nogrant',''); [SWORD_SKINS,OUTFIT_SKINS,SHIELD_SKINS,PERK_SHOP].forEach(function(list){ list.forEach(function(it){ if(it.id && ownedItems.indexOf(it.id)<0) ownedItems.push(it.id); }); }); }
+      else { store.set('yk_nogrant','1'); ownedItems=['normal','silver','default']; equipItem('silver','sword'); equipItem('normal','shield'); equipItem('default','outfit'); }
+      store.set('yk_owned',JSON.stringify(ownedItems)); showRecords(sel);
+    }); }
   },30);
 }
 
