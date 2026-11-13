@@ -852,13 +852,15 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
    「あそびかた」と同じ高さ（中心＝60% + 48.97vw）の左右の空き（左はし〜22.2%／77.7%〜右はし）のまん中に置く。絵の座標と同じ式なので機種でずれない。
    実測：IG 390×674 は上のボタン4つの下から13px・画面の下まで50px／SE 375×548 は13px・8px あく。直径 14.5vw（IG 57px・SE 54px）。動きは付けない（§10） */
 #overlay.home .homeRound{position:absolute;top:calc(60% + 41.72vw);width:14.5vw;height:14.5vw;margin-left:-7.25vw;border-radius:50%;box-sizing:border-box;
-  border:3px solid #fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;
-  box-shadow:0 4px 0 rgba(10,30,80,0.55),0 6px 10px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;transition:transform .09s ease,filter .09s ease;}
+  border:1.5px solid #1a234c;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;
+  background:linear-gradient(180deg,#7080b0 0%,#465684 45%,#26325e 100%);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.26),0 3px 0 rgba(8,14,36,0.6),0 5px 9px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;transition:transform .09s ease,filter .09s ease;}
 #overlay.home .homeRound span{font-size:6vw;line-height:1;}
 #overlay.home .homeRound b{font-size:2.6vw;line-height:1.2;color:#fff;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,0.7);white-space:nowrap;}
 #overlay.home .homeRound:active{transform:scale(0.92);filter:brightness(1.12);}
-#overlay.home .hrRec{left:11.1%;background:radial-gradient(circle at 35% 28%,#8fc2ff 0%,#3b72e6 55%,#2147a6 100%);}   /* 青（オレンジだと📜の色と近くて見えにくかった） */
-#overlay.home .hrChat{left:88.85%;background:radial-gradient(circle at 35% 28%,#9ff0a8 0%,#33b84f 55%,#16752c 100%);}
+/* ★v374 白いふち・青と緑の原色をやめて、上の四角いボタン4つ（絵に描かれた あい色 #7080b0→#1a234c）と同じ色に（実機「位置は完璧。白縁が無駄に目立ちすぎ。取ってつけたみたいに主張がすごい。背景に馴染むように」） */
+#overlay.home .hrRec{left:11.1%;}
+#overlay.home .hrChat{left:88.85%;}
 </style>
 </head>
 <body>
@@ -9403,9 +9405,14 @@ function bgCastle(){   // ★v255 W6夜の城（新規・bgNightMtnの「城が�
 }
 
 // ★v371 テスト版：タイムアタックの「運動会ステージ」の背景（ユーザー「背景も運動会みたいな背景にする」）。bgDraw の 11 番
-//   奥から：青空 → 雲 → 校舎（時計台は9時）→ 植えこみ → グラウンド（白線・コーン）→ 紅白のテントと応援する子ども（赤組・白組の帽子）→ 万国旗
+//   奥から：青空 → 雲 → 校舎（時計台は9時）→ 植えこみ → グラウンド（白線）→ 紅白のテントと応援する子ども（赤組・白組の帽子）→ 万国旗
 //   同じ色はまとめて1パス（§1-7。図形ごとに moveTo）。どれも面積が小さいので焼き置き（ストリップ）はしない（§1-23）
 //   校舎は「浅い視差＋クランプ」（§1-9）：cam*0.03 で 最大260pxだけ左へ＝ステージの最後まで画面に残る
+//   ★v372 背景を「遠くにかすんだ絵」に（実機「背景がパキっとしすぎててプレイ画面が見にくい。背景は背景として、ステージが綺麗になるように」）
+//     遊ぶ帯（地面から上185px）の細かさ（となりの画素との明るさの差の平均）が 7.89 で、草原 1.36・森 2.12・雪山 3.45 の 2.3〜5.8倍あった → 2.9 に
+//     やったこと：色を空の青（#b4daf3）へ 28〜80% まぜる（白くとばさない）・窓は1階5枚に・テントのしまは4本に・子どもは8人に
+//     ・地面まで立つ万国旗の柱・コーン・テントの足・階の線は なくした（遊ぶ所を横切る はっきりした線）・万国旗の視差 0.55→0.3
+//     色を変えるときは 1色ずつではなく まぜる割合ごとに（校舎 0.68・窓 0.8・植えこみ 0.5・土 0.28・テント 0.48・子ども 0.6・旗 0.45）
 function bgUndokai(){
   var i, j, k, x, y, n;
   // ① 空（帯のキャッシュを1回貼る）
@@ -9419,77 +9426,65 @@ function bgUndokai(){
     ctx.moveTo(x-6,y+8); ctx.arc(x-24,y+8,18,0,Math.PI*2);
   }
   ctx.fill();
-  // ③ 校舎（3階建て・まん中に時計台）
+  // ③ 校舎（3階建て・まん中に時計台。遠くにかすんで見える色）
   var sx=250-Math.min(260,cam*0.03), sy=170;
-  ctx.fillStyle='#c9b998'; ctx.fillRect(sx-156,sy-6,312,8);
-  ctx.fillStyle='#f3ead6'; ctx.beginPath(); ctx.rect(sx-150,sy,300,92); ctx.rect(sx-26,sy-46,52,48); ctx.fill();
-  ctx.fillStyle='#e2d5b8'; ctx.beginPath(); ctx.rect(sx-150,sy+29,300,3); ctx.rect(sx-150,sy+59,300,3); ctx.fill();
-  ctx.fillStyle='#7fb8de'; ctx.beginPath();
-  for(j=0;j<3;j++) for(i=0;i<10;i++) ctx.rect(sx-142+i*29,sy+7+j*30,19,15);
+  ctx.fillStyle='#bbcfd6'; ctx.fillRect(sx-156,sy-6,312,8);
+  ctx.fillStyle='#c8dfea'; ctx.beginPath(); ctx.rect(sx-150,sy,300,92); ctx.rect(sx-26,sy-46,52,48); ctx.fill();
+  ctx.fillStyle='#a9d3ef'; ctx.beginPath();
+  for(j=0;j<3;j++) for(i=0;i<5;i++) ctx.rect(sx-141+i*58,sy+7+j*30,50,15);
   ctx.fill();
-  ctx.fillStyle='#d0503c'; ctx.beginPath(); ctx.moveTo(sx-32,sy-46); ctx.lineTo(sx,sy-72); ctx.lineTo(sx+32,sy-46); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#bdaeb8'; ctx.beginPath(); ctx.moveTo(sx-32,sy-46); ctx.lineTo(sx,sy-72); ctx.lineTo(sx+32,sy-46); ctx.closePath(); ctx.fill();
   ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(sx,sy-24,14,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#6a5a48'; ctx.lineWidth=2; ctx.beginPath();
+  ctx.strokeStyle='#9cb1bc'; ctx.lineWidth=2; ctx.beginPath();
   ctx.moveTo(sx+14,sy-24); ctx.arc(sx,sy-24,14,0,Math.PI*2);
   ctx.moveTo(sx,sy-24); ctx.lineTo(sx,sy-34); ctx.moveTo(sx,sy-24); ctx.lineTo(sx-7,sy-24);
   ctx.stroke(); ctx.lineWidth=1;
   // ④ 植えこみ（視差 cam*0.08。こぶの大きさは場所で決まる＝スクロールしても変わらない）
   var hb=cam*0.08, h0=Math.floor(hb/44)-1, r;
-  ctx.fillStyle='#4f9a3c'; ctx.beginPath(); ctx.rect(0,252,W,26);
+  ctx.fillStyle='#82ba98'; ctx.beginPath(); ctx.rect(0,252,W,26);
   for(n=h0;n<h0+12;n++){ x=n*44-hb; r=22+(((n%3)+3)%3)*3; ctx.moveTo(x+r,258); ctx.arc(x,258,r,0,Math.PI*2); }
   ctx.fill();
-  ctx.fillStyle='#6dbb4f'; ctx.beginPath();
+  ctx.fillStyle='#90caa1'; ctx.beginPath();
   for(n=h0;n<h0+12;n++){ x=n*44-hb; r=12+(((n%3)+3)%3)*2; ctx.moveTo(x-6+r,250); ctx.arc(x-6,250,r,0,Math.PI*2); }
   ctx.fill();
-  // ⑤ グラウンド（土・白線2本・コーン 視差 cam*0.45）
-  ctx.fillStyle='#dcbb8a'; ctx.fillRect(0,272,W,GROUND-270);
-  ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fillRect(0,300,W,2); ctx.fillRect(0,320,W,2);
-  var cb=cam*0.45, c0=Math.floor(cb/180)-1;
-  ctx.fillStyle='#ff7a1a'; ctx.beginPath();
-  for(k=c0;k<c0+4;k++){ x=k*180+60-cb; ctx.moveTo(x-6,319); ctx.lineTo(x,304); ctx.lineTo(x+6,319); ctx.closePath(); }
-  ctx.fill();
-  // ⑥ 紅白のテントと応援する子ども（視差 cam*0.2。帽子はテントごとに赤組・白組。子どもは はねて応援）
+  // ⑤ グラウンド（土・うすい白線2本）
+  ctx.fillStyle='#d1c4a7'; ctx.fillRect(0,272,W,GROUND-270);
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(0,300,W,2); ctx.fillRect(0,320,W,2);
+  // ⑥ 紅白のテントと応援する子ども（視差 cam*0.2。帽子はテントごとに赤組・白組。子どもは 小さく はねる）
   var tb=cam*0.2, t0=Math.floor(tb/250)-1, tx=[], tn=[];
   for(k=t0;k<t0+4;k++){ x=k*250+120-tb; if(x+84>0 && x-84<W){ tx.push(x); tn.push(k); } }
-  ctx.fillStyle='rgba(40,30,20,0.22)'; ctx.beginPath();
-  for(i=0;i<tx.length;i++) ctx.rect(tx[i]-78,250,156,40);
+  ctx.fillStyle='rgba(60,70,90,0.07)'; ctx.beginPath();
+  for(i=0;i<tx.length;i++) ctx.rect(tx[i]-78,250,156,36);
   ctx.fill();
-  ctx.fillStyle='#9aa0a8'; ctx.beginPath();
-  for(i=0;i<tx.length;i++){ ctx.rect(tx[i]-78,244,4,48); ctx.rect(tx[i]+74,244,4,48); }
-  ctx.fill();
-  var kid=function(fn){ for(i=0;i<tx.length;i++) for(j=0;j<10;j++) fn(tx[i]-65+j*14.4, Math.sin(fr*0.3+j*1.7+tn[i])*1.6, ((tn[i]%2)+2)%2); };
-  ctx.fillStyle='#ffffff'; ctx.beginPath(); kid(function(kx,dy){ ctx.rect(kx-4,273+dy,8,10); }); ctx.fill();
-  ctx.fillStyle='#f6d2ac'; ctx.beginPath(); kid(function(kx,dy){ ctx.moveTo(kx+4.5,269+dy); ctx.arc(kx,269+dy,4.5,0,Math.PI*2); }); ctx.fill();
-  ctx.fillStyle='#e0352f'; ctx.beginPath(); kid(function(kx,dy,tm){ if(!tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
-  ctx.fillStyle='#fafafa'; ctx.beginPath(); kid(function(kx,dy,tm){ if(tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
-  ctx.fillStyle='#ffffff'; ctx.beginPath();
+  var kid=function(fn){ for(i=0;i<tx.length;i++) for(j=0;j<8;j++) fn(tx[i]-63+j*18, Math.sin(fr*0.2+j*1.7+tn[i])*1.0, ((tn[i]%2)+2)%2); };
+  ctx.fillStyle='#e4f2fb'; ctx.beginPath(); kid(function(kx,dy){ ctx.rect(kx-4,273+dy,8,10); }); ctx.fill();
+  ctx.fillStyle='#ced7d7'; ctx.beginPath(); kid(function(kx,dy){ ctx.moveTo(kx+4.5,269+dy); ctx.arc(kx,269+dy,4.5,0,Math.PI*2); }); ctx.fill();
+  ctx.fillStyle='#c698a5'; ctx.beginPath(); kid(function(kx,dy,tm){ if(!tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
+  ctx.fillStyle='#e1eef7'; ctx.beginPath(); kid(function(kx,dy,tm){ if(tm){ ctx.moveTo(kx+4.8,268+dy); ctx.arc(kx,268+dy,4.8,0,Math.PI,true); } }); ctx.fill();
+  ctx.fillStyle='#ebf5fc'; ctx.beginPath();
   for(i=0;i<tx.length;i++){ x=tx[i]; ctx.moveTo(x-64,226); ctx.lineTo(x+64,226); ctx.lineTo(x+82,246); ctx.lineTo(x-82,246); ctx.closePath(); ctx.rect(x-82,246,164,7); }
   ctx.fill();
-  ctx.fillStyle='#e0352f'; ctx.beginPath();
+  ctx.fillStyle='#cb848d'; ctx.beginPath();
   for(i=0;i<tx.length;i++){ x=tx[i];
-    for(k=0;k<8;k+=2){ ctx.moveTo(x-64+16*k,226); ctx.lineTo(x-64+16*(k+1),226); ctx.lineTo(x-82+20.5*(k+1),246); ctx.lineTo(x-82+20.5*k,246); ctx.closePath(); }
-    for(k=1;k<8;k+=2) ctx.rect(x-82+20.5*k,246,20.5,7);
+    for(k=0;k<4;k+=2){ ctx.moveTo(x-64+32*k,226); ctx.lineTo(x-64+32*(k+1),226); ctx.lineTo(x-82+41*(k+1),246); ctx.lineTo(x-82+41*k,246); ctx.closePath(); }
+    for(k=1;k<4;k+=2) ctx.rect(x-82+41*k,246,41,7);
   }
   ctx.fill();
-  // ⑦ 万国旗（視差 cam*0.55。柱と柱のあいだで ロープがたるむ。白い旗には赤い丸）
-  var fb=cam*0.55, f0=Math.floor(fb/300);
-  var FC=['#ffffff','#e8443a','#3a6fe0','#f6c432','#3fae5a','#a24ee0'];
-  ctx.fillStyle='#e8e8e8'; ctx.beginPath();
-  for(k=f0;k<f0+3;k++){ x=k*300-fb; ctx.rect(x-2,38,4,GROUND-38); }
-  ctx.fill();
-  ctx.strokeStyle='rgba(70,60,50,0.8)'; ctx.beginPath();
-  for(k=f0;k<f0+2;k++){ x=k*300-fb; ctx.moveTo(x,40); ctx.quadraticCurveTo(x+150,110,x+300,40); }
+  // ⑦ 万国旗（視差 cam*0.3。ロープがたるむ。白い旗には赤い丸。柱は立てない＝遊ぶ所を横切る線を作らない）
+  var fb=cam*0.3, f0=Math.floor(fb/300);
+  var FC=['#ddeefa','#d1888d','#719fe9','#d8ce89','#74c29f','#aa8de9'];
+  ctx.strokeStyle='rgba(90,100,120,0.35)'; ctx.beginPath();
+  for(k=f0;k<f0+2;k++){ x=k*300-fb; ctx.moveTo(x,30); ctx.quadraticCurveTo(x+150,100,x+300,30); }
   ctx.stroke();
   for(var ci=0;ci<FC.length;ci++){
     ctx.fillStyle=FC[ci]; ctx.beginPath();
     for(k=f0;k<f0+2;k++){ x=k*300-fb;
-      for(j=0;j<14;j++){
-        var ft=(j+0.5)/14, fx=x+300*ft, fy=40+140*ft*(1-ft)+Math.sin(fr*0.12+j)*0.8, fc=((k*14+j)%6+6)%6;
+      for(j=0;j<12;j++){
+        var ft=(j+0.5)/12, fx=x+300*ft, fy=30+140*ft*(1-ft), fc=((k*12+j)%6+6)%6;
         if(fc===ci) ctx.rect(fx-6,fy,12,9);
         else if(ci===1 && fc===0){ ctx.moveTo(fx+2.6,fy+4.5); ctx.arc(fx,fy+4.5,2.6,0,Math.PI*2); }
       }
     }
-    if(ci===3) for(k=f0;k<f0+3;k++){ x=k*300-fb; ctx.moveTo(x+4,37); ctx.arc(x,37,4,0,Math.PI*2); }   // 柱のてっぺんの金の玉
     ctx.fill();
   }
 }
@@ -11127,8 +11122,8 @@ function showEnding(star,first){
 function recFmt(t){ var d=new Date(t), z=function(n){ return (n<10?'0':'')+n; }; return d.getFullYear()+'/'+z(d.getMonth()+1)+'/'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes()); }
 function recLine(e,nm){   // [アイコン, 文]。知らない種類（新しい版で足した記録）は null＝出さない
   if(e.k==='born') return e.how==='make'?['🐣','「'+nm+'」が誕生した！']:['🎉',nm+' と はじめて冒険に出た！'];
-  if(e.k==='clear'){ var w=stageWorld(e.s); return ['🚩','ワールド'+w+'「'+(WORLD_NAMES[w-1]||'')+'」を はじめてクリア！'+(e.st?' <span style="color:#ffd24a">'+new Array(e.st+1).join('★')+'</span>':'')]; }
-  if(e.k==='item'){ var ic={sword:'⚔️',shield:'🛡️',outfit:'👕',perk:'✨',skill:'📈'}[e.kind]||'🎁'; return [ic,'<b>'+_escHtml(e.n||'')+'</b> を手に入れた'+(e.via==='shop'?'<span style="color:#9fb6c2">（ショップ）</span>':'')]; }
+  if(e.k==='clear'){ var w=stageWorld(e.s); return ['🚩','ワールド'+w+'「'+(WORLD_NAMES[w-1]||'')+'」<span style="white-space:nowrap"> はじめてクリア！</span>'+(e.st?' <span style="color:#ffd24a;white-space:nowrap">'+new Array(e.st+1).join('★')+'</span>':'')]; }
+  if(e.k==='item'){ var ic={sword:'⚔️',shield:'🛡️',outfit:'👕',perk:'✨',skill:'📈'}[e.kind]||'🎁'; return [ic,'<b>'+_escHtml(e.n||'')+'</b> を手に入れた'+(e.via==='shop'?'<span style="color:#9fb6c2;white-space:nowrap">（ショップ）</span>':'')]; }
   return null;
 }
 function showRecords(sel){
@@ -11140,43 +11135,47 @@ function showRecords(sel){
   var h=sel?_rec.h[sel]:null, ev=(h&&h.ev)?h.ev.slice().sort(function(a,b){ return a.t-b.t; }):[], nm=sel?recHeroName(sel):'';
   var born=null, nClr=0, nItem=0, i;
   for(i=0;i<ev.length;i++){ if(ev[i].k==='born' && !born) born=ev[i]; if(ev[i].k==='clear') nClr++; if(ev[i].k==='item') nItem++; }
-  var s='<div style="width:100%;max-width:350px;display:flex;flex-direction:column;align-items:center;padding-bottom:18px">'
-    +'<div class="uiTitle">📜 冒険の記録</div>';
-  if(ids.length>1){   // ヒーローえらび
-    s+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:2px 0 10px">';
+  // ★v373 見た目を作り直し（実機「見にくい。もっとシンプルに。ボタンっぽいデザインが多くて、ホンマのボタンと見分けがつきにくい」）
+  //   ボタンの形（角丸の箱・ふち・影）をしているのは 押せるものだけ：ヒーローえらび・ホームに戻る。
+  //   見出し・ヒーローのまとめ・あしあと は 箱に入れず、文字と細い線だけ（前は 見出しのプレート・まとめのパネル・丸いアイコンのふち が全部ボタンに見えた）
+  var _ln='border-bottom:1px solid rgba(255,255,255,0.13)';
+  var _row=function(l,v){ return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 2px;'+_ln+'"><span style="color:#b4c6dc;font-size:13px">'+l+'</span><span style="color:#fff;font-size:15px;font-weight:bold;text-align:right">'+v+'</span></div>'; };
+  var s='<div style="width:320px;max-width:92%;display:flex;flex-direction:column;align-items:stretch;padding:6px 0 18px;text-align:left">'
+    +'<div style="color:#fff;font-size:21px;font-weight:900;letter-spacing:1px;text-align:center;margin:4px 0 14px">📜 冒険の記録</div>';
+  if(ids.length>1){   // ヒーローえらび（押せる）
+    s+='<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:0 0 14px">';
     ids.forEach(function(k){ s+='<div class="recHero uiBtn '+(k===sel?'go':'info')+'" data-id="'+_escHtml(k)+'" style="font-size:12px;min-height:32px;padding:5px 11px">'+_escHtml(recHeroName(k))+'</div>'; });
     s+='</div>';
   }
-  if(!sel){ s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:14px;color:#dfeeff;font-size:14px;line-height:1.7">まだ記録がないよ。<br>ヒーローをえらんで 冒険に出かけよう！</div>'; }
+  if(!sel){ s+='<div style="color:#dfeeff;font-size:14px;line-height:1.8;text-align:center;padding:18px 0">まだ記録がないよ。<br>ヒーローをえらんで 冒険に出かけよう！</div>'; }
   else {
-    s+='<div class="uiPanel" style="width:320px;max-width:94%;padding:10px 12px;text-align:left">'
-      +'<div style="color:#ffe44d;font-size:18px;font-weight:bold;text-align:center">'+_escHtml(nm)+'</div>'
-      +'<div style="color:#dfeeff;font-size:13px;line-height:1.8;margin-top:4px">🐣 誕生：'+(born?recFmt(born.t):'<span style="color:#9fb6c2">わからない（記録をはじめる前から）</span>')+'<br>'
-        +'🚩 はじめてクリアしたワールド：<b style="color:#ffe44d">'+nClr+'</b> / '+NUM_WORLDS+'<br>'
-        +'🎁 手に入れたアイテム：<b style="color:#ffe44d">'+nItem+'</b></div>'
-    +'</div>';
-    s+='<div style="width:320px;max-width:94%;margin-top:10px;text-align:left">';
+    s+='<div style="color:#ffe44d;font-size:20px;font-weight:bold;padding:0 2px 6px;'+_ln+'">'+_escHtml(nm)+'</div>'
+      +_row('誕生', born?recFmt(born.t):'<span style="color:#9fb6c2;font-weight:normal">わからない</span>')
+      +_row('クリアしたワールド', '<span style="color:#ffe44d">'+nClr+'</span> / '+NUM_WORLDS)
+      +_row('手に入れたアイテム', '<span style="color:#ffe44d">'+nItem+'</span>');
+    s+='<div style="color:#8fa6bd;font-size:12px;font-weight:bold;letter-spacing:2px;margin:20px 2px 2px">あしあと</div>';
     var shown=0;
     for(i=0;i<ev.length;i++){ var L=recLine(ev[i],nm); if(!L) continue; shown++;
-      s+='<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-left:2px solid rgba(140,200,255,0.35);margin-left:13px;padding-left:12px;position:relative">'
-        +'<div style="position:absolute;left:-14px;top:5px;width:26px;height:26px;border-radius:50%;background:#173a6a;border:2px solid #8cc8ff;display:flex;align-items:center;justify-content:center;font-size:14px">'+L[0]+'</div>'
-        +'<div style="padding-left:10px"><div style="color:#9fc4e6;font-size:11px">'+recFmt(ev[i].t)+'</div><div style="color:#fff;font-size:14px;line-height:1.5">'+L[1]+'</div></div></div>';
+      s+='<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 2px;'+_ln+'">'
+        +'<div style="flex:0 0 24px;text-align:center;font-size:17px;line-height:1.35">'+L[0]+'</div>'
+        +'<div style="min-width:0"><div style="color:#fff;font-size:14px;line-height:1.5">'+L[1]+'</div><div style="color:#8fa6bd;font-size:11px;margin-top:1px">'+recFmt(ev[i].t)+'</div></div></div>';
     }
-    if(!shown) s+='<div style="color:#dfeeff;font-size:13px;text-align:center;padding:10px">まだ記録がないよ。冒険に出かけよう！</div>';
-    s+='</div>';
+    if(!shown) s+='<div style="color:#dfeeff;font-size:13px;padding:12px 2px">まだ ないよ。冒険に出かけよう！</div>';
   }
-  s+='<div style="color:#9fb6c2;font-size:11px;line-height:1.6;margin-top:12px;max-width:320px">記録は '+recFmt(_rec.since)+' から つけているよ。<br>それより前のことは 日時がわからないので のせていないよ。</div>';
+  s+='<div style="color:#8fa6bd;font-size:11px;line-height:1.7;margin-top:16px;padding:0 2px">記録は '+recFmt(_rec.since)+' から。<br>それより前は 日時がわからないので のせていないよ。</div>';
+  s+='<div id="recBack" class="uiBtn info" style="width:200px;margin:22px auto 0">◀ ホームに戻る</div>';
   if(TEST_MODE){ var ng=(store.get('yk_nogrant')==='1');   // テスト版：持ち物を全部もらった状態だと、ショップで買えない＝アイテムの記録を確かめられないので
-    s+='<div id="recTest" class="uiBtn info" style="width:290px;font-size:12px;min-height:36px;margin-top:12px;opacity:0.85">'+(ng?'🧪 テスト用：持ち物を全部もどす':'🧪 テスト用：持ち物を空にする（ショップで買い直せる）')+'</div>';
+    //   ★v373 ふつうのボタンと同じ見た目だった（しかも文字が はみ出していた）→ いちばん下に、点線の小さい文字で（テストの道具だと分かるように）
+    s+='<div id="recTest" style="align-self:center;margin-top:26px;padding:7px 12px;border:1px dashed rgba(160,180,200,0.45);border-radius:6px;color:#8fa6bd;font-size:11px;line-height:1.5;text-align:center;cursor:pointer">🧪 テスト用：'+(ng?'持ち物を全部もどす':'持ち物を空にする<br>（ショップで買い直して 記録をためす）')+'</div>';
   }
-  s+='<div id="recBack" class="uiBtn info" style="width:180px;margin-top:14px">◀ ホームに戻る</div></div>';
+  s+='</div>';
   ov.className='scrollable opaque'; ov.innerHTML=s; ov.style.display='flex'; ov.scrollTop=0;
   setTimeout(function(){
     ov.querySelectorAll('.recHero').forEach(function(el){ _csTap(el,function(){ showRecords(el.dataset.id); }); });
     _csTap(document.getElementById('recBack'),function(){ gs='title'; showTitleScreen(); });
     var rt=document.getElementById('recTest');
     if(rt){ var armed=false; _csTap(rt,function(){
-      if(!armed){ armed=true; rt.textContent='⚠ もう一度おすと 実行（テスト版のセーブだけ）'; return; }
+      if(!armed){ armed=true; rt.textContent='⚠ もう一度おすと 実行（テスト版のセーブだけ）'; rt.style.color='#ffd24a'; rt.style.borderColor='#ffd24a'; return; }
       if(store.get('yk_nogrant')==='1'){ store.set('yk_nogrant',''); [SWORD_SKINS,OUTFIT_SKINS,SHIELD_SKINS,PERK_SHOP].forEach(function(list){ list.forEach(function(it){ if(it.id && ownedItems.indexOf(it.id)<0) ownedItems.push(it.id); }); }); }
       else { store.set('yk_nogrant','1'); ownedItems=['normal','silver','default']; equipItem('silver','sword'); equipItem('normal','shield'); equipItem('default','outfit'); }
       store.set('yk_owned',JSON.stringify(ownedItems)); showRecords(sel);
