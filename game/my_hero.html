@@ -859,8 +859,9 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 #overlay.home .homeRound b{font-size:2.6vw;line-height:1.2;color:#fff;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,0.7);white-space:nowrap;}
 #overlay.home .homeRound:active{transform:scale(0.92);filter:brightness(1.12);}
 /* ★v374 白いふち・青と緑の原色をやめて、上の四角いボタン4つ（絵に描かれた あい色 #7080b0→#1a234c）と同じ色に（実機「位置は完璧。白縁が無駄に目立ちすぎ。取ってつけたみたいに主張がすごい。背景に馴染むように」） */
-#overlay.home .hrRec{left:11.1%;}
-#overlay.home .hrChat{left:88.85%;}
+/* ★v375 2つの種類が分かるように、記録は黄・チャットは緑。明るさ・つやは四角いボタンと同じ幅のまま（実機「記録は黄色っぽく、チャットは緑っぽくしつつボタンの種類があるようにはしたい。馴染む色合いの方向性はあってる」） */
+#overlay.home .hrRec{left:11.1%;background:linear-gradient(180deg,#c9ac62 0%,#9a7a34 45%,#5c4417 100%);border-color:#3a2a0c;}
+#overlay.home .hrChat{left:88.85%;background:linear-gradient(180deg,#86b062 0%,#4f7a37 45%,#2c4d22 100%);border-color:#1a3314;}
 </style>
 </head>
 <body>
