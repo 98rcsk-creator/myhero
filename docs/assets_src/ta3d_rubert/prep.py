@@ -36,6 +36,12 @@ for j in range(2):
     for i in range(3):
         im=Image.fromarray(Fc[j*ch:(j+1)*ch,i*cw:(i+1)*cw],'RGBA').resize((256,256),Image.LANCZOS)
         out['face'].append(b64(im)); prev.append(im)
+# 7つ目：ふつうの顔（キャラ選択の元絵 face_calm_src.png・背景は透明）。顔1の頭（首をのぞく上75%）と 幅・上はし・横のまん中 を合わせる
+c0=Fc[0:ch,0:cw]; m=c0[:int(ch*0.75),:,3]>128; xs=np.where(m.sum(0)>0)[0]; ys=np.where(m.sum(1)>0)[0]
+src=Image.open(os.path.join(D,'face_calm_src.png')).convert('RGBA'); sa=np.asarray(src)[...,3]>128; sx=np.where(sa.sum(0)>0)[0]; sy=np.where(sa.sum(1)>0)[0]
+k=(xs[-1]-xs[0])/float(sx[-1]-sx[0]); im=src.resize((round(src.width*k),round(src.height*k)),Image.LANCZOS)
+cell=Image.new('RGBA',(cw,ch),(0,0,0,0)); cell.alpha_composite(im,(int(round((xs[0]+xs[-1])/2-(sx[0]+sx[-1])/2*k)),int(round(ys[0]-sy[0]*k))))
+im=cell.resize((256,256),Image.LANCZOS); out['face'].append(b64(im)); prev.append(im)
 json.dump(out,open(sys.argv[1],'w'))
 print('bytes',sum(len(p['d']) for p in out['pose']),sum(len(f) for f in out['face']))
 if len(sys.argv)>2:
