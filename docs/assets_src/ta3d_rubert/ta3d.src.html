@@ -88,7 +88,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   </div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作8</div>
+    <div id="tag">番外編・試作9</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">1000</b> m</div></div>
     <div id="ov"></div>
   </div>
@@ -480,7 +480,7 @@ function draw(){
   if(combo>=2) txt(combo+' コンボ',W-58,H-34,15,'#ffb0e0');
   selfie();
   if(banner){ var bk=Math.min(1,(banner.m-banner.l)*7), bo=Math.min(1,banner.l*3); g.globalAlpha=bo; g.fillStyle='rgba(10,20,45,0.55)'; g.fillRect(0,HOR+28-22*bk,W,44*bk); txt(banner.t,W/2+(1-bk)*200,HOR+38,30,banner.c,-0.03); g.globalAlpha=1; }
-  if(st==='count'){ var n=3-Math.floor(tRun/0.8), tx=n>0?String(n):'GO!', z=1.6-((tRun%0.8)/0.8)*0.6; txt(tx,W/2,H/2+20,72*z,n>0?'#fff':'#ffe44d'); }
+  if(st==='count'){ var n=3-Math.floor(tRun/0.8), tx=n>0?String(n):'GO!', z=1.6-((tRun%0.8)/0.8)*0.6; txt(tx,W/2,HOR+58,60*z,n>0?'#fff':'#ffe44d'); }   // ★試作9 数字は主人公の上に（前は 直立・よーい の絵に重なって見えなかった）
   if(st==='lost') txt(lostWhy,W/2,H/2,36,'#ff7a7a',-0.05);
   if(st==='goal') txt('ゴール！！',W/2,HOR+40,46,'#ffe44d',-0.05);
 }

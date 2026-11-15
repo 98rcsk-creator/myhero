@@ -17,7 +17,7 @@ out={'poses':{}, 'face':[]}; prev=[]
 #   名前：向き＋ポーズ。向き b＝うしろ bd＝ななめうしろ s＝横 fd＝ななめ前 f＝前（どれも「画面の右を向く」絵。左へ行くときはゲームが反転する）
 #   None＝使わない絵。元絵がまだ無いものは とばす（ゲームは うしろ姿で代わりにする）
 SHEETS=[('back_src.png',  [['b_run0','b_run1','b_jump',None]]),                 # 4つ目は剣をふる絵（剣をやめたので使わない）
-        ('back2_src.png', [['b_stand','b_ready','b_punch','b_slide']]),          # 直立・よーい・パンチ・スライディング
+        ('back2_src.png', [['b_stand',None,'b_punch','b_ready']]),            # 直立・（剣を抜く＝使わない）・右手をふりぬく＝パンチに使う・よーい
         ('dirs_src.png',  [['bd_run0','s_run0','fd_run0','f_run0'],              # 上の段：走る1（右足が前）
                            ['bd_run1','s_run1','fd_run1','f_run1']])]            # 下の段：走る2（左足が前）
 def bands(mask,axis,minlen=60):
