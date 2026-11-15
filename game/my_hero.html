@@ -10826,7 +10826,7 @@ function showStageMap(){
   //   1カード = [色帯のタイトル行] + [ワールド絵(.wThumb)] + [王冠と星]。
   //   星・ロック・王冠は今までどおり実データから作る（絵に焼き込んでいない）。
   //   タップ判定は .stageCell のまま＝v272の「タップで即開始」を維持。
-  if(TA_ON) h+=taCardHTML(); else   // ★v371
+  if(TA_ON) h+=taCardHTML()+taExtraHTML(); else   // ★v371（★v376 番外編の入口）
   for(var w=1;w<=NUM_WORLDS;w++){
     var wColors=['#7ec850','#e0883c','#9a7adc','#7ec0ee','#ff6644','#a060d0','#88c0ff','#40c0b0','#c04080','#ffcc44'];
     var wc=wColors[w-1];
@@ -10874,6 +10874,7 @@ function showStageMap(){
   ov.style.display='flex';
   ov.scrollTop=0;
   setTimeout(function(){
+    var _tx=document.getElementById('taExtra'); if(_tx) _csTap(_tx,function(){ try{ MUS.stop(); }catch(e){} location.href=(location.pathname.indexOf('/game/')>=0?'../':'')+'test/ta3d.html?from=game'; });   // ★v376
     ['mapModeN','mapModeT'].forEach(function(id){ var b=document.getElementById(id); if(b) _csTap(b,function(){ var on=(id==='mapModeT'); if(on===TA_ON) return; TA_ON=on; var sc=ov.scrollTop; showStageMap(); ov.scrollTop=sc; }); });   // ★v366
     var cells=ov.querySelectorAll('.stageCell');
     // ★v271 開始ボタンを廃止したので、セルのタップでそのまま開始する。
@@ -10935,6 +10936,14 @@ function taCardHTML(){
     +'</div>'
     +'<div style="color:#ffe9a8;font-size:12px;font-weight:bold;padding:0 9px 8px">👾 '+TA_NEED_K+'体 ＋ '+coinIconHTML()+' '+TA_NEED_C+'枚 で ゴール！</div>'
   +'</div>';
+}
+// ★v376 テスト版だけ：番外編「1km タイムアタック（うしろから見る試作）」への入口。別のページ test/ta3d.html を開く（ゲーム本体には入っていない）
+//   ⚠ 本番にするとき：この遊びは「ステージ10をクリアした人だけ」に出す（ユーザー指定 2026-11-15）。今は taUnlocked()＝テスト版なら誰でも、の中にあるので、
+//     TA_TEST_OPEN を 0 にすれば ステージ10クリア後だけになる。本番へ出す前に、ここと taUnlocked() を必ず見直す
+function taExtraHTML(){
+  return '<div id="taExtra" style="grid-column:1/-1;border-radius:14px;box-sizing:border-box;border:2px dashed #ffd24a;background:linear-gradient(180deg,rgba(255,210,74,0.16),rgba(10,24,52,0.85));padding:9px 11px;cursor:pointer;display:flex;align-items:center;gap:10px">'
+    +'<span style="font-size:26px;line-height:1">🏁</span><div style="text-align:left"><div style="color:#ffe9a8;font-size:11px;font-weight:bold;letter-spacing:1px">番外編（試作）</div>'
+    +'<div style="color:#fff;font-size:14px;font-weight:bold">1km タイムアタック ▶</div><div style="color:#cfe3ff;font-size:11px">うしろから見て走る 新しい遊び。別のページが開くよ</div></div></div>';
 }
 // マップから特定ステージで開始（キャラ選択へ）
 function startStageFromMap(s){
