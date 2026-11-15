@@ -88,7 +88,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   </div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作7</div>
+    <div id="tag">番外編・試作8</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">1000</b> m</div></div>
     <div id="ov"></div>
   </div>
@@ -204,7 +204,7 @@ function build(){
   // ★試作5 観客：コースのすぐ外（さくのむこう）に、コースに出ないまもの と ほかのヒーロー がならんで応援する
   var EK=['shooter','fire','ghost','fly','bomber','diver'], sd, NB=CB.length;
   for(sd=-1;sd<=1;sd+=2){ s=-10+R()*6; while(s<GOAL+26){ var end=s+5+R()*10;                       // かたまり（5〜15m）→ すき間（4〜11m）
-      for(;s<end;s+=0.95+R()*0.7){ var he=NB>0 && R()<0.55; specs.push({s:s,x:sd*(HW+2.0+R()*1.3),b:he?Math.floor(R()*NB):-1,e:he?null:EK[Math.floor(R()*EK.length)],ph:R()*6,sz:he?1.3+R()*0.12:0.95+R()*0.35}); }
+      for(;s<end;s+=1.25+R()*0.9){ var he=NB>0 && R()<0.55; specs.push({s:s,x:sd*(HW+1.55+R()*1.0),b:he?Math.floor(R()*NB):-1,e:he?null:EK[Math.floor(R()*EK.length)],ph:R()*6,fl:R()<0.5,sz:he?1.85+R()*0.2:1.25+R()*0.45}); }   // ★試作8 コースのすぐ横・大きめ（前は いちばん近くでも画面で約38px しかなかった）
       s+=4+R()*7; } }
   [[300,-1],[640,1],[GOAL-6,-1],[GOAL-6,1]].forEach(function(b){ specs.push({s:b[0],x:b[1]*(HW+3.9),b:-1,e:'boss',ph:R()*6,sz:2.6}); });
   P={x:0,y:0,s:0,vx:0,vs:0,vy:0,ph:0,sw:0,stun:0,tilt:0,inv:0,fin:0,slide:0,fa:0}; jumpBuf=0;
@@ -323,7 +323,7 @@ function groundDraw(){
   g.fillStyle='rgba(255,255,255,0.85)'; g.beginPath(); each(function(a,b,n){ q4(a,b,2,3); q4(a,b,4,5); q4(a,b,6,7); q4(a,b,8,9); if(n&1){ q4(a,b,0,1); q4(a,b,10,11); } }); g.fill();
   g.fillStyle='#e0352f'; g.beginPath(); each(function(a,b,n){ if(!(n&1)){ q4(a,b,0,1); q4(a,b,10,11); } }); g.fill();   // ふちの赤白＝ここをこえたら コースアウト
   // ★試作5 さく（白い板＋赤いふち・高さ 0.7m）。観客はこのむこう
-  var FX=HW+1.5, fr=[]; for(i=0;i<rows.length;i++){ d=rows[i].s; fr.push([pj(-FX,0,d,1),pj(-FX,0.52,d,1),pj(-FX,0.7,d,1),pj(FX,0,d,1),pj(FX,0.52,d,1),pj(FX,0.7,d,1)]); }
+  var FX=HW+1.0, fr=[]; for(i=0;i<rows.length;i++){ d=rows[i].s; fr.push([pj(-FX,0,d,1),pj(-FX,0.52,d,1),pj(-FX,0.7,d,1),pj(FX,0,d,1),pj(FX,0.52,d,1),pj(FX,0.7,d,1)]); }
   function fq(a,b,p,q){ g.moveTo(a[p].x,a[p].y); g.lineTo(b[p].x,b[p].y); g.lineTo(b[q].x,b[q].y); g.lineTo(a[q].x,a[q].y); g.closePath(); }
   g.fillStyle='#f4f1ea'; g.beginPath(); for(i=0;i<fr.length-1;i++){ if(fr[i][0].d<=NEAR) continue; fq(fr[i],fr[i+1],0,1); fq(fr[i],fr[i+1],3,4); } g.fill();
   g.fillStyle='#e0352f'; g.beginPath(); for(i=0;i<fr.length-1;i++){ if(fr[i][0].d<=NEAR) continue; fq(fr[i],fr[i+1],1,2); fq(fr[i],fr[i+1],4,5); } g.fill();
@@ -370,7 +370,8 @@ function hurdleDraw(h,o){ var s=o.s, x=o.x, y=o.y; g.globalAlpha=fog(o.d);
 // 観客：さく（0.7m）の上に見える分だけ描く。はねて応援。主人公が近いと 大きくはねる
 function specDraw(q,o){ var s=o.s, im=q.b>=0?CB[q.b]:CE[q.e]; if(!im||!im.complete||!im.naturalWidth) return; var near=Math.abs(q.s-P.s)<9?1.8:1, hop=Math.abs(Math.sin(tAll*(5+q.ph%2)+q.ph))*0.16*near;
   var h=q.sz, w=h*im.naturalWidth/im.naturalHeight, base=(q.b>=0?0.12:0.25)+hop, f=Math.min(1,(base+h-0.7)/h); if(f<=0.05) return;
-  g.globalAlpha=clamp(1-(o.d-60)/20,0,1); g.drawImage(im,0,0,im.naturalWidth,im.naturalHeight*f,o.x-w*s/2,o.y-(base+h)*s,w*s,h*f*s); g.globalAlpha=1; }
+  g.globalAlpha=clamp(1-(o.d-60)/20,0,1); if(q.fl){ g.save(); g.translate(o.x,0); g.scale(-1,1); g.drawImage(im,0,0,im.naturalWidth,im.naturalHeight*f,-w*s/2,o.y-(base+h)*s,w*s,h*f*s); g.restore(); }   // 半分は左右を反転（同じ絵がならんで見えないように）
+  else g.drawImage(im,0,0,im.naturalWidth,im.naturalHeight*f,o.x-w*s/2,o.y-(base+h)*s,w*s,h*f*s); g.globalAlpha=1; }
 // ★試作7 コイン：ゲーム本体の _coinFace（金のふち・★の浮き彫り）と _drawCoin の厚み（v359）をそのまま移した
 function ctxEllipse(c,x,y,rx,ry,rot,s,e){ c.save(); c.translate(x,y); c.rotate(rot||0); c.scale(rx,ry); c.arc(0,0,1,s||0,e!=null?e:Math.PI*2); c.restore(); }
 function _coinFace(g,R){
