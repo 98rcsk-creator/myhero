@@ -169,7 +169,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作12</div>
+    <div id="tag">番外編・試作13</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -195,7 +195,9 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 var SPRD=/*SPRD*/{}, FROM_GAME=/[?&]from=game/.test(location.search);
 var W=390, H=390, HOR=112, F0=320, F=F0, CAMH=2.3, BACK=4.6, NEAR=0.35, GOAL=500,   // ★試作11 1000m → 500m（ユーザー「思った以上に長かった」）
     FAR=112, HW=5, KERB=0.55, OFF=40;
-var RUN=9, DASHK=1.65, STARK=1.9, STAR_NEED=12, STAR_T=6;
+// ★試作13 走る速さを 現実の速さに（ユーザー「500mは変えない。タイマーは現実の時間と同じ。そこから速度を割り出す。全て現実的に」）
+//   ふつう 25km/h（6.94m/秒）・ダッシュ 40km/h（×1.6）・スター 50km/h（×2.0）。前は 32・53・61km/h（人間ばなれしていた）
+var RUN=25/3.6, DASHK=1.6, STARK=2.0, STAR_NEED=12, STAR_T=6;
 var cv=document.getElementById('cv'), g=cv.getContext('2d');
 var QP=parseFloat((location.search.match(/[?&]q=([\d.]+)/)||[])[1])||0, DPR=QP||Math.min(3,window.devicePixelRatio||1), skyCv=null;
 function setRes(d){ DPR=d; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); skyCv=null; }
@@ -278,7 +280,7 @@ function build(){
       for(i=0;i<3;i++) coins.push({x:LANES[Object.keys(used)[0]],s:s-1.6+i*1.6,y:bar?0.45:1.25+(i===1?0.35:0),got:0,ph:R()*6}); }   // ハードルの上にコイン＝とぶ ごほうび
     else if(kd==='enemy'){ var prog=s/GOAL, tp=R()<0.25+prog*0.2?'fast':(R()<0.3?'giant':(R()<0.25?'spiky':'normal')), two=R()<0.25+prog*0.4;
       ens.push(mkE(tp,ln,s)); if(two) ens.push(mkE(R()<0.5?'normal':'fast',-ln||2,s+3)); }
-    else { pitN++; var full=(pitN%4===0), len=3.0+R()*1.0,   /* ★試作11 3.2〜4.4m → 3.0〜4.0m */
+    else { pitN++; var full=(pitN%4===0), len=2.5+R()*0.75,   /* ★試作11 3.2〜4.4m → 3.0〜4.0m。★試作13 速さを現実にしたので とべる距離が 6.6→5.1m → 穴も 2.5〜3.25m（押してよい時間のはば 0.39〜0.50秒を そのまま） */
        w=full?HW:(2.2+R()*1.2), cx=full?0:clamp(ln*0.8,-HW+w,HW-w);
       pits.push({s0:s,s1:s+len,x0:cx-w,x1:cx+w,full:full}); for(i=0;i<3;i++) coins.push({x:cx,s:s+len*(0.2+i*0.3),y:1.3,got:0,ph:R()*6}); } }
   for(s=-24;s<GOAL+50;s+=17){ tents.push({s:s,x:-(HW+6.2),k:tents.length}); tents.push({s:s+8.5,x:HW+6.2,k:tents.length}); }
@@ -592,9 +594,8 @@ function draw(){
   if(st==='run'||st==='fall') speedo();
 }
 // ★試作11 右下の速さ（km/h）。ふつう＝白 RUN／ダッシュ＝オレンジ DASH／スター＝虹 STAR。左は 0〜50km/h のメーター
-// ★試作12 表示だけ 人の速さに合わせる（ゲームの速さは そのまま）。いちばん速いスターを 50km/h に：ふつう 約26・ダッシュ 約43・スター 約50
-//   ユーザー「人間最速のウサインボルトでも50kmは出ない。MAXで50kmやとしたら平均速度は25kmぐらい」（前は 32・53・61 と出ていた）
-var spdD=0, SPD_K=50/(RUN*STARK*3.6);
+// ★試作13 表示は 本当に進んだ速さ（m/秒×3.6）そのまま。試作12 の「表示だけ小さくする」はやめた（距離÷タイムと合わなかった）
+var spdD=0, SPD_K=1;
 function speedo(){ var v=Math.sqrt(P.vs*P.vs+P.vx*P.vx)*3.6*SPD_K; spdD+=(v-spdD)*0.2; var md=starT>0?2:(P.dashing?1:0), x=W-10, y=H-31, col=md===2?'hsl('+((tAll*400)%360)+',95%,65%)':(md?'#ff9a3c':'#ffffff');
   g.fillStyle=md?'rgba(60,20,0,0.62)':'rgba(10,20,45,0.62)'; g.beginPath(); rrect(x-104,y-48,104,46,11); g.fill(); if(md){ g.strokeStyle=col; g.lineWidth=2; g.beginPath(); rrect(x-104,y-48,104,46,11); g.stroke(); }
   var cx=x-84, cy=y-17, f=clamp(spdD/50,0,1); g.lineWidth=5; g.lineCap='round'; g.strokeStyle='rgba(255,255,255,0.18)'; g.beginPath(); g.arc(cx,cy,12,Math.PI,2*Math.PI); g.stroke(); g.strokeStyle=col; g.beginPath(); g.arc(cx,cy,12,Math.PI,Math.PI+Math.PI*Math.max(0.02,f)); g.stroke();
@@ -611,7 +612,7 @@ function hud(){ var rem=Math.max(0,Math.ceil(GOAL-P.s)), t=st==='goal'||st==='lo
   els.hpFill.style.width=(stam*100)+'%'; els.hpTxt.textContent=Math.round(stam*100); els.bdash.className='abtn'+(stam<0.05?' empty':'')+(hold.dash?' act':'');
   els.starFill.style.width=(starT>0?starT/STAR_T*100:starC/STAR_NEED*100)+'%'; }
 // ★試作11 ランキング（この端末の記録）。完走はタイムの順、失格は そのあと 走った距離の順。日時は記録したときの時刻
-var RK_KEY='ta3d_rank_500';
+var RK_KEY='ta3d_rank_500r';   // ★試作13 速さを変えたので、前の記録（速すぎた走り）とは別にする
 function rkLoad(){ try{ var a=JSON.parse(localStorage.getItem(RK_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function rkSort(a){ return a.sort(function(x,y){ if((x.t!=null)!==(y.t!=null)) return x.t!=null?-1:1; return x.t!=null?x.t-y.t:y.d-x.d; }); }
 function rkAdd(e){ var a=rkSort(rkLoad().concat([e])).slice(0,20); try{ localStorage.setItem(RK_KEY,JSON.stringify(a)); }catch(_){} for(var i=0;i<a.length;i++) if(a[i].at===e.at) return i+1; return 0; }
