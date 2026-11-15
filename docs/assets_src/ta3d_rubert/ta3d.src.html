@@ -88,7 +88,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   </div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">試作5</div>
+    <div id="tag">試作6</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">1000</b> m</div></div>
     <div id="ov"></div>
   </div>
@@ -119,8 +119,8 @@ var cv=document.getElementById('cv'), g=cv.getContext('2d');
 var QP=parseFloat((location.search.match(/[?&]q=([\d.]+)/)||[])[1])||0, DPR=QP||Math.min(3,window.devicePixelRatio||1), skyCv=null;
 function setRes(d){ DPR=d; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); skyCv=null; }
 setRes(DPR);
-var ART=/*ART*/null, POSE=[], FACE=[];
-if(ART){ ART.pose.forEach(function(p){ var im=new Image(); im.src='data:image/webp;base64,'+p.d; POSE.push({im:im,w:p.w,h:p.h,ax:p.ax}); }); ART.face.forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; FACE.push(im); }); }
+var ART=/*ART*/null, PS={}, FACE=[];
+if(ART){ Object.keys(ART.poses).forEach(function(k){ var p=ART.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; PS[k]={im:im,w:p.w,h:p.h,ax:p.ax}; }); ART.face.forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; FACE.push(im); }); }
 var CROWD=/*CROWD*/null, CE={}, CH=[];
 if(CROWD){ Object.keys(CROWD.e).forEach(function(k){ var im=new Image(); im.src='data:image/png;base64,'+CROWD.e[k]; CE[k]=im; }); CROWD.h.forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; CH.push(im); }); }
 var SPR={}; Object.keys(SPRD).forEach(function(k){ var im=new Image(); im.src='data:image/png;base64,'+SPRD[k]; SPR[k]=im; });
@@ -205,7 +205,7 @@ function build(){
   var EK=['shooter','fire','ghost','fly','bomber','diver'], sd;
   for(s=-8;s<GOAL+26;s+=2.6+R()*1.6) for(sd=-1;sd<=1;sd+=2){ if(R()<0.22) continue; var he=R()<0.5; specs.push({s:s+R(),x:sd*(HW+2.1+R()*0.7),h:he?Math.floor(R()*7):-1,e:he?null:EK[Math.floor(R()*EK.length)],ph:R()*6,sz:he?0.95+R()*0.2:1.0+R()*0.35}); }
   [[300,-1],[640,1],[GOAL-6,-1],[GOAL-6,1]].forEach(function(b){ specs.push({s:b[0],x:b[1]*(HW+3.4),h:-1,e:'boss',ph:R()*6,sz:2.6}); });
-  P={x:0,y:0,s:0,vx:0,vs:0,vy:0,ph:0,sw:0,stun:0,tilt:0,inv:0,fin:0,slide:0}; jumpBuf=0;
+  P={x:0,y:0,s:0,vx:0,vs:0,vy:0,ph:0,sw:0,stun:0,tilt:0,inv:0,fin:0,slide:0,fa:0}; jumpBuf=0;
   kills=0; got=0; starC=0; starT=0; stam=1; shake=0; flash=0; hitstop=0; banner=null; combo=0; comboT=0; cheerT=1; mile=[750,500,250,100]; tRun=0; face='calm'; faceHold=0; faceTmpT=0; fallT=0; lostWhy='';
 }
 function mkE(tp,x,s){ return {tp:tp,x:x,s:s,hp:tp==='giant'?2:1,dead:0,hurt:0,ph:Math.random()*6,h:tp==='giant'?1.7:(tp==='spiky'?0.8:1.0)}; }
@@ -237,6 +237,9 @@ function step(){
     if(live && edge.atk && P.sw<=0){ P.sw=0.26; sfx('slash'); }
   }
   edge.jump=edge.atk=edge.slide=0;
+  // ★試作6 体の向き P.fa（0＝前へ走る＝背中・＋は右・π＝こちら向き）。動いている向きへ 1秒で約2回転の速さで回る（180度で0.25秒＝クルッ）
+  if(live && Math.abs(P.vx)+Math.abs(P.vs)>1.2){ var da=Math.atan2(P.vx,P.vs)-P.fa; while(da>Math.PI) da-=2*Math.PI; while(da<-Math.PI) da+=2*Math.PI; P.fa+=clamp(da,-12.5*DT,12.5*DT); if(P.fa>Math.PI) P.fa-=2*Math.PI; if(P.fa<-Math.PI) P.fa+=2*Math.PI; }
+  if(!live && st!=='fall') P.fa*=0.8;
   var sp=Math.abs(P.vs)+Math.abs(P.vx)*0.6; P.ph+=sp*DT*1.9; P.tilt+=((P.vx/6.5)*0.2-P.tilt)*0.2;
   if(P.sw>0) P.sw-=DT; if(P.stun>0) P.stun-=DT; if(P.inv>0) P.inv-=DT; if(shake>0) shake-=DT; if(flash>0) flash=Math.max(0,flash-DT); if(flash<0) flash=Math.min(0,flash+DT);
   if(starT>0){ starT-=DT; if(Math.random()<0.5) parts.push({x:P.x+(Math.random()-0.5),y:0.4+Math.random(),s:P.s-0.3,vx:(Math.random()-0.5)*2,vy:1+Math.random()*2,vs:-3,l:0.6,c:['#ff6ad5','#ffe44d','#6ad7ff','#8dff8a'][Math.random()*4|0],st:1}); }
@@ -371,11 +374,24 @@ function enemyDraw(e,o){ var s=o.s, im=SPR[e.tp]; g.globalAlpha=fog(o.d)*(e.hurt
   if(im && im.complete && im.naturalWidth){ var h=e.h*s, w=h*im.naturalWidth/im.naturalHeight, b=Math.abs(Math.sin(e.ph))*0.07*s; g.drawImage(im,o.x-w/2,o.y-h-b,w,h); } g.globalAlpha=1; }
 // 主人公：ルーベルトのうしろ姿（走る2枚・ジャンプ・剣をふる）。元絵は docs/assets_src/ta3d_rubert/（緑バック）→ prep.py で切り抜き
 //   絵は 走るポーズの高さ 300px＝1.35m。横の基準は頭のまん中（ax）、たての基準は足もと
+// 主人公の絵をえらぶ（★試作6）。向き：0 うしろ 1 ななめうしろ 2 横 3 ななめ前 4 前（絵は右向き。左へ行くときは反転）
+//   その向きの絵が まだ無いときは うしろ姿で代わりにする。ジャンプ・パンチ・スライディング・直立・よーい は うしろ姿だけ
+var DIRK=['b','bd','s','fd','f'];
+function heroPose(){ var a=Math.abs(P.fa), di=a<Math.PI/8?0:(a<3*Math.PI/8?1:(a<5*Math.PI/8?2:(a<7*Math.PI/8?3:4))), flip=P.fa<-0.05 && di>0 && di<4;   // 前向きは反転しない（π と -π で絵が入れかわらないように）
+  var air=P.y>0.02||st==='fall', mv=Math.min(1,(Math.abs(P.vs)+Math.abs(P.vx))/4), cyc=P.ph*0.35, run=(mv>0.15?Math.floor(cyc)%2:0), k=DIRK[di], nm, sq=0;
+  if(di>0 && !PS[k+'_run0']){ di=0; k='b'; flip=false; }
+  if(st==='title'||st==='lost') nm='b_stand';
+  else if(st==='count') nm='b_ready';
+  else if(di===0 && P.slide>0) nm=PS.b_slide?'b_slide':(sq=1,'b_jump');
+  else if(di===0 && P.sw>0 && PS.b_punch) nm='b_punch';
+  else if(di===0 && air) nm='b_jump';
+  else if(st==='goal' && mv<0.3) nm='b_stand';
+  else nm=k+'_run'+(mv>0.15?run:0);
+  if(!PS[nm]) nm=air?'b_jump':'b_run'+run;
+  return {p:PS[nm], nm:nm, flip:flip, sq:sq, bob:(nm.indexOf('_run')>0?Math.abs(Math.sin(cyc*Math.PI))*0.07*mv:0)}; }
 function hero(x,y,m,sc){
-  var air=P.y>0.02||st==='fall', sl=P.slide>0, pu=P.sw>0?1-P.sw/0.26:-1, mv=Math.min(1,(Math.abs(P.vs)+Math.abs(P.vx))/4), cyc=P.ph*0.35;
-  var fr=(air||sl)?2:(mv>0.15?Math.floor(cyc)%2:0), p=POSE[fr], k=m*1.35/300*sc, bob=(fr<2?Math.abs(Math.sin(cyc*Math.PI))*0.07*m*mv:0);
-  if(!p||!p.im.complete||!p.im.naturalWidth) return;
-  g.save(); g.translate(x,y-bob-(pu>=0?Math.sin(pu*Math.PI)*0.12*m:0)); g.rotate(P.tilt); if(sl) g.scale(1.08,0.78);   // スライディング＝ひざをかかえた絵を 低くつぶす（仮。絵が来たら差しかえ）
+  var hp=heroPose(), p=hp.p, pu=P.sw>0?1-P.sw/0.26:-1, k=m*1.35/300*sc; if(!p||!p.im.complete||!p.im.naturalWidth) return;
+  g.save(); g.translate(x,y-hp.bob*m-(pu>=0 && hp.nm!=='b_punch'?Math.sin(pu*Math.PI)*0.12*m:0)); g.rotate(P.tilt*(hp.nm.charAt(0)==='b'&&hp.nm.charAt(1)==='_'?1:0.3)); if(hp.flip) g.scale(-1,1); if(hp.sq) g.scale(1.08,0.78);   // 横向きのときは かたむけを弱く
   g.drawImage(p.im,-p.ax*k,-p.h*k,p.w*k,p.h*k);
   g.restore();
 }
@@ -471,7 +487,7 @@ var acc=0, last=performance.now();
 var fN=0, fT=0;
 function loop(now){ var dt=now-last; if(st==='run' && !QP){ fN++; fT+=dt; if(fN>=90){ if(fT/fN>21 && DPR>1.5) setRes(Math.max(1.5,DPR-0.5)); fN=0; fT=0; } }   // 1.5秒の平均が 48fps を下回ったら 細かさを1段下げる
   acc+=Math.min(0.1,(now-last)/1000); last=now; while(acc>=DT){ step(); acc-=DT; } draw(); hud(); requestAnimationFrame(loop); }
-window.__P=function(){ return {dpr:DPR,st:st,P:P,kills:kills,got:got,starC:starC,starT:starT,stam:stam,face:face,n:[ens.length,coins.length,hurd.length,pits.length],pits:pits,ens:ens,hurd:hurd,mus:musOn,joy:joy,hold:hold,why:lostWhy}; };
+window.__P=function(){ return {pose:heroPose().nm,flip:heroPose().flip,fa:+P.fa.toFixed(2),dpr:DPR,st:st,P:P,kills:kills,got:got,starC:starC,starT:starT,stam:stam,face:face,n:[ens.length,coins.length,hurd.length,pits.length],pits:pits,ens:ens,hurd:hurd,mus:musOn,joy:joy,hold:hold,why:lostWhy}; };
 title(); step(); requestAnimationFrame(loop);
 })();
 </script>
