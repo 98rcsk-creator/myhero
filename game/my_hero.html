@@ -1987,6 +1987,10 @@ function saveData(){
 // ===== 実績システム =====
 // 通算コイン（貯金：実績報酬＋プレイで稼いだ分。アンロックで使う土台）
 var totalGold=parseInt(store.get('yk_gold')||'0',10)||0;
+// ★v377 テスト版だけ：番外編（test/ta3d.html）でもらったゴールドを受けとる。番外編は「あずかり」（yk_ta3d_gold）に足すだけで、所持金には ここでしか足さない
+//   ⚠ 本番にするときは、番外編の側の名前（tk_ つき）も いっしょに直す
+var _taGoldGot=0;
+if(TEST_MODE){ _taGoldGot=Math.max(0,Math.min(99999,parseInt(store.get('yk_ta3d_gold')||'0',10)||0)); if(_taGoldGot>0){ totalGold+=_taGoldGot; store.set('yk_gold',''+totalGold); store.set('yk_ta3d_gold','0'); } }
 if(TEST_MODE && totalGold<50000){ totalGold=99999; store.set('yk_gold',''+totalGold); } // ★v241 テストのみ
 var lastEarnedGold=0; // ★v199 ⑨: 直近ステージで獲得したゴールド（クリア/GO画面表示用）
 // スキルレベル（前回プレイ時の最終レベルを引き継ぐ）
@@ -10943,7 +10947,8 @@ function taCardHTML(){
 function taExtraHTML(){
   return '<div id="taExtra" style="grid-column:1/-1;border-radius:14px;box-sizing:border-box;border:2px dashed #ffd24a;background:linear-gradient(180deg,rgba(255,210,74,0.16),rgba(10,24,52,0.85));padding:9px 11px;cursor:pointer;display:flex;align-items:center;gap:10px">'
     +'<span style="font-size:26px;line-height:1">🏁</span><div style="text-align:left"><div style="color:#ffe9a8;font-size:11px;font-weight:bold;letter-spacing:1px">番外編（試作）</div>'
-    +'<div style="color:#fff;font-size:14px;font-weight:bold">1km タイムアタック ▶</div><div style="color:#cfe3ff;font-size:11px">うしろから見て走る 新しい遊び。別のページが開くよ</div></div></div>';
+    +'<div style="color:#fff;font-size:14px;font-weight:bold">500m タイムアタック ▶</div><div style="color:#cfe3ff;font-size:11px">うしろから見て走る 新しい遊び。別のページが開くよ</div>'
+    +(_taGoldGot>0?'<div style="color:#ffe44d;font-size:12px;font-weight:bold;margin-top:3px">💰 番外編のごほうび +'+_taGoldGot+'G を受けとったよ</div>':'')+'</div></div>';
 }
 // マップから特定ステージで開始（キャラ選択へ）
 function startStageFromMap(s){
