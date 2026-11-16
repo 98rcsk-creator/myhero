@@ -117,6 +117,21 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 #ov .rk small{font-size:11px;color:#8fa6bd}
 #ov .rk .me{color:#ffe44d}
 #ov .stamp{display:inline-block;padding:4px 14px;border:3px solid #ff5a6e;border-radius:10px;color:#ff5a6e;font-size:22px;font-weight:900;transform:rotate(-8deg);background:rgba(255,255,255,0.92);box-shadow:0 4px 10px rgba(0,0,0,0.35);animation:stampIn .35s cubic-bezier(.2,1.6,.4,1) both}
+/* ★試作15 あそびかた（ユーザー「もう少しポップなデザインで見やすく」）。背景は不透明・ボタンの絵つきのカード・文は短く */
+#ov.htv{justify-content:flex-start;gap:8px;padding:16px 14px 14px;background:linear-gradient(180deg,#1d3a78 0%,#13264d 45%,#0b1838 100%)}
+.htSub{display:inline-block;padding:5px 14px;border-radius:999px;background:linear-gradient(180deg,#fff6c4,#ffd84a);color:#5a3a00;font-size:14px;font-weight:900;box-shadow:0 3px 0 #c99a1e}
+.htSec{width:100%;max-width:360px;text-align:left;font-size:12px;font-weight:900;letter-spacing:2px;color:#8fc1ff;margin:4px 0 -2px 4px}
+.htGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:360px}
+.htTile{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:14px;text-align:left;color:#fff;box-shadow:0 4px 0 rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.35)}
+.htTile.w{grid-column:1/-1}
+.htIco{flex:0 0 40px;width:40px;height:40px;border-radius:50%;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(0,0,0,0.3),inset 0 -4px 6px rgba(0,0,0,0.18)}
+.htName{font-size:15px;font-weight:900;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,0.35)}
+.htDo{font-size:12px;font-weight:bold;line-height:1.3;opacity:0.95}
+.htChips{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:360px}
+.htChip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#fff;color:#1b2a4a;text-align:left;font-size:12.5px;font-weight:900;line-height:1.3;box-shadow:0 3px 0 rgba(0,0,0,0.25)}
+.htChip big{font-size:22px;line-height:1;flex:0 0 auto}
+.htChip em{font-style:normal;color:#e0352f}
+.htMedal{display:flex;gap:14px;justify-content:center;font-size:16px;font-weight:900;color:#fff;background:rgba(255,255,255,0.1);border-radius:999px;padding:5px 16px}
 @keyframes stampIn{from{transform:rotate(-8deg) scale(2.6);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:1}}
 #ov .stats{display:flex;gap:16px;justify-content:center;font-size:14px;font-weight:bold;color:#dfeeff}
 /* ---- コントローラー（ゲーム本体の #pad・.abtn と同じ作り。左だけ十字キー → スティック）---- */
@@ -169,7 +184,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作14</div>
+    <div id="tag">番外編・試作15</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -672,13 +687,25 @@ function title(){ st='title'; build(); hideTa(1); menuMode(1); mus(null);
   ov.className='home';
   onTap(document.getElementById('go'),start); onTap(document.getElementById('hr'),ranking); onTap(document.getElementById('hb'),ranking); onTap(document.getElementById('hh'),howto);
   if(FROM_GAME) onTap(document.getElementById('bk'),function(){ mus(null); location.href='../index.html?test=1'; }); }
-function howto(){ menuMode(1); show('<div class="uiTitle">📖 あそびかた</div>'
-    +'<p class="note">ゴールまで 500m。はやく ゴールしよう！</p>'
-    +'<div class="how"><i style="background:#555c6e"></i><span>スティック：走る（前・うしろ・ななめ）</span><i style="background:#3d9bf0"></i><span>ジャンプ：ハードル・穴を こえる</span>'
-    +'<i style="background:#f04d4d"></i><span>パンチ：まものを たおす</span><i style="background:#a8d840"></i><span>ダッシュ（おしっぱなし）</span><i style="background:#ffc928"></i><span>スライディング：みどりの網を くぐる</span></div>'
-    +'<p class="note">🥇 '+MEDAL[0][0]+'秒　🥈 '+MEDAL[1][0]+'秒　🥉 '+MEDAL[2][0]+'秒<br>「GO!」ぴったりで前へ＝ロケットスタート（早いとフライング）<br>大玉は よけるか パンチ／パンは ジャンプで パクッ</p>'
-    +'<p class="note">♥ ハートは5つ。まもの・穴・コースアウトで 1つへる<br>コイン'+STAR_NEED+'枚で スター モード！</p>'
-    +'<div class="uiBtn info mid" id="hx">◀ もどる</div>'); ov.className='';
+function howto(){ menuMode(1);
+  function tile(bg,ico,icoBg,name,txt,wide){ return '<div class="htTile'+(wide?' w':'')+'" style="background:'+bg+'"><span class="htIco" style="background:'+icoBg+'">'+ico+'</span><span><div class="htName">'+name+'</div><div class="htDo">'+txt+'</div></span></div>'; }
+  show('<div class="uiTitle">📖 あそびかた</div>'
+    +'<div class="htSub">🏁 ゴールまで 500m！</div>'
+    +'<div class="htSec">そうさ</div><div class="htGrid">'
+      +tile('linear-gradient(180deg,#5f6a86,#3b4560)','<span style="width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#9a9aa4,#4a4a52)"></span>','radial-gradient(circle,#2c2c34,#18181d)','スティック','走る・よける')
+      +tile('linear-gradient(180deg,#4fa8f5,#2a76d0)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M12 5 Q12.9 5 13.5 5.7 L18.6 11.2 Q19.4 12 18.4 12.6 Q17.6 13 16.8 12.4 L14.3 10 L14.3 18 Q14.3 19.2 13 19.2 L11 19.2 Q9.7 19.2 9.7 18 L9.7 10 L7.2 12.4 Q6.4 13 5.6 12.6 Q4.6 12 5.4 11.2 L10.5 5.7 Q11.1 5 12 5 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg>','radial-gradient(circle at 40% 30%,#8fd0ff,#1f6dd8)','ジャンプ','ハードル・穴')
+      +tile('linear-gradient(180deg,#f2655f,#c93a34)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M6 9.5 Q6 7 8.5 7 L16 7 Q19 7 19 10 L19 14 Q19 18 15 18 L10 18 Q6 18 6 14 Z" fill="#fff" stroke="rgba(0,0,0,0.25)" stroke-width="1" stroke-linejoin="round"/><path d="M9.6 7.4 V11 M12.8 7.2 V11 M16 7.4 V11 M6.4 12.2 H13.5 Q15 12.2 15 13.8" stroke="rgba(0,0,0,0.3)" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg>','radial-gradient(circle at 40% 30%,#ff9a9a,#d02020)','パンチ','まもの・大玉')
+      +tile('linear-gradient(180deg,#8fca3c,#5c9a22)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M4 6.5 L10.5 12 L4 17.5 Z M12 6.5 L19.5 12 L12 17.5 Z" fill="#fff" stroke="rgba(0,0,0,0.22)" stroke-width="1" stroke-linejoin="round"/></svg>','radial-gradient(circle at 50% 55%,#c4ec5a,#86b830)','ダッシュ','おしっぱなし')
+      +tile('linear-gradient(180deg,#f6b92a,#d98a10)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M12 19 Q11.1 19 10.5 18.3 L5.4 12.8 Q4.6 12 5.6 11.4 Q6.4 11 7.2 11.6 L9.7 14 L9.7 6 Q9.7 4.8 11 4.8 L13 4.8 Q14.3 4.8 14.3 6 L14.3 14 L16.8 11.6 Q17.6 11 18.4 11.4 Q19.4 12 18.6 12.8 L13.5 18.3 Q12.9 19 12 19 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg>','radial-gradient(circle at 40% 30%,#fff3a0,#f09a10)','スライディング','みどりの網を くぐる',1)
+    +'</div>'
+    +'<div class="htSec">ルール</div><div class="htChips">'
+      +'<div class="htChip"><big>❤️</big><span>ハートは <em>5つ</em><br>当たると へる</span></div>'
+      +'<div class="htChip"><big>🪙</big><span>コイン <em>'+STAR_NEED+'枚</em>で<br>スター モード！</span></div>'
+      +'<div class="htChip"><big>🚀</big><span>「GO!」で 前へ<br><em>ロケットスタート</em></span></div>'
+      +'<div class="htChip"><big>🍞</big><span>パンは ジャンプで<br><em>パクッ！</em></span></div>'
+    +'</div>'
+    +'<div class="htMedal"><span>🥇 '+MEDAL[0][0]+'秒</span><span>🥈 '+MEDAL[1][0]+'秒</span><span>🥉 '+MEDAL[2][0]+'秒</span></div>'
+    +'<div class="uiBtn info mid" id="hx" style="margin-top:4px">◀ もどる</div>'); ov.className='htv';
   onTap(document.getElementById('hx'),title); }
 function ranking(){ menuMode(1); var a=rkSort(rkLoad()).slice(0,10), h='';
   for(var i=0;i<a.length;i++){ var e=a[i]; h+='<div class="'+(lastRes&&lastRes===e.at?'me':'')+'"><b>'+(i+1)+'</b><span class="t'+(e.t==null?' ng':'')+'">'+(e.t!=null?fmt(e.t)+(medalOf(e.t)?' '+medalOf(e.t)[1]:''):e.d+'m で失格')+'</span><small>'+md(e.at)+'</small></div>'; }
