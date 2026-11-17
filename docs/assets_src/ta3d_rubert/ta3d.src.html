@@ -196,7 +196,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作19</div>
+    <div id="tag">番外編・試作20</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -232,7 +232,7 @@ function setRes(d){ DPR=d; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DP
 setRes(DPR);
 var ART=/*ART*/null, PS={}, FACE=[];
 if(ART){ Object.keys(ART.poses).forEach(function(k){ var p=ART.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; PS[k]={im:im,w:p.w,h:p.h,ax:p.ax}; }); ART.face.forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; FACE.push(im); }); }
-var CROWD=/*CROWD*/null, CE={}, CB=[];   // CE＝まもの（ゲームの絵）／CB＝応援するヒーロー（体つき・AIの絵。crowd_src.png が来たら入る）
+var CROWD=/*CROWD*/null, CE={}, CB=[];   // CE＝まもの（ゲームの絵）／CB＝応援するヒーロー（体つき・AIの絵。★試作20 21体＝crowd_src・crowd2_src（別のポーズ）・crowd_pair_src（まものと仲良し））
 if(CROWD){ Object.keys(CROWD.e).forEach(function(k){ var im=new Image(); im.src='data:image/png;base64,'+CROWD.e[k]; CE[k]=im; }); (CROWD.hb||[]).forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; CB.push(im); }); }
 var SPR={}; Object.keys(SPRD).forEach(function(k){ var im=new Image(); im.src='data:image/png;base64,'+SPRD[k]; SPR[k]=im; });
 function rng(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -535,7 +535,7 @@ function hurdleDraw(h,o){ var s=o.s, x=o.x, y=o.y; g.globalAlpha=fog(o.d);
   g.fillStyle='#fafafa'; g.fillRect(x-0.88*s,y-0.66*s,1.76*s,0.16*s); g.fillStyle='#e0352f'; g.fillRect(x-0.88*s,y-0.66*s,0.44*s,0.16*s); g.fillRect(x,y-0.66*s,0.44*s,0.16*s); g.globalAlpha=1; }
 // 観客：さく（0.7m）の上に見える分だけ描く。はねて応援。主人公が近いと 大きくはねる
 function specDraw(q,o){ var s=o.s, im=q.b>=0?CB[q.b]:CE[q.e]; if(!im||!im.complete||!im.naturalWidth) return; var near=st==='goal'?3:(Math.abs(q.s-P.s)<9?1.8:1), hop=Math.abs(Math.sin(tAll*(5+q.ph%2)+q.ph))*0.16*near;
-  var h=q.sz, w=h*im.naturalWidth/im.naturalHeight, base=(q.b>=0?0.12:0.25)+hop, f=Math.min(1,(base+h-0.7)/h); if(f<=0.05) return;
+  var h=q.sz*(q.b>=0?im.naturalHeight/210:1), w=h*im.naturalWidth/im.naturalHeight,   /* ★試作20 ヒーローは「絵の高さ÷210」倍（210px＝ヒーローの背。肩車の組は背が高く、横にならぶ組は はばが広い。prep_crowd.py） */ base=(q.b>=0?0.12:0.25)+hop, f=Math.min(1,(base+h-0.7)/h); if(f<=0.05) return;
   g.globalAlpha=clamp(1-(o.d-60)/20,0,1); if(q.fl){ g.save(); g.translate(o.x,0); g.scale(-1,1); g.drawImage(im,0,0,im.naturalWidth,im.naturalHeight*f,-w*s/2,o.y-(base+h)*s,w*s,h*f*s); g.restore(); }   // 半分は左右を反転（同じ絵がならんで見えないように）
   else g.drawImage(im,0,0,im.naturalWidth,im.naturalHeight*f,o.x-w*s/2,o.y-(base+h)*s,w*s,h*f*s); g.globalAlpha=1; }
 // ★試作7 コイン：ゲーム本体の _coinFace（金のふち・★の浮き彫り）と _drawCoin の厚み（v359）をそのまま移した
