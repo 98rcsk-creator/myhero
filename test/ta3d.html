@@ -196,7 +196,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作16</div>
+    <div id="tag">番外編・試作17</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -719,7 +719,7 @@ function sfx(tp){ if(!AC) return; try{ var t=AC.currentTime, o=AC.createOscillat
 
 // ---- 入力：左はスティック（全方向）・右はボタン4つ。タッチは全部 preventDefault（連打してもズームしない）----
 var joy={x:0,y:0}, hold={dash:0}, edge={jump:0,atk:0,slide:0}, key={};
-var stickEl=document.getElementById('stick'), knob=document.getElementById('knob'), stickId=null, btnOf={}, tapOf={};
+var stickEl=document.getElementById('stick'), knob=document.getElementById('knob'), stickId=null, btnOf={}, tapOf={}, demoOf={};
 function stickSet(cx,cy){ var r=stickEl.getBoundingClientRect(), R=r.width*0.34, x=(cx-(r.left+r.width/2))/R, y=(cy-(r.top+r.height/2))/R, m=Math.sqrt(x*x+y*y); if(m>1){ x/=m; y/=m; m=1; }
   knob.style.transform='translate('+(x*38)+'px,'+(y*38)+'px)'; if(m<0.16){ x=0; y=0; } joy.x=x; joy.y=y; }
 function stickOff(){ stickId=null; joy.x=joy.y=0; knob.style.transform=''; }
@@ -727,15 +727,16 @@ function press(k,el){ if(k==='dash') hold.dash=1; else edge[k]=1; if(el) el.clas
 function release(k,el){ if(k==='dash') hold.dash=0; if(el) el.classList.remove('act'); }
 document.addEventListener('touchstart',function(e){ if(e.target.closest && e.target.closest('.save')) return;   // ★試作14 記念の画像は 長押しで保存できるように 止めない
   e.preventDefault();
-  for(var i=0;i<e.changedTouches.length;i++){ var t=e.changedTouches[i], b=t.target.closest&&t.target.closest('[data-k]'), tp=t.target.closest&&t.target.closest('.tap');
+  for(var i=0;i<e.changedTouches.length;i++){ var t=e.changedTouches[i], b=t.target.closest&&t.target.closest('[data-k]'), tp=t.target.closest&&t.target.closest('.tap'), dm=t.target.closest&&t.target.closest('.hcDia .abtn');
     if(!b && !tp && t.target.closest && t.target.closest('#pad') && t.clientX>stickEl.getBoundingClientRect().right+24){   // ★試作5 ボタンの間・近くを押しても いちばん近いボタンが反応（見た目は小さいまま、当たりだけ広く）
       var bs=document.querySelectorAll('#pad .abtn'), bd=1e9; for(var j=0;j<bs.length;j++){ var r=bs[j].getBoundingClientRect(), dd=Math.pow(t.clientX-(r.left+r.width/2),2)+Math.pow(t.clientY-(r.top+r.height/2),2); if(dd<bd){ bd=dd; b=bs[j]; } } }
     if(b){ btnOf[t.identifier]=b; press(b.dataset.k,b); }
     else if(tp){ tapOf[t.identifier]=tp; }
+    else if(dm){ demoOf[t.identifier]=dm; dm.classList.add('act'); }   // ★試作17 あそびかたの図のボタン：押すと へこむだけ（ゲームの入力にはしない）
     else if(stickId===null && t.target.closest && t.target.closest('#pad') && t.clientX<stickEl.getBoundingClientRect().right+24){ stickId=t.identifier; stickSet(t.clientX,t.clientY); } } },{passive:false});
 document.addEventListener('touchmove',function(e){ e.preventDefault(); for(var i=0;i<e.changedTouches.length;i++){ var t=e.changedTouches[i]; if(t.identifier===stickId) stickSet(t.clientX,t.clientY); } },{passive:false});
 function tEnd(e){ e.preventDefault(); for(var i=0;i<e.changedTouches.length;i++){ var t=e.changedTouches[i], id=t.identifier;
-  if(id===stickId) stickOff(); if(btnOf[id]){ release(btnOf[id].dataset.k,btnOf[id]); delete btnOf[id]; }
+  if(id===stickId) stickOff(); if(btnOf[id]){ release(btnOf[id].dataset.k,btnOf[id]); delete btnOf[id]; } if(demoOf[id]){ demoOf[id].classList.remove('act'); delete demoOf[id]; }
   if(tapOf[id]){ var el=tapOf[id]; delete tapOf[id]; if(e.type==='touchend' && el._tap) el._tap(); } } }
 document.addEventListener('touchend',tEnd,{passive:false}); document.addEventListener('touchcancel',tEnd,{passive:false});
 ['gesturestart','gesturechange','gestureend','dblclick','contextmenu'].forEach(function(n){ document.addEventListener(n,function(e){ if(e.target.closest && e.target.closest('.save')) return; e.preventDefault(); },{passive:false}); });
