@@ -196,7 +196,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作18</div>
+    <div id="tag">番外編・試作19</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -736,8 +736,9 @@ function finish(){ face='happy'; gT=0; camO=0; resShown=false; hideTa(1); mus('C
   splits.push(+P.fin.toFixed(2)); if(P.nb){ try{ localStorage.setItem(GH_KEY,JSON.stringify({t:P.fin,d:rec,sp:splits})); }catch(e){} }      // ベストなら ゴーストを入れかえ
   // ⑥ ごほうび（My HERO のゴールド）：完走 30G・はじめての完走 +300G・メダルは 色ごとに はじめての1回だけ（金100・銀60・銅30）
   var m=medalOf(P.fin), fl={}, gd=30, why=['完走 30G']; try{ fl=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')||{}; }catch(e){}
-  if(!fl.first){ fl.first=1; gd+=300; why.push('はじめての完走 300G'); }
-  if(m){ var mi=MEDAL.indexOf(m), bn=[100,60,30][mi]; if(!fl['m'+mi]){ fl['m'+mi]=1; gd+=bn; why.push(m[2]+'メダル '+bn+'G'); } }
+  P.items=[];   // ★試作19 My HERO（テスト版）の そうびの ごほうび。ゲームは この記録（FLAG_KEY）を見て 渡す（first＝紅白の剣・m0＝金メダルの盾）
+  if(!fl.first){ fl.first=1; gd+=300; why.push('はじめての完走 300G'); P.items.push('🎀 紅白の剣'); }
+  if(m){ var mi=MEDAL.indexOf(m), bn=[100,60,30][mi]; if(!fl['m'+mi]){ fl['m'+mi]=1; gd+=bn; why.push(m[2]+'メダル '+bn+'G'); if(mi===0) P.items.push('🏅 金メダルの盾'); } }
   try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); localStorage.setItem(GOLD_KEY,String((parseInt(localStorage.getItem(GOLD_KEY)||'0',10)||0)+gd)); }catch(e){}
   P.medal=m; P.gold=gd; P.goldWhy=why; }
 function showResult(){ ov.className='res';
@@ -746,6 +747,7 @@ function showResult(){ ov.className='res';
     +'<p>ランキング <span style="color:#ffe44d;font-size:22px">'+P.rank+'位</span></p>'
     +'<div class="stats"><span>👾 '+kills+'</span><span>🪙 '+got+'</span><span style="color:#ff5a6e">'+new Array(Math.max(0,life)+1).join('♥')+'</span></div>'
     +'<p class="note" style="color:#ffe9a8">💰 +'+P.gold+'G（My HERO で もらえる）<br><span style="font-size:11px;color:#b4c6dc">'+P.goldWhy.join('・')+'</span></p>'
+    +(P.items.length?'<p class="note" style="color:#ffd0e8">🎁 '+P.items.join('・')+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span></p>':'')
     +'<div class="row"><div class="uiBtn gold half" id="shot">📸 記念の画像</div><div class="uiBtn go half" id="again" style="font-size:16px">⏱ もう一回</div></div><div class="row"><div class="uiBtn info half" id="r2">🏆 ランキング</div><div class="uiBtn info half" id="h2">🏠 ホーム</div></div>');
   onTap(document.getElementById('shot'),shotShow);
   ov.className='res';
