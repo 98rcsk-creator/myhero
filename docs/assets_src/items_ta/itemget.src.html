@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>アイテムゲット演出（試作）</title>
+<!-- ★2026-11-17 ユーザー「新しいアイテムをゲットするときは 特別な演出を入れて 豪華に めちゃくちゃ凄い演出で讃えたい！ そのプレビューをまず作成して！ かなり派手に豪華に」
+     「金メダルで 盾も剣も は豪華すぎる。どちらか選べるように」→ ①えらぶ画面 → ②ゲットの演出。ゲームに入れる前の 見た目の試作（ゲームとはつながっていない）。
+     作り方：docs/assets_src/items_ta/build_itemget.py（この元ファイルの 剣・盾の しるしの所に prep_items_ta.py の WebP を入れて test/itemget.html に書き出す） -->
+<style>
+html,body{margin:0;height:100%;background:#071230;color:#fff;font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#sky{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 38%,#24479a 0%,#102a63 45%,#071230 100%)}
+#cv{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
+/* ---- ① えらぶ画面 ---- */
+#pick{position:fixed;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;padding:0 14px;box-sizing:border-box;transition:opacity .35s}
+#pick.off{opacity:0;pointer-events:none}
+.medal{font-size:min(23vw,108px);line-height:1;filter:drop-shadow(0 0 18px rgba(255,210,60,0.75));animation:mBob 1.8s ease-in-out infinite}
+@keyframes mBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-8px) rotate(6deg)}}
+.pt1{font-size:min(7.4vw,30px);font-weight:900;color:#ffe44d;text-shadow:0 3px 0 #a0620a,0 0 14px rgba(255,200,60,0.6);letter-spacing:1px}
+.pt2{font-size:min(4.4vw,17px);font-weight:900;color:#dfeeff}
+.cards{display:flex;gap:12px;margin-top:1vh}
+.card{width:min(42vw,170px);padding:12px 6px 12px;border-radius:20px;box-sizing:border-box;text-align:center;cursor:pointer;
+  background:linear-gradient(180deg,#fff7d6 0%,#ffd76a 55%,#e8a422 100%);border:3px solid #fff;color:#4a2a00;
+  box-shadow:0 6px 0 #a8660f,0 10px 22px rgba(0,0,0,0.45),0 0 26px rgba(255,210,80,0.45);animation:cFl 2.4s ease-in-out infinite}
+.card:nth-child(2){animation-delay:-1.2s}
+.card:active{transform:translateY(5px) scale(0.97)!important;box-shadow:0 1px 0 #a8660f,0 3px 8px rgba(0,0,0,0.45)}
+@keyframes cFl{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.card .pic{height:min(34vw,140px);display:flex;align-items:center;justify-content:center}
+.card .pic img{max-height:100%;max-width:90%;filter:drop-shadow(0 4px 4px rgba(0,0,0,0.35))}
+.card b{display:block;font-size:min(4.6vw,18px);font-weight:900;margin-top:6px}
+.card span{display:block;font-size:min(3.1vw,12px);font-weight:bold;opacity:0.85;margin-top:2px;line-height:1.35}
+.hint{font-size:12px;color:#9fc0e6;font-weight:bold}
+/* ---- ② ゲットの演出 ---- */
+#fx{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0}
+#fx.on{opacity:1;pointer-events:auto}
+#fx.shake{animation:shk .5s linear}
+@keyframes shk{0%{transform:translate(0,0)}10%{transform:translate(-9px,6px)}20%{transform:translate(8px,-7px)}30%{transform:translate(-7px,-5px)}40%{transform:translate(6px,7px)}55%{transform:translate(-4px,3px)}70%{transform:translate(3px,-2px)}85%{transform:translate(-1px,1px)}100%{transform:translate(0,0)}}
+.dim{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(255,236,150,0.18) 0%,rgba(8,14,40,0.82) 62%)}
+.rays{position:absolute;left:50%;top:42%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;border-radius:50%;opacity:0;
+  background:repeating-conic-gradient(from 0deg,rgba(255,226,120,0.55) 0deg 7deg,rgba(255,226,120,0) 7deg 15deg);
+  -webkit-mask-image:radial-gradient(circle,#000 0%,#000 18%,transparent 52%);mask-image:radial-gradient(circle,#000 0%,#000 18%,transparent 52%)}
+#fx.on .rays{animation:rIn .5s ease-out forwards,rSpin 9s linear infinite}
+.rays.r2{background:repeating-conic-gradient(from 4deg,rgba(255,140,220,0.35) 0deg 4deg,rgba(255,140,220,0) 4deg 22deg)}
+#fx.on .rays.r2{animation:rIn .5s ease-out forwards,rSpin2 14s linear infinite}
+@keyframes rIn{to{opacity:1}}
+@keyframes rSpin{to{transform:rotate(360deg)}}
+@keyframes rSpin2{to{transform:rotate(-360deg)}}
+.pillar{position:absolute;left:50%;top:-10%;width:42vw;height:62%;margin-left:-21vw;opacity:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,250,210,0.75) 70%,rgba(255,255,255,0.95) 100%);filter:blur(6px)}
+#fx.on .pillar{animation:pil 1.1s ease-out .05s forwards}
+@keyframes pil{0%{opacity:0;transform:scaleX(0.2)}25%{opacity:1;transform:scaleX(1.25)}100%{opacity:0;transform:scaleX(0.6)}}
+.glow{position:absolute;left:50%;top:42%;width:76vmin;height:76vmin;margin:-38vmin 0 0 -38vmin;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,rgba(255,255,255,0.95) 0%,rgba(255,232,120,0.75) 22%,rgba(255,170,40,0.25) 48%,rgba(255,170,40,0) 70%)}
+#fx.on .glow{animation:gIn .6s ease-out .1s forwards,gPulse 1.6s ease-in-out .7s infinite}
+@keyframes gIn{0%{opacity:0;transform:scale(0.2)}60%{opacity:1;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
+@keyframes gPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.ring{position:absolute;left:50%;top:42%;width:30vmin;height:30vmin;margin:-15vmin 0 0 -15vmin;border-radius:50%;opacity:0;
+  border:6px solid transparent;background:conic-gradient(#ff5a5a,#ffd84a,#6aff8a,#5ad4ff,#b88aff,#ff5a5a) border-box;
+  -webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+#fx.on .ring{animation:rg 1.1s ease-out forwards}
+#fx.on .ring.k2{animation-delay:.75s}
+#fx.on .ring.k3{animation-delay:1.05s}
+@keyframes rg{0%{opacity:1;transform:scale(0.3)}100%{opacity:0;transform:scale(3.4)}}
+.item{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);opacity:0}
+.item img{display:block;height:min(34vh,250px);filter:drop-shadow(0 0 16px rgba(255,240,170,0.95)) drop-shadow(0 8px 10px rgba(0,0,0,0.4))}
+.item.sh img{height:min(27vh,200px)}
+#fx.on .item{animation:itIn .75s cubic-bezier(.2,1.5,.4,1) .1s forwards}
+#fx.on .item img{animation:spin 1.3s ease-in-out .1s 1,bob 2.2s ease-in-out 1.5s infinite}
+@keyframes itIn{0%{opacity:0;transform:translate(-50%,-140%) scale(0.2)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes spin{0%{transform:scaleX(1)}20%{transform:scaleX(-1)}40%{transform:scaleX(1)}60%{transform:scaleX(-1)}80%{transform:scaleX(1)}100%{transform:scaleX(1)}}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-10px) rotate(3deg)}}
+.ttl{position:absolute;left:0;right:0;top:9%;text-align:center;opacity:0}
+.ttl .t1{font-size:min(10.2vw,46px);font-weight:900;letter-spacing:0;line-height:1;white-space:nowrap;color:#fff6b0;
+  text-shadow:0 0 1px #000,3px 0 0 #b2470a,-3px 0 0 #b2470a,0 3px 0 #b2470a,0 -3px 0 #b2470a,2px 2px 0 #b2470a,-2px 2px 0 #b2470a,2px -2px 0 #b2470a,-2px -2px 0 #b2470a,0 7px 0 #6e2500,0 0 26px rgba(255,190,60,0.9)}
+.ttl .t1 i{display:inline-block;font-style:normal}
+#fx.on .ttl .t1 i{animation:hop .55s ease-out calc(.75s + var(--d)) both}
+@keyframes hop{0%{transform:translateY(0)}35%{transform:translateY(-16px) scale(1.15)}70%{transform:translateY(3px)}100%{transform:translateY(0)}}
+.ttl .t2{display:inline-block;margin-top:10px;padding:5px 16px;border-radius:999px;font-size:min(4.6vw,18px);font-weight:900;color:#5a2a00;
+  background:linear-gradient(180deg,#fff7c8,#ffc93a);box-shadow:0 3px 0 #b77a10,0 0 16px rgba(255,210,80,0.7)}
+#fx.on .ttl{animation:slam .5s cubic-bezier(.3,1.6,.5,1) .7s forwards}
+@keyframes slam{0%{opacity:0;transform:scale(3.2)}60%{opacity:1;transform:scale(0.92)}100%{opacity:1;transform:scale(1)}}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#fx.on .flash{animation:fl .55s ease-out forwards}
+#fx.on .flash.f2{animation:fl .45s ease-out .7s forwards}
+@keyframes fl{0%{opacity:0.95}100%{opacity:0}}
+.plate{position:absolute;left:50%;bottom:16%;transform:translate(-50%,40px);width:min(86vw,340px);text-align:center;opacity:0;
+  padding:12px 14px 13px;border-radius:18px;box-sizing:border-box;background:linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,240,200,0.97));
+  color:#4a2a00;border:3px solid #ffd24a;box-shadow:0 6px 0 rgba(0,0,0,0.25),0 0 30px rgba(255,210,80,0.6)}
+.plate b{display:block;font-size:min(6.4vw,26px);font-weight:900;color:#d42020;text-shadow:0 2px 0 rgba(255,255,255,0.9)}
+.plate span{display:block;font-size:min(3.8vw,15px);font-weight:bold;margin-top:4px;line-height:1.45}
+#fx.on .plate{animation:plIn .5s cubic-bezier(.2,1.4,.4,1) 1.45s forwards}
+@keyframes plIn{to{opacity:1;transform:translate(-50%,0)}}
+.ok{position:absolute;left:50%;bottom:5%;transform:translateX(-50%) scale(0.6);opacity:0;padding:12px 40px;border-radius:16px;font-size:20px;font-weight:900;cursor:pointer;
+  color:#fff;background:linear-gradient(180deg,#7ff07f,#26b33d);border:3px solid #fff;box-shadow:0 5px 0 #13792a,0 8px 16px rgba(0,0,0,0.4);text-shadow:0 2px 0 rgba(0,0,0,0.25)}
+#fx.on .ok{animation:okIn .4s cubic-bezier(.2,1.6,.4,1) 2.3s forwards}
+@keyframes okIn{to{opacity:1;transform:translateX(-50%) scale(1)}}
+.ok:active{transform:translateX(-50%) translateY(4px) scale(0.97)!important;box-shadow:0 1px 0 #13792a}
+.tag{position:fixed;right:8px;top:8px;z-index:9;padding:2px 8px;border-radius:6px;background:rgba(0,0,0,0.45);color:#ffe9a8;font-size:10px;font-weight:bold}
+</style></head>
+<body>
+<div id="sky"></div>
+<div class="tag">アイテムゲット演出・試作1</div>
+<div id="pick">
+  <div class="medal">🥇</div>
+  <div class="pt1">金メダル おめでとう！</div>
+  <div class="pt2">ごほうびを 1つ えらんでね</div>
+  <div class="cards">
+    <div class="card" data-k="sword"><div class="pic"><img id="imS1" alt=""></div><b>🎀 紅白の剣</b><span>まものを たおすと<br>どんどん 強くなる</span></div>
+    <div class="card" data-k="shield"><div class="pic"><img id="imH1" alt=""></div><b>🏅 金メダルの盾</b><span>ガードが 長くなって<br>HP も 回復</span></div>
+  </div>
+  <div class="hint">タップすると 音が出るよ 🔊</div>
+</div>
+<div id="fx">
+  <div class="dim"></div>
+  <div class="rays"></div><div class="rays r2"></div>
+  <div class="pillar"></div>
+  <div class="glow"></div>
+  <div class="ring"></div><div class="ring k2"></div><div class="ring k3"></div>
+  <div class="item" id="it"><img id="imBig" alt=""></div>
+  <div class="ttl"><div class="t1" id="t1"></div><div class="t2">ニューアイテム ゲット！</div></div>
+  <div class="plate"><b id="pn"></b><span id="pd"></span></div>
+  <div class="ok" id="ok">やったー！</div>
+  <div class="flash"></div><div class="flash f2"></div>
+</div>
+<canvas id="cv"></canvas>
+<script>
+(function(){
+var IMG={sword:'data:image/webp;base64,/*SWORD*/', shield:'data:image/webp;base64,/*SHIELD*/'};
+var INFO={sword:['🎀 紅白の剣','まものを たおすと 育つ剣！<br>Lv5 で 金色のオーラ'],shield:['🏅 金メダルの盾','ガード時間 +50%・ガード成功で HP +1<br>1位の しるし！']};
+document.getElementById('imS1').src=IMG.sword; document.getElementById('imH1').src=IMG.shield;
+var pick=document.getElementById('pick'), fx=document.getElementById('fx'), it=document.getElementById('it'), big=document.getElementById('imBig');
+// タイトルは1文字ずつ はねる
+var T='NEW ITEM GET!!', t1=document.getElementById('t1'); t1.innerHTML=T.split('').map(function(c,i){ return c===' '?'<i style="width:.3em"> </i>':'<i style="--d:'+(i*0.05)+'s">'+c+'</i>'; }).join('');
+// ---- 音（ファンファーレ）：タップのときに作る（iPhone は 指で さわった時しか 音が出せない） ----
+var AC=null;
+function tone(f,t0,d,type,v){ var o=AC.createOscillator(), g=AC.createGain(); o.type=type||'square'; o.frequency.value=f; o.connect(g); g.connect(AC.destination);
+  var t=AC.currentTime+t0; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v||0.08,t+0.012); g.gain.exponentialRampToValueAtTime(0.0008,t+d); o.start(t); o.stop(t+d+0.05); }
+function fanfare(){
+  try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){ return; }
+  // じゃららら（上がる）→ ジャーン！（和音）→ キラキラ
+  [523,659,784,1047,1319].forEach(function(f,i){ tone(f,i*0.07,0.16,'square',0.06); });
+  [523,659,784,1047].forEach(function(f){ tone(f,0.7,1.6,'sawtooth',0.035); tone(f*2,0.7,1.2,'square',0.025); });
+  [1568,2093,2637,3136,2637,3136,4186].forEach(function(f,i){ tone(f,0.95+i*0.09,0.25,'triangle',0.05); });
+  tone(196,0.7,0.5,'triangle',0.12);   // ドン（iPhone のスピーカーでも聞こえる高さ）
+}
+// ---- 紙ふぶき・花火・コイン・キラキラ（canvas 1枚） ----
+var cv=document.getElementById('cv'), g=cv.getContext('2d'), W=0, H=0, DPR=Math.min(2,window.devicePixelRatio||1), P=[], tStart=0, running=false;
+function size(){ W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; g.setTransform(DPR,0,0,DPR,0,0); } size(); addEventListener('resize',size);
+var COL=['#ff5a5a','#ffd84a','#6aff8a','#5ad4ff','#b88aff','#ff9ad5','#ffffff'];
+function confetti(x,y,n,dir){ for(var i=0;i<n;i++){ var a=dir+(Math.random()-0.5)*1.1, v=7+Math.random()*9; P.push({k:'c',x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:Math.random()*6.3,vr:(Math.random()-0.5)*0.4,w:6+Math.random()*6,h:3+Math.random()*4,c:COL[i%COL.length],l:200}); } }
+function firework(x,y){ var c=COL[Math.floor(Math.random()*6)], n=46; for(var i=0;i<n;i++){ var a=i/n*6.283, v=2.4+Math.random()*3.4; P.push({k:'f',x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c:c,l:60+Math.random()*20,ml:80}); } P.push({k:'b',x:x,y:y,l:14,ml:14,c:c}); }
+function coins(n){ for(var i=0;i<n;i++) P.push({k:'g',x:Math.random()*W,y:-20-Math.random()*H*0.6,vy:3+Math.random()*3,vx:(Math.random()-0.5)*1.2,ph:Math.random()*6,l:400}); }
+function star(x,y,r,rot){ g.beginPath(); for(var i=0;i<8;i++){ var rr=i%2?r*0.28:r, a=rot+i*Math.PI/4; g[i?'lineTo':'moveTo'](x+Math.cos(a)*rr,y+Math.sin(a)*rr); } g.closePath(); }
+function loop(now){
+  if(!running) return; var t=(now-tStart)/1000;
+  g.clearRect(0,0,W,H);
+  // 花火：0.7秒の ドン から 3.6秒まで 0.33秒ごと
+  if(t>0.7 && t<3.6 && Math.floor(t/0.33)!==loop.k){ loop.k=Math.floor(t/0.33); firework(W*(0.15+Math.random()*0.7),H*(0.08+Math.random()*0.32)); }
+  // キラキラ：アイテムのまわり（ずっと）
+  var cx=W/2, cy=H*0.42;
+  for(var i=0;i<14;i++){ var a=t*0.9+i*0.449, rr=Math.min(W,H)*(0.2+0.06*Math.sin(t*2+i)), s=(Math.sin(t*6+i*1.7)+1)*0.5;
+    if(t<0.25) break; g.fillStyle='rgba(255,255,230,'+(0.35+0.65*s).toFixed(2)+')'; star(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr*0.9,3+7*s,t); g.fill(); }
+  for(var j=P.length-1;j>=0;j--){ var q=P[j]; q.l--;
+    if(q.k==='c'){ q.vx*=0.985; q.vy=q.vy*0.985+0.22; q.x+=q.vx; q.y+=q.vy; q.r+=q.vr; g.save(); g.translate(q.x,q.y); g.rotate(q.r); g.scale(1,Math.cos(q.r*2)); g.fillStyle=q.c; g.fillRect(-q.w/2,-q.h/2,q.w,q.h); g.restore(); }
+    else if(q.k==='f'){ q.vx*=0.97; q.vy=q.vy*0.97+0.06; q.x+=q.vx; q.y+=q.vy; g.globalAlpha=Math.max(0,q.l/q.ml); g.fillStyle=q.c; g.beginPath(); g.arc(q.x,q.y,2.2,0,6.283); g.fill(); g.fillStyle='#fff'; g.beginPath(); g.arc(q.x,q.y,0.9,0,6.283); g.fill(); g.globalAlpha=1; }
+    else if(q.k==='b'){ var k=1-q.l/q.ml; g.globalAlpha=1-k; g.fillStyle='#fff'; g.beginPath(); g.arc(q.x,q.y,6+30*k,0,6.283); g.fill(); g.globalAlpha=1; }
+    else if(q.k==='g'){ q.y+=q.vy; q.x+=q.vx; q.ph+=0.16; var sx=Math.abs(Math.cos(q.ph)); g.save(); g.translate(q.x,q.y); g.scale(Math.max(0.15,sx),1);
+      g.fillStyle='#b8860b'; g.beginPath(); g.arc(0,1.5,9,0,6.283); g.fill(); g.fillStyle='#ffd84a'; g.beginPath(); g.arc(0,0,9,0,6.283); g.fill(); g.fillStyle='#fff6b0'; g.beginPath(); g.arc(-2.5,-2.5,3,0,6.283); g.fill(); g.restore(); if(q.y>H+20) q.l=0; }
+    if(q.l<=0 || (q.k==='c' && q.y>H+30)) P.splice(j,1); }
+  requestAnimationFrame(loop);
+}
+// ---- ① えらぶ → ② 演出 ----
+function play(k){
+  fanfare();
+  big.src=IMG[k]; it.className='item'+(k==='shield'?' sh':'');
+  document.getElementById('pn').textContent=INFO[k][0]; document.getElementById('pd').innerHTML=INFO[k][1];
+  pick.classList.add('off'); fx.classList.remove('on','shake'); void fx.offsetWidth; fx.classList.add('on');
+  setTimeout(function(){ fx.classList.add('shake'); confetti(0,H,70,-1.05); confetti(W,H,70,-2.09); confetti(W/2,H*0.42,40,-1.57); },700);
+  setTimeout(function(){ coins(36); },1000);
+  setTimeout(function(){ confetti(0,H*0.6,40,-0.7); confetti(W,H*0.6,40,-2.44); },1800);
+  P=[]; loop.k=-1; tStart=performance.now(); if(!running){ running=true; requestAnimationFrame(loop); }
+}
+[].forEach.call(document.querySelectorAll('.card'),function(c){ c.addEventListener('click',function(){ play(c.dataset.k); }); });
+document.getElementById('ok').addEventListener('click',function(){ fx.classList.remove('on','shake'); pick.classList.remove('off'); setTimeout(function(){ running=false; P=[]; g.clearRect(0,0,W,H); },400); });
+window.__play=play;
+})();
+</script>
+</body></html>
