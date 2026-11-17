@@ -196,17 +196,18 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作17</div>
+    <div id="tag">番外編・試作18</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
     <div id="stick"><div id="stickBase"><i class="a1"></i><i class="a2"></i><i class="a3"></i><i class="a4"></i></div><div id="knob"></div></div>
     <div id="skillrow">★ スター（コイン） <div id="starBar"><div id="starFill"></div></div></div>
     <div id="apad">
-      <div class="abtn" id="bj" data-k="jump"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"><path d="M12 5 Q12.9 5 13.5 5.7 L18.6 11.2 Q19.4 12 18.4 12.6 Q17.6 13 16.8 12.4 L14.3 10 L14.3 18 Q14.3 19.2 13 19.2 L11 19.2 Q9.7 19.2 9.7 18 L9.7 10 L7.2 12.4 Q6.4 13 5.6 12.6 Q4.6 12 5.4 11.2 L10.5 5.7 Q11.1 5 12 5 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg></div>
-      <div class="abtn" id="ba" data-k="atk"><svg viewBox="0 0 24 24" width="31" height="31" fill="none"><path d="M6 9.5 Q6 7 8.5 7 L16 7 Q19 7 19 10 L19 14 Q19 18 15 18 L10 18 Q6 18 6 14 Z" fill="#fff" stroke="rgba(0,0,0,0.25)" stroke-width="1" stroke-linejoin="round"/><path d="M9.6 7.4 V11 M12.8 7.2 V11 M16 7.4 V11 M6.4 12.2 H13.5 Q15 12.2 15 13.8" stroke="rgba(0,0,0,0.3)" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg><small>パンチ</small></div>
-      <div class="abtn" id="bdash" data-k="dash"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"><path d="M4 6.5 L10.5 12 L4 17.5 Z M12 6.5 L19.5 12 L12 17.5 Z" fill="#fff" stroke="rgba(0,0,0,0.22)" stroke-width="1" stroke-linejoin="round"/></svg><small>ダッシュ</small></div>
-      <div class="abtn" id="bslide" data-k="slide"><svg viewBox="0 0 24 24" width="31" height="31" fill="none"><path d="M12 19 Q11.1 19 10.5 18.3 L5.4 12.8 Q4.6 12 5.6 11.4 Q6.4 11 7.2 11.6 L9.7 14 L9.7 6 Q9.7 4.8 11 4.8 L13 4.8 Q14.3 4.8 14.3 6 L14.3 14 L16.8 11.6 Q17.6 11 18.4 11.4 Q19.4 12 18.6 12.8 L13.5 18.3 Q12.9 19 12 19 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg></div>
+      <!-- ★試作18 ボタンの絵柄を1.4倍に（ユーザー「パッと見でもっとわかるように」。本編 v378 と同じ。あそびかたの図はここの絵を写すので いっしょに大きくなる） -->
+      <div class="abtn" id="bj" data-k="jump"><svg viewBox="0 0 24 24" width="42" height="42" fill="none"><path d="M12 5 Q12.9 5 13.5 5.7 L18.6 11.2 Q19.4 12 18.4 12.6 Q17.6 13 16.8 12.4 L14.3 10 L14.3 18 Q14.3 19.2 13 19.2 L11 19.2 Q9.7 19.2 9.7 18 L9.7 10 L7.2 12.4 Q6.4 13 5.6 12.6 Q4.6 12 5.4 11.2 L10.5 5.7 Q11.1 5 12 5 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg></div>
+      <div class="abtn" id="ba" data-k="atk"><svg viewBox="0 0 24 24" width="43" height="43" fill="none"><path d="M6 9.5 Q6 7 8.5 7 L16 7 Q19 7 19 10 L19 14 Q19 18 15 18 L10 18 Q6 18 6 14 Z" fill="#fff" stroke="rgba(0,0,0,0.25)" stroke-width="1" stroke-linejoin="round"/><path d="M9.6 7.4 V11 M12.8 7.2 V11 M16 7.4 V11 M6.4 12.2 H13.5 Q15 12.2 15 13.8" stroke="rgba(0,0,0,0.3)" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg><small>パンチ</small></div>
+      <div class="abtn" id="bdash" data-k="dash"><svg viewBox="0 0 24 24" width="42" height="42" fill="none"><path d="M4 6.5 L10.5 12 L4 17.5 Z M12 6.5 L19.5 12 L12 17.5 Z" fill="#fff" stroke="rgba(0,0,0,0.22)" stroke-width="1" stroke-linejoin="round"/></svg><small>ダッシュ</small></div>
+      <div class="abtn" id="bslide" data-k="slide"><svg viewBox="0 0 24 24" width="43" height="43" fill="none"><path d="M12 19 Q11.1 19 10.5 18.3 L5.4 12.8 Q4.6 12 5.6 11.4 Q6.4 11 7.2 11.6 L9.7 14 L9.7 6 Q9.7 4.8 11 4.8 L13 4.8 Q14.3 4.8 14.3 6 L14.3 14 L16.8 11.6 Q17.6 11 18.4 11.4 Q19.4 12 18.6 12.8 L13.5 18.3 Q12.9 19 12 19 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg></div>
     </div>
   </div>
 </div>
