@@ -121,12 +121,23 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 #ov.htv{justify-content:flex-start;gap:8px;padding:16px 14px 14px;background:linear-gradient(180deg,#1d3a78 0%,#13264d 45%,#0b1838 100%)}
 .htSub{display:inline-block;padding:5px 14px;border-radius:999px;background:linear-gradient(180deg,#fff6c4,#ffd84a);color:#5a3a00;font-size:14px;font-weight:900;box-shadow:0 3px 0 #c99a1e}
 .htSec{width:100%;max-width:360px;text-align:left;font-size:12px;font-weight:900;letter-spacing:2px;color:#8fc1ff;margin:4px 0 -2px 4px}
-.htGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:360px}
-.htTile{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:14px;text-align:left;color:#fff;box-shadow:0 4px 0 rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.35)}
-.htTile.w{grid-column:1/-1}
-.htIco{flex:0 0 40px;width:40px;height:40px;border-radius:50%;border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(0,0,0,0.3),inset 0 -4px 6px rgba(0,0,0,0.18)}
-.htName{font-size:15px;font-weight:900;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,0.35)}
-.htDo{font-size:12px;font-weight:bold;line-height:1.3;opacity:0.95}
+/* ★試作16 そうさ（ユーザー「コントローラーのデザインを軸に説明」）：本物と同じ並び・同じ絵のコントローラーに、ボタンのとなりへ説明を付ける */
+.hcPad{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:362px;box-sizing:border-box;padding:9px 8px 11px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);box-shadow:inset 0 2px 12px rgba(0,0,0,0.6),0 4px 0 rgba(0,0,0,0.3)}
+.hcL{width:84px;flex:0 0 84px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.hcSW{position:relative;width:84px;height:84px}
+.hcStk{position:absolute;left:0;top:0;width:150px;height:150px;transform:scale(0.56);transform-origin:0 0}
+.hcR{flex:1;display:grid;grid-template-columns:1fr 110px 1fr;grid-template-rows:auto 110px auto;gap:4px 4px;align-items:center}
+.hcDW{grid-column:2;grid-row:2;width:110px;height:110px}
+.hcDia{position:relative;width:162px;height:162px;transform:scale(0.679);transform-origin:0 0}
+.hcL b,.hcLb b{font-size:14px;font-weight:900;line-height:1.25;white-space:nowrap}
+.hcL span,.hcLb span{font-size:11.5px;font-weight:bold;line-height:1.3;color:#fff;white-space:nowrap}
+.hcLb.t,.hcLb.b{grid-column:1/-1;text-align:center}
+.hcLb.t{grid-row:1}
+.hcLb.b{grid-row:3;padding-top:6px}
+.hcLb.t span,.hcLb.b span{margin-left:6px}
+.hcLb.l{grid-column:1;grid-row:2;text-align:right}
+.hcLb.r{grid-column:3;grid-row:2;text-align:left}
+.hcLb.l span,.hcLb.r span{display:block}
 .htChips{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:360px}
 .htChip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#fff;color:#1b2a4a;text-align:left;font-size:12.5px;font-weight:900;line-height:1.3;box-shadow:0 3px 0 rgba(0,0,0,0.25)}
 .htChip big{font-size:22px;line-height:1;flex:0 0 auto}
@@ -135,22 +146,23 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 @keyframes stampIn{from{transform:rotate(-8deg) scale(2.6);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:1}}
 #ov .stats{display:flex;gap:16px;justify-content:center;font-size:14px;font-weight:bold;color:#dfeeff}
 /* ---- コントローラー（ゲーム本体の #pad・.abtn と同じ作り。左だけ十字キー → スティック）---- */
-#pad{width:390px;height:172px;background:linear-gradient(160deg,#15151f 0%,#0a0a12 60%,#06060c 100%);display:flex;align-items:flex-end;justify-content:space-between;
+#pad,.hcPad{background:linear-gradient(160deg,#15151f 0%,#0a0a12 60%,#06060c 100%)}
+#pad{width:390px;height:172px;display:flex;align-items:flex-end;justify-content:space-between;
   padding:0 14px 2px;flex-shrink:0;border-top:1px solid #222;position:relative;box-shadow:inset 0 2px 12px rgba(0,0,0,0.6)}
 #stick,#apad{transform:scale(0.86);transform-origin:50% 100%}   /* ★試作4 コントローラーを少し小さく（画面をたてに広げるため） */
 #stick{position:relative;width:156px;height:168px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-#stickBase{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;
+#stickBase,.hcSB{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;
   background:radial-gradient(circle at 50% 42%,#3a3a44 0%,#26262e 60%,#17171d 100%);
   box-shadow:inset 0 6px 12px rgba(0,0,0,0.7),inset 0 -3px 5px rgba(255,255,255,0.10),0 1px 1px rgba(255,255,255,0.12)}
-#stickBase i{position:absolute;left:50%;top:50%;width:0;height:0;border:7px solid transparent;opacity:0.35}
-#stickBase .a1{margin:-66px 0 0 -7px;border-bottom-color:#fff;border-top-width:0}
-#stickBase .a2{margin:52px 0 0 -7px;border-top-color:#fff;border-bottom-width:0}
-#stickBase .a3{margin:-7px 0 0 -66px;border-right-color:#fff;border-left-width:0}
-#stickBase .a4{margin:-7px 0 0 52px;border-left-color:#fff;border-right-width:0}
-#knob{position:absolute;left:50%;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;will-change:transform;
+#stickBase i,.hcSB i{position:absolute;left:50%;top:50%;width:0;height:0;border:7px solid transparent;opacity:0.35}
+#stickBase .a1,.hcSB .a1{margin:-66px 0 0 -7px;border-bottom-color:#fff;border-top-width:0}
+#stickBase .a2,.hcSB .a2{margin:52px 0 0 -7px;border-top-color:#fff;border-bottom-width:0}
+#stickBase .a3,.hcSB .a3{margin:-7px 0 0 -66px;border-right-color:#fff;border-left-width:0}
+#stickBase .a4,.hcSB .a4{margin:-7px 0 0 52px;border-left-color:#fff;border-right-width:0}
+#knob,.hcKn{position:absolute;left:50%;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;will-change:transform;
   background:radial-gradient(circle at 50% 36%,#8c8c95 0%,#6a6a72 45%,#4a4a52 100%);
   box-shadow:inset 0 3px 5px rgba(255,255,255,0.4),inset 0 -8px 12px rgba(0,0,0,0.45),0 8px 8px rgba(0,0,0,0.55)}
-#knob::after{content:'';position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;
+#knob::after,.hcKn::after{content:'';position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;
   background:radial-gradient(circle at 42% 36%,#62626a 0%,#3c3c42 56%,#27272c 100%);box-shadow:inset 0 2px 4px rgba(0,0,0,0.55),inset 0 -2px 3px rgba(255,255,255,0.14)}
 #skillrow{position:absolute;top:4px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;font-size:9px;font-weight:bold;color:#8a93a8;letter-spacing:1px;white-space:nowrap}
 #starBar{width:66px;height:9px;border-radius:5px;background:#222;border:1px solid #444;overflow:hidden}
@@ -164,11 +176,11 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 .abtn.act{transform:translateY(6px) scale(0.88,0.82);box-shadow:0 1px 0 rgba(0,0,0,0.25),0 2px 4px rgba(0,0,0,0.4),0 -2px 8px rgba(0,0,0,0.28) inset,0 3px 6px rgba(255,255,255,0.3) inset;filter:brightness(1.12)}
 .abtn svg{filter:drop-shadow(0 1.5px 1px rgba(0,0,0,0.35));pointer-events:none;display:block}
 .abtn small{position:absolute;left:-10px;right:-10px;bottom:-15px;text-align:center;font-size:9px;font-weight:bold;color:#8a93a8;pointer-events:none}
-#bj{top:-2px;left:50%;margin-left:-33px;background:radial-gradient(circle at 40% 30%,#8fd0ff 0%,#3d9bf0 45%,#1f6dd8 100%)}
-#ba{top:50%;right:-2px;margin-top:-33px;background:radial-gradient(circle at 40% 30%,#ff9a9a 0%,#f04d4d 45%,#d02020 100%)}
-#bdash{top:50%;left:-2px;margin-top:-33px;background:radial-gradient(circle at 50% 55%,#c4ec5a 0%,#a8d840 55%,#86b830 100%)}
+#bj,.hcJ{top:-2px;left:50%;margin-left:-33px;background:radial-gradient(circle at 40% 30%,#8fd0ff 0%,#3d9bf0 45%,#1f6dd8 100%)}
+#ba,.hcA{top:50%;right:-2px;margin-top:-33px;background:radial-gradient(circle at 40% 30%,#ff9a9a 0%,#f04d4d 45%,#d02020 100%)}
+#bdash,.hcDs{top:50%;left:-2px;margin-top:-33px;background:radial-gradient(circle at 50% 55%,#c4ec5a 0%,#a8d840 55%,#86b830 100%)}
 #bdash.empty{filter:saturate(0.3) brightness(0.75)}
-#bslide{bottom:-2px;left:50%;margin-left:-33px;background:radial-gradient(circle at 40% 30%,#fff3a0 0%,#ffc928 45%,#f09a10 100%)}
+#bslide,.hcSl{bottom:-2px;left:50%;margin-left:-33px;background:radial-gradient(circle at 40% 30%,#fff3a0 0%,#ffc928 45%,#f09a10 100%)}
 .abtn small{color:#aab4c8}
 </style>
 </head><body>
@@ -184,7 +196,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作15</div>
+    <div id="tag">番外編・試作16</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -717,7 +729,7 @@ document.addEventListener('touchstart',function(e){ if(e.target.closest && e.tar
   e.preventDefault();
   for(var i=0;i<e.changedTouches.length;i++){ var t=e.changedTouches[i], b=t.target.closest&&t.target.closest('[data-k]'), tp=t.target.closest&&t.target.closest('.tap');
     if(!b && !tp && t.target.closest && t.target.closest('#pad') && t.clientX>stickEl.getBoundingClientRect().right+24){   // ★試作5 ボタンの間・近くを押しても いちばん近いボタンが反応（見た目は小さいまま、当たりだけ広く）
-      var bs=document.querySelectorAll('.abtn'), bd=1e9; for(var j=0;j<bs.length;j++){ var r=bs[j].getBoundingClientRect(), dd=Math.pow(t.clientX-(r.left+r.width/2),2)+Math.pow(t.clientY-(r.top+r.height/2),2); if(dd<bd){ bd=dd; b=bs[j]; } } }
+      var bs=document.querySelectorAll('#pad .abtn'), bd=1e9; for(var j=0;j<bs.length;j++){ var r=bs[j].getBoundingClientRect(), dd=Math.pow(t.clientX-(r.left+r.width/2),2)+Math.pow(t.clientY-(r.top+r.height/2),2); if(dd<bd){ bd=dd; b=bs[j]; } } }
     if(b){ btnOf[t.identifier]=b; press(b.dataset.k,b); }
     else if(tp){ tapOf[t.identifier]=tp; }
     else if(stickId===null && t.target.closest && t.target.closest('#pad') && t.clientX<stickEl.getBoundingClientRect().right+24){ stickId=t.identifier; stickSet(t.clientX,t.clientY); } } },{passive:false});
@@ -1142,15 +1154,21 @@ function title(){ st='title'; build(); hideTa(1); menuMode(1); mus(null);
   onTap(document.getElementById('go'),start); onTap(document.getElementById('hr'),ranking); onTap(document.getElementById('hb'),ranking); onTap(document.getElementById('hh'),howto);
   if(FROM_GAME) onTap(document.getElementById('bk'),function(){ mus(null); location.href='../index.html?test=1'; }); }
 function howto(){ menuMode(1);
-  function tile(bg,ico,icoBg,name,txt,wide){ return '<div class="htTile'+(wide?' w':'')+'" style="background:'+bg+'"><span class="htIco" style="background:'+icoBg+'">'+ico+'</span><span><div class="htName">'+name+'</div><div class="htDo">'+txt+'</div></span></div>'; }
+  // ★試作16 そうさは コントローラーの図で説明（並び・色・絵は本物と同じ。ボタンの絵は本物から写すので 二重に書かない）
+  function ic(id){ return document.querySelector('#'+id+' svg').outerHTML; }
+  function lb(c,col,name,txt){ return '<div class="hcLb '+c+'"><b style="color:'+col+'">'+name+'</b><span>'+txt+'</span></div>'; }
   show('<div class="uiTitle">📖 あそびかた</div>'
     +'<div class="htSub">🏁 ゴールまで 500m！</div>'
-    +'<div class="htSec">そうさ</div><div class="htGrid">'
-      +tile('linear-gradient(180deg,#5f6a86,#3b4560)','<span style="width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#9a9aa4,#4a4a52)"></span>','radial-gradient(circle,#2c2c34,#18181d)','スティック','走る・よける')
-      +tile('linear-gradient(180deg,#4fa8f5,#2a76d0)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M12 5 Q12.9 5 13.5 5.7 L18.6 11.2 Q19.4 12 18.4 12.6 Q17.6 13 16.8 12.4 L14.3 10 L14.3 18 Q14.3 19.2 13 19.2 L11 19.2 Q9.7 19.2 9.7 18 L9.7 10 L7.2 12.4 Q6.4 13 5.6 12.6 Q4.6 12 5.4 11.2 L10.5 5.7 Q11.1 5 12 5 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg>','radial-gradient(circle at 40% 30%,#8fd0ff,#1f6dd8)','ジャンプ','ハードル・穴')
-      +tile('linear-gradient(180deg,#f2655f,#c93a34)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M6 9.5 Q6 7 8.5 7 L16 7 Q19 7 19 10 L19 14 Q19 18 15 18 L10 18 Q6 18 6 14 Z" fill="#fff" stroke="rgba(0,0,0,0.25)" stroke-width="1" stroke-linejoin="round"/><path d="M9.6 7.4 V11 M12.8 7.2 V11 M16 7.4 V11 M6.4 12.2 H13.5 Q15 12.2 15 13.8" stroke="rgba(0,0,0,0.3)" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg>','radial-gradient(circle at 40% 30%,#ff9a9a,#d02020)','パンチ','まもの・大玉')
-      +tile('linear-gradient(180deg,#8fca3c,#5c9a22)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M4 6.5 L10.5 12 L4 17.5 Z M12 6.5 L19.5 12 L12 17.5 Z" fill="#fff" stroke="rgba(0,0,0,0.22)" stroke-width="1" stroke-linejoin="round"/></svg>','radial-gradient(circle at 50% 55%,#c4ec5a,#86b830)','ダッシュ','おしっぱなし')
-      +tile('linear-gradient(180deg,#f6b92a,#d98a10)','<svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d="M12 19 Q11.1 19 10.5 18.3 L5.4 12.8 Q4.6 12 5.6 11.4 Q6.4 11 7.2 11.6 L9.7 14 L9.7 6 Q9.7 4.8 11 4.8 L13 4.8 Q14.3 4.8 14.3 6 L14.3 14 L16.8 11.6 Q17.6 11 18.4 11.4 Q19.4 12 18.6 12.8 L13.5 18.3 Q12.9 19 12 19 Z" fill="#fff" stroke="rgba(0,0,0,0.2)" stroke-width="0.9" stroke-linejoin="round"/></svg>','radial-gradient(circle at 40% 30%,#fff3a0,#f09a10)','スライディング','みどりの網を くぐる',1)
+    +'<div class="htSec">そうさ</div>'
+    +'<div class="hcPad">'
+      +'<div class="hcL"><b style="color:#e6e6ef">スティック</b><div class="hcSW"><div class="hcStk"><div class="hcSB"><i class="a1"></i><i class="a2"></i><i class="a3"></i><i class="a4"></i></div><div class="hcKn"></div></div></div><span>走る・よける</span></div>'
+      +'<div class="hcR">'
+        +lb('t','#7cc4ff','ジャンプ','ハードル・穴')
+        +lb('l','#b9e64e','ダッシュ','おしっぱなし')
+        +'<div class="hcDW"><div class="hcDia"><div class="abtn hcJ">'+ic('bj')+'</div><div class="abtn hcA">'+ic('ba')+'</div><div class="abtn hcDs">'+ic('bdash')+'</div><div class="abtn hcSl">'+ic('bslide')+'</div></div></div>'
+        +lb('r','#ff8a8a','パンチ','まもの・大玉')
+        +lb('b','#ffc928','スライディング','みどりの網を くぐる')
+      +'</div>'
     +'</div>'
     +'<div class="htSec">ルール</div><div class="htChips">'
       +'<div class="htChip"><big>❤️</big><span>ハートは <em>5つ</em><br>当たると へる</span></div>'
