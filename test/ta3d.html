@@ -196,7 +196,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作20</div>
+    <div id="tag">番外編・試作21</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -784,8 +784,8 @@ function mkE(tp,x,s){ return {tp:tp,x:x,s:s,hp:tp==='giant'?2:1,dead:0,hurt:0,ph
 
 // ---- 1コマ ----
 // ★試作14 メダル（秒。仮：自動走行 ダッシュあり61秒・なし65秒から。実機で走って直す）・ゴースト・区間タイム・スタートダッシュ・ごほうび
-var MEDAL=[[60,'🥇','金'],[66,'🥈','銀'],[74,'🥉','銅']], GH_KEY='ta3d_ghost_500r', GOLD_KEY='tk_yk_ta3d_gold', FLAG_KEY='ta3d_flags_500r';
-function medalOf(tm){ for(var i=0;i<MEDAL.length;i++) if(tm<=MEDAL[i][0]) return MEDAL[i]; return null; }
+var MEDAL=[[60,'🥇','金'],[70,'🥈','銀'],[75,'🥉','銅']],   /* ★試作21 ユーザー指定：60秒を切ったら金・60〜70秒 銀・70〜75秒 銅・75秒から メダルなし（「〜秒より前」＝ < ） */ GH_KEY='ta3d_ghost_500r', GOLD_KEY='tk_yk_ta3d_gold', FLAG_KEY='ta3d_flags_500r';
+function medalOf(tm){ for(var i=0;i<MEDAL.length;i++) if(tm<MEDAL[i][0]) return MEDAL[i]; return null; }
 var ghost=null, rec=[], recF=0, splits=[], nextSp=100, flying=false, boostT=0, goWin=0, balls=[], breads=[], gap=null;
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(GH_KEY)||'null'); return (o&&o.d&&o.d.length)?o:null; }catch(e){ return null; } }
 function ghAt(tm){ if(!ghost) return null; var f=tm*10, i=Math.floor(f), n=ghost.d.length/2; if(i>=n-1) return null; var k=f-i; return {s:ghost.d[i*2]+(ghost.d[i*2+2]-ghost.d[i*2])*k, x:ghost.d[i*2+1]+(ghost.d[i*2+3]-ghost.d[i*2+1])*k}; }
@@ -1126,7 +1126,7 @@ function speedo(){ var v=Math.sqrt(P.vs*P.vs+P.vx*P.vx)*3.6*SPD_K; spdD+=(v-spdD
 // ---- 画面 ----
 var tmEl=document.getElementById('taT'), remEl=document.getElementById('taR'), ov=document.getElementById('ov'), els={};
 ['hRem','hCo','hKi','hpFill','hpTxt','starFill','bdash','hLife'].forEach(function(k){ els[k]=document.getElementById(k); });
-function fmt(t){ var m=Math.floor(t/60), r=(t-m*60).toFixed(1); return m+':'+(r.length<4?'0':'')+r; }
+function fmt(t){ t=Math.floor(t*10+1e-6)/10; var m=Math.floor(t/60), r=(t-m*60).toFixed(1);   /* ★試作21 0.1秒の下は切りすて（59.96秒が「0:60.0」と出て 金なのに60秒に見えないように） */ return m+':'+(r.length<4?'0':'')+r; }
 var hudC='';
 function hud(){ var rem=Math.max(0,Math.ceil(GOAL-P.s)), t=st==='goal'||st==='lost'?(P.fin||tRun):(st==='count'||st==='title'?0:tRun), sig=fmt(t)+rem+got+kills+Math.round(stam*50)+starC+(starT>0)+life;
   if(sig===hudC) return; hudC=sig; tmEl.textContent=fmt(t); remEl.textContent=rem; els.hRem.textContent=rem+'m'; els.hLife.innerHTML='<span style="color:#ff5a6e">'+new Array(Math.max(0,life)+1).join('♥')+'</span><span style="color:#444">'+new Array(LIFE_MAX-Math.max(0,life)+1).join('♥')+'</span>'; els.hCo.textContent=got; els.hKi.textContent=kills;
@@ -1154,7 +1154,7 @@ function title(){ st='title'; build(); hideTa(1); menuMode(1); mus(null);
     +'</div>');
   ov.className='home';
   onTap(document.getElementById('go'),start); onTap(document.getElementById('hr'),ranking); onTap(document.getElementById('hb'),ranking); onTap(document.getElementById('hh'),howto);
-  if(FROM_GAME) onTap(document.getElementById('bk'),function(){ mus(null); location.href='../index.html?test=1'; }); }
+  if(FROM_GAME) onTap(document.getElementById('bk'),function(){ mus(null); location.href='../index.html?test=1&from=ta'; }); }   /* ★試作21 from=ta＝ゲームはオープニングを出さずにホームへ */
 function howto(){ menuMode(1);
   // ★試作16 そうさは コントローラーの図で説明（並び・色・絵は本物と同じ。ボタンの絵は本物から写すので 二重に書かない）
   function ic(id){ return document.querySelector('#'+id+' svg').outerHTML; }
@@ -1178,7 +1178,7 @@ function howto(){ menuMode(1);
       +'<div class="htChip"><big>🚀</big><span>「GO!」で 前へ<br><em>ロケットスタート</em></span></div>'
       +'<div class="htChip"><big>🍞</big><span>パンは ジャンプで<br><em>パクッ！</em></span></div>'
     +'</div>'
-    +'<div class="htMedal"><span>🥇 '+MEDAL[0][0]+'秒</span><span>🥈 '+MEDAL[1][0]+'秒</span><span>🥉 '+MEDAL[2][0]+'秒</span></div>'
+    +'<div class="htMedal"><span>🥇 〜'+(MEDAL[0][0]-0.1).toFixed(1)+'秒</span><span>🥈 〜'+(MEDAL[1][0]-0.1).toFixed(1)+'秒</span><span>🥉 〜'+(MEDAL[2][0]-0.1).toFixed(1)+'秒</span></div>'
     +'<div class="uiBtn info mid" id="hx" style="margin-top:4px">◀ もどる</div>'); ov.className='htv';
   onTap(document.getElementById('hx'),title); }
 function ranking(){ menuMode(1); var a=rkSort(rkLoad()).slice(0,10), h='';
