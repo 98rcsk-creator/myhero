@@ -282,7 +282,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">大運動会・試作22</div>
+    <div id="tag">大運動会・試作23</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -345,9 +345,14 @@ function fog(d){ return clamp(1-(d-(FAR-26))/26,0,1); }
 var AC=null, musOn=null;
 function audioOn(){ try{ if(!AC){ var A=window.AudioContext||window.webkitAudioContext; if(A) AC=new A(); } if(AC && AC.state==='suspended') AC.resume(); }catch(e){} }
 function mus(id){ try{ if(!AC||typeof MUS==='undefined') return; if(id){ if(musOn===id) return; MUS.play(id,AC); musOn=id; } else { MUS.stop(); musOn=null; } }catch(e){} }
+// ★試作23 パンチの音を2つ重ねる（ユーザーの参考「打撃音のレイヤー化」）。シュッ＝ふった音（ノイズを高い→低いへ）、当たったら ドッ（四角い波 260→110Hz）＋パシッ（高いノイズ）。
+//   iPhone のスピーカーは 300Hz より下が ほぼ鳴らない（§1-24）ので「重低音」は入れない。ドッは 倍音の多い四角い波で 中くらいの高さに
+var NZB=null; function noiseBuf(){ if(NZB||!AC) return NZB; var n=AC.sampleRate*0.3|0; NZB=AC.createBuffer(1,n,AC.sampleRate); var d=NZB.getChannelData(0); for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return NZB; }
+function sfxN(f0,f1,dur,vol,type){ if(!AC) return; try{ var t=AC.currentTime, src=AC.createBufferSource(), bq=AC.createBiquadFilter(), v=AC.createGain(); src.buffer=noiseBuf(); bq.type=type||'bandpass'; bq.Q.value=1.2;
+  bq.frequency.setValueAtTime(f0,t); bq.frequency.exponentialRampToValueAtTime(f1,t+dur); src.connect(bq); bq.connect(v); v.connect(AC.destination); v.gain.setValueAtTime(vol,t); v.gain.exponentialRampToValueAtTime(0.0008,t+dur); src.start(t); src.stop(t+dur+0.02); }catch(e){} }
 function sfx(tp){ if(!AC) return; try{ var t=AC.currentTime, o=AC.createOscillator(), v=AC.createGain(); o.connect(v); v.connect(AC.destination);
   var P={jump:['square',420,760,0.12,0.05],slash:['sawtooth',900,180,0.1,0.06],coin:['square',1320,1760,0.08,0.04],hit:['sawtooth',170,60,0.25,0.09],hurdle:['square',240,120,0.14,0.06],
-         star:['triangle',520,1560,0.5,0.08],count:['square',660,660,0.1,0.06],go:['square',990,990,0.3,0.07],fall:['sine',700,90,0.6,0.08],kill:['square',300,900,0.12,0.06],boom:['triangle',160,40,0.45,0.1],dash:['sawtooth',200,520,0.18,0.04]}[tp]; if(!P) return;
+         star:['triangle',520,1560,0.5,0.08],count:['square',660,660,0.1,0.06],go:['square',990,990,0.3,0.07],fall:['sine',700,90,0.6,0.08],kill:['square',300,900,0.12,0.06],thump:['square',260,110,0.12,0.075],boom:['triangle',160,40,0.45,0.1],dash:['sawtooth',200,520,0.18,0.04]}[tp]; if(!P) return;
   o.type=P[0]; o.frequency.setValueAtTime(P[1],t); o.frequency.exponentialRampToValueAtTime(Math.max(30,P[2]),t+P[3]); v.gain.setValueAtTime(P[4],t); v.gain.exponentialRampToValueAtTime(0.0008,t+P[3]); o.start(t); o.stop(t+P[3]+0.02); }catch(e){} }
 
 // ---- 入力：左はスティック（全方向）・右はボタン4つ。タッチは全部 preventDefault（連打してもズームしない）----
@@ -385,10 +390,11 @@ function fit(){ var k=Math.min(1,innerWidth/390), hh=innerHeight/k-38-172; if(hh
 addEventListener('resize',fit); fit();
 
 // ---- コースの中身 ----
+var flys=[], rings=[];   // ★試作23 パンチの手ごたえ：吹っとぶ まもの・衝撃の輪
 var P, ens, coins, hurd, pits, tents, signs, specs, jumpBuf=0, parts, pops, bubs, conf, st, prevSt, tRun, kills, got, starC, starT, stam, shake, flash, hitstop, banner, combo, comboT, cheerT, mile, face, tAll=0, fallT, lostWhy, faceHold=0, faceTmpT=0, life=5, LIFE_MAX=5;
 var LANES=[-4,-2,0,2,4];
 function build(){
-  var R=rng(11), i, s; ens=[]; coins=[]; hurd=[]; pits=[]; tents=[]; signs=[]; specs=[]; balls=[]; breads=[]; ghost=ghLoad(); rec=[]; recF=0; splits=[]; nextSp=100; flying=false; boostT=0; goWin=0; gap=null; parts=[]; pops=[]; bubs=[]; conf=[];
+  var R=rng(11), i, s; ens=[]; coins=[]; hurd=[]; pits=[]; tents=[]; signs=[]; specs=[]; balls=[]; breads=[]; ghost=ghLoad(); rec=[]; recF=0; splits=[]; nextSp=100; flying=false; boostT=0; goWin=0; gap=null; parts=[]; pops=[]; bubs=[]; flys=[]; rings=[]; conf=[];
   var kinds=['coin','hurdle','enemy','bread','pit','enemy','ball','hurdle','coin','enemy','pit','bread','ball'], n=0, pitN=0;   // ★試作14 bread＝パン食い・ball＝大玉ころがし
   for(s=34; s<GOAL-22; s+=10+R()*5){ var kd=kinds[n++%kinds.length], ln=LANES[Math.floor(R()*5)];
     if(kd==='coin'){ for(i=0;i<5;i++) coins.push({x:ln,s:s+i*1.5,y:0.55,got:0,ph:R()*6}); }
@@ -447,7 +453,7 @@ function step(){
     if(live && edge.slide && P.y===0 && P.slide<=0 && P.vs>2.5){ P.slide=0.6; sfx('dash'); dust(6); }
     if(P.slide>0){ P.slide-=DT; if(Math.random()<0.5) dust(1); }
     P.vy-=19*DT; var y0=P.y; P.y+=P.vy*DT; if(P.y<0){ P.y=0; P.vy=0; if(y0>0.05) dust(5); }
-    if(live && edge.atk && P.sw<=0){ P.sw=0.26; sfx('slash'); }
+    if(live && edge.atk && P.sw<=0){ P.sw=0.26; sfxN(2400,700,0.13,0.22); }   // ★試作23 シュッ
   }
   edge.jump=edge.atk=edge.slide=0;
   // ★試作6 体の向き P.fa（0＝前へ走る＝背中・＋は右・π＝こちら向き）。動いている向きへ 1秒で約2回転の速さで回る（180度で0.25秒＝クルッ）
@@ -498,6 +504,8 @@ function step(){
   fws=fws.filter(function(f){ f.l-=DT; f.x+=f.vx*DT; f.y+=f.vy*DT; f.vy+=(f.r?0:40)*DT; if(f.r && f.y<=f.ty){ f.l=0; for(var i=0;i<38;i++){ var a=i/38*6.283, v=55+Math.random()*55; fws.push({x:f.x,y:f.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1.1+Math.random()*0.4,c:i%3?f.c:f.c2}); } sfx('boom'); } return f.l>0; });
   if(st==='goal' && gT>0.9){ if(Math.random()<0.6) conf.push({x:Math.random()*W,y:-8,vx:(Math.random()-0.5)*60,vy:60+Math.random()*90,r:Math.random()*6,c:['#ff5a8a','#ffe44d','#6ad7ff','#8dff8a','#fff'][Math.random()*5|0],l:4}); }
   parts=parts.filter(function(q){ q.l-=DT; q.x+=q.vx*DT; q.y+=q.vy*DT; q.s+=(q.vs||0)*DT; q.vy-=(q.st?2:9)*DT; return q.l>0; });
+  flys=flys.filter(function(f){ f.t+=DT; if(f.t>0.08){ f.s+=f.vs*DT; f.x+=f.vx*DT; f.y+=f.vy*DT; f.vy-=16*DT; f.r+=f.vr*DT; } return f.t<0.9; });   // ★試作23
+  rings=rings.filter(function(q){ q.t+=DT; return q.t<0.28; }); ens.forEach(function(e){ if(e.sq>0) e.sq-=DT; });
   pops=pops.filter(function(q){ q.l-=DT; return q.l>0; }); bubs=bubs.filter(function(q){ q.l-=DT; return q.l>0; });
   conf=conf.filter(function(q){ q.l-=DT; q.x+=q.vx*DT; q.y+=q.vy*DT; q.r+=DT*8; return q.l>0 && q.y<H+10; });
   if(banner){ banner.l-=DT; if(banner.l<=0) banner=null; }
@@ -516,8 +524,11 @@ function faceNow(){ var i, d; if(P.stun>0) return 'hit';
   if(Math.abs(P.x)>HW-0.7) return 'panic';
   if(starT>0) return 'star'; if(faceTmpT>0) return 'happy';
   if(P.dashing) return 'dash'; if(GOAL-P.s<150 || stam<0.25) return 'run'; return 'calm'; }
-function dmg(e,word){ e.hp--; e.hurt=0.3; if(e.hp>0){ burst(e.x,0.7,e.s,'#fff',6); onoma(e.x,e.h,e.s,'ガッ！'); sfx('hit'); return; }
-  e.dead=1; kills++; combo++; comboT=3; faceTmpT=0.7; hitstop=0.05; shake=0.12; sfx('kill'); burst(e.x,0.7,e.s,'#ffd24a',16); onoma(e.x,e.h+0.2,e.s,word); if(combo>=2) say(combo+' コンボ！','#ffb0e0'); if(combo>=2) cheer('すごーい！'); }
+function dmg(e,word){ e.hp--; e.hurt=0.3; rings.push({x:e.x,y:e.h*0.5,s:e.s,t:0,k:e.hp>0?0.7:1}); sfxN(3200,1600,0.06,0.25,'highpass');   // ★試作23 衝撃の輪・パシッ
+  if(e.hp>0){ e.sq=0.08; burst(e.x,0.7,e.s,'#fff',6); onoma(e.x,e.h,e.s,'ガッ！'); sfx('hit'); return; }
+  // ★試作23 吹っとぶ：消えるかわりに、0.08秒 つぶれてから 回りながら コースの奥へ（0.9秒）。たおれた まものの絵だけ動かす（当たり判定は もう無い）
+  flys.push({tp:e.tp,x:e.x,s:e.s,y:0,h:e.h,vx:clamp((e.x-P.x)*1.5,-3,3)+(Math.random()-0.5)*2,vs:14+Math.random()*4,vy:7+Math.random()*2,r:0,vr:(Math.random()<0.5?-1:1)*(10+Math.random()*6),t:0});
+  e.dead=1; kills++; combo++; comboT=3; faceTmpT=0.7; hitstop=0.08; shake=0.12; sfx('kill'); sfx('thump');   /* ★試作23 止まる 0.05→0.08秒（3コマ→5コマ）・ドッ */ burst(e.x,0.7,e.s,'#ffd24a',16); onoma(e.x+(e.x>=P.x?1.1:-1.1),e.h+0.2,e.s,word);   /* ★試作23 文字は 横へずらす（まん中に出すと 吹っとぶ まものが かくれた） */ if(combo>=2) say(combo+' コンボ！','#ffb0e0'); if(combo>=2) cheer('すごーい！'); }
 // ★試作7 ハート5つ。まものに当たる・穴に落ちる・コースアウト で1つへる。0 で失格（ハードル・ゲートは へらない）
 function heartLoss(why){ life--; flash=0.3; if(life<=0){ lose(why); return true; } say('♥ のこり '+life,'#ff9aa8'); return false; }
 function hit(){ P.vs=-7; P.stun=0.8; P.inv=1.2; shake=0.32; combo=0; sfx('hit'); onoma(P.x,1.9,P.s+0.2,'ドカッ！'); cheer('だいじょうぶ！？'); heartLoss('ハートが なくなった！'); }
@@ -650,7 +661,13 @@ function coinDraw(c,o){ if(!coinCv){ coinCv=document.createElement('canvas'); co
   g.drawImage(coinCv,-R*w*49/48,-R*49/48,2*R*w*49/48,2*R*49/48); g.restore(); g.globalAlpha=1; }
 function enemyDraw(e,o){ var s=o.s, im=SPR[e.tp]; g.globalAlpha=fog(o.d)*(e.hurt>0&&Math.floor(e.hurt*20)%2?0.4:1);
   g.fillStyle='rgba(0,0,0,0.2)'; g.beginPath(); oval(o.x,o.y,0.45*s*e.h,0.1*s); g.fill();
-  if(im && im.complete && im.naturalWidth){ var h=e.h*s, w=h*im.naturalWidth/im.naturalHeight, b=Math.abs(Math.sin(e.ph))*0.07*s; g.drawImage(im,o.x-w/2,o.y-h-b,w,h); } g.globalAlpha=1; }
+  if(im && im.complete && im.naturalWidth){ var h=e.h*s, w=h*im.naturalWidth/im.naturalHeight, b=Math.abs(Math.sin(e.ph))*0.07*s, q=e.sq>0?1:0;   // ★試作23 当たったら一瞬 つぶれる（横1.3・たて0.65・足もと基準）
+    g.drawImage(im,o.x-w*(q?0.65:0.5),o.y-h*(q?0.65:1)-b,w*(q?1.3:1),h*(q?0.65:1)); } g.globalAlpha=1; }
+// ★試作23 吹っとぶ まもの：はじめの0.08秒は つぶれて、そのあと回りながら飛ぶ。さいごの0.35秒で うすくなる
+function flyDraw(f,o){ var im=SPR[f.tp]; if(!im||!im.complete||!im.naturalWidth) return; var s=o.s, h=f.h*s, w=h*im.naturalWidth/im.naturalHeight;
+  g.globalAlpha=fog(o.d)*clamp(1-(f.t-0.55)/0.35,0,1); g.save(); g.translate(o.x,o.y-h*0.5);
+  if(f.t<=0.08){ g.drawImage(im,-w*0.65,h*0.5-h*0.65,w*1.3,h*0.65); } else { g.rotate(f.r); g.drawImage(im,-w/2,-h/2,w,h); }
+  g.restore(); g.globalAlpha=1; }
 // 主人公：ルーベルトのうしろ姿（走る2枚・ジャンプ・剣をふる）。元絵は docs/assets_src/ta3d_rubert/（緑バック）→ prep.py で切り抜き
 //   絵は 走るポーズの高さ 300px＝1.35m。横の基準は頭のまん中（ax）、たての基準は足もと
 // 主人公の絵をえらぶ（★試作6）。向き：0 うしろ 1 ななめうしろ 2 横 3 ななめ前 4 前（絵は右向き。左へ行くときは反転）
@@ -710,11 +727,15 @@ function draw(){
   if(st==='run'||st==='fall'){ var gh=ghAt(tRun); if(gh && vis(gh.s)) add(pj(gh.x,0,gh.s),ghostDraw); }
   coins.forEach(function(c){ if(!c.got && vis(c.s)) add(pj(c.x,c.y+Math.sin(c.ph*0.6)*0.06,c.s),function(o){ coinDraw(c,o); }); });
   ens.forEach(function(e){ if(!e.dead && vis(e.s)) add(pj(e.x,0,e.s),function(o){ enemyDraw(e,o); }); });
+  flys.forEach(function(f){ if(vis(f.s)) add(pj(f.x,f.y,f.s),function(o){ flyDraw(f,o); }); });   // ★試作23
   specs.forEach(function(q){ if(vis(q.s,80)) add(pj(q.x,0,q.s),function(o){ specDraw(q,o); }); });
   if(vis(GOAL)){ var q2=pj(0,0,GOAL); if(q2) L.push({d:q2.d,f:goalDraw}); }
   o=pj(P.x,P.y,P.s); if(o){ o.d-=0.01; add(o,heroDraw); }
   L.sort(function(a,b){ return b.d-a.d; }); for(i=0;i<L.length;i++) L[i].f(L[i].o);
   punchFx();
+  rings.forEach(function(q){ var o=pj(q.x,q.y,q.s); if(!o) return; var k=q.t/0.28, r=(0.25+1.0*k)*o.s*q.k;   // ★試作23 当たった所に 白い輪（＋黄色の内がわ）が広がる
+    g.globalAlpha=1-k; g.strokeStyle='#fff'; g.lineWidth=Math.max(1.5,0.14*(1-k)*o.s); g.beginPath(); g.arc(o.x,o.y,r,0,7); g.stroke();
+    g.strokeStyle='#ffd24a'; g.lineWidth=Math.max(1,0.07*(1-k)*o.s); g.beginPath(); g.arc(o.x,o.y,r*0.72,0,7); g.stroke(); }); g.globalAlpha=1;
   parts.forEach(function(q){ var o=pj(q.x,q.y,q.s); if(!o) return; var r=Math.max(1.5,(q.st?0.13:0.08)*o.s); g.globalAlpha=Math.min(1,q.l*2.5); g.fillStyle=q.c; if(q.st){ g.beginPath(); g.arc(o.x,o.y,r/2,0,7); g.fill(); } else g.fillRect(o.x-r/2,o.y-r/2,r,r); }); g.globalAlpha=1;
   // ダッシュ・スター：まわりから まん中へ走る線
   if((P.dashing||starT>0) && Math.abs(P.vs)>6){ g.strokeStyle=starT>0?'rgba(255,245,160,0.75)':'rgba(255,255,255,0.6)'; g.lineWidth=2; g.beginPath(); for(i=0;i<22;i++){ var a=(i*0.29+Math.floor(tAll*24)*1.7)%6.283, r0=150+((i*53)%60), r1=r0+50+((i*31)%50); g.moveTo(W/2+Math.cos(a)*r0,HOR+70+Math.sin(a)*r0*0.9); g.lineTo(W/2+Math.cos(a)*r1,HOR+70+Math.sin(a)*r1*0.9); } g.stroke(); }
