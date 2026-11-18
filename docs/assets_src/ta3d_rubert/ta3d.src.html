@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>My HERO 500m タイムアタック（番外編）</title>
+<title>MyHEROの大運動会 500m走</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
@@ -182,6 +182,92 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 #bdash.empty{filter:saturate(0.3) brightness(0.75)}
 #bslide,.hcSl{bottom:-2px;left:50%;margin-left:-33px;background:radial-gradient(circle at 40% 30%,#fff3a0 0%,#ffc928 45%,#f09a10 100%)}
 .abtn small{color:#aab4c8}
+/* ★試作22 ごほうびの剣・盾を もらうときの演出（test/itemget.html の試作1 と同じ見た目。名前は ig ではじめる）。
+   金メダル1回目＝どちらか1つ えらぶ → 演出、2回目＝のこりの1つの演出（ユーザー指定 2026-11-18） */
+#igL{position:fixed;left:0;top:0;right:0;bottom:0;z-index:60;display:none;overflow:hidden;color:#fff}
+#igL.on{display:block}
+#igL .igSky{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 38%,rgba(36,71,154,0.97) 0%,rgba(16,42,99,0.98) 45%,rgba(7,18,48,0.99) 100%)}
+#igCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
+#igPick{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2vh;padding:0 14px;box-sizing:border-box;transition:opacity .35s}
+#igPick.off{opacity:0;pointer-events:none}
+.igMedal{font-size:min(23vw,108px);line-height:1;filter:drop-shadow(0 0 18px rgba(255,210,60,0.75));animation:igBob 1.8s ease-in-out infinite}
+@keyframes igBob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-8px) rotate(6deg)}}
+.igP1{font-size:min(7.4vw,30px);font-weight:900;color:#ffe44d;text-shadow:0 3px 0 #a0620a,0 0 14px rgba(255,200,60,0.6);letter-spacing:1px}
+.igP2{font-size:min(4.4vw,17px);font-weight:900;color:#dfeeff}
+.igCards{display:flex;gap:12px;margin-top:1vh}
+.igCard{width:min(42vw,170px);padding:12px 6px;border-radius:20px;box-sizing:border-box;text-align:center;
+  background:linear-gradient(180deg,#fff7d6 0%,#ffd76a 55%,#e8a422 100%);border:3px solid #fff;color:#4a2a00;
+  box-shadow:0 6px 0 #a8660f,0 10px 22px rgba(0,0,0,0.45),0 0 26px rgba(255,210,80,0.45);animation:igFl 2.4s ease-in-out infinite}
+.igCard:nth-child(2){animation-delay:-1.2s}
+@keyframes igFl{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.igCard .igPic{height:min(34vw,140px);display:flex;align-items:center;justify-content:center}
+.igCard .igPic img{max-height:100%;max-width:90%;filter:drop-shadow(0 4px 4px rgba(0,0,0,0.35))}
+.igCard b{display:block;font-size:min(4.6vw,18px);font-weight:900;margin-top:6px}
+.igCard span{display:block;font-size:min(3.1vw,12px);font-weight:bold;opacity:0.85;margin-top:2px;line-height:1.35}
+.igHint{font-size:12px;color:#9fc0e6;font-weight:bold;text-align:center;line-height:1.5}
+#igFx{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0}
+#igFx.on{opacity:1;pointer-events:auto}
+#igFx.shake{animation:igShk .5s linear}
+@keyframes igShk{0%{transform:translate(0,0)}10%{transform:translate(-9px,6px)}20%{transform:translate(8px,-7px)}30%{transform:translate(-7px,-5px)}40%{transform:translate(6px,7px)}55%{transform:translate(-4px,3px)}70%{transform:translate(3px,-2px)}85%{transform:translate(-1px,1px)}100%{transform:translate(0,0)}}
+.igDim{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(255,236,150,0.18) 0%,rgba(8,14,40,0.82) 62%)}
+.igRays{position:absolute;left:50%;top:42%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;border-radius:50%;opacity:0;
+  background:repeating-conic-gradient(from 0deg,rgba(255,226,120,0.55) 0deg 7deg,rgba(255,226,120,0) 7deg 15deg);
+  -webkit-mask-image:radial-gradient(circle,#000 0%,#000 18%,transparent 52%);mask-image:radial-gradient(circle,#000 0%,#000 18%,transparent 52%)}
+#igFx.on .igRays{animation:igRIn .5s ease-out forwards,igSpin 9s linear infinite}
+.igRays.r2{background:repeating-conic-gradient(from 4deg,rgba(255,140,220,0.35) 0deg 4deg,rgba(255,140,220,0) 4deg 22deg)}
+#igFx.on .igRays.r2{animation:igRIn .5s ease-out forwards,igSpin2 14s linear infinite}
+@keyframes igRIn{to{opacity:1}}
+@keyframes igSpin{to{transform:rotate(360deg)}}
+@keyframes igSpin2{to{transform:rotate(-360deg)}}
+.igPillar{position:absolute;left:50%;top:-10%;width:42vw;height:62%;margin-left:-21vw;opacity:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,250,210,0.75) 70%,rgba(255,255,255,0.95) 100%);filter:blur(6px)}
+#igFx.on .igPillar{animation:igPil 1.1s ease-out .05s forwards}
+@keyframes igPil{0%{opacity:0;transform:scaleX(0.2)}25%{opacity:1;transform:scaleX(1.25)}100%{opacity:0;transform:scaleX(0.6)}}
+.igGlow{position:absolute;left:50%;top:42%;width:76vmin;height:76vmin;margin:-38vmin 0 0 -38vmin;border-radius:50%;opacity:0;
+  background:radial-gradient(circle,rgba(255,255,255,0.95) 0%,rgba(255,232,120,0.75) 22%,rgba(255,170,40,0.25) 48%,rgba(255,170,40,0) 70%)}
+#igFx.on .igGlow{animation:igGIn .6s ease-out .1s forwards,igGPulse 1.6s ease-in-out .7s infinite}
+@keyframes igGIn{0%{opacity:0;transform:scale(0.2)}60%{opacity:1;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
+@keyframes igGPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.igRing{position:absolute;left:50%;top:42%;width:30vmin;height:30vmin;margin:-15vmin 0 0 -15vmin;border-radius:50%;opacity:0;
+  border:6px solid transparent;background:conic-gradient(#ff5a5a,#ffd84a,#6aff8a,#5ad4ff,#b88aff,#ff5a5a) border-box;
+  -webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+#igFx.on .igRing{animation:igRg 1.1s ease-out forwards}
+#igFx.on .igRing.k2{animation-delay:.75s}
+#igFx.on .igRing.k3{animation-delay:1.05s}
+@keyframes igRg{0%{opacity:1;transform:scale(0.3)}100%{opacity:0;transform:scale(3.4)}}
+.igItem{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);opacity:0}
+.igItem img{display:block;height:min(34vh,250px);filter:drop-shadow(0 0 16px rgba(255,240,170,0.95)) drop-shadow(0 8px 10px rgba(0,0,0,0.4))}
+.igItem.sh img{height:min(27vh,200px)}
+#igFx.on .igItem{animation:igItIn .75s cubic-bezier(.2,1.5,.4,1) .1s forwards}
+#igFx.on .igItem img{animation:igRot 1.3s ease-in-out .1s 1,igBob2 2.2s ease-in-out 1.5s infinite}
+@keyframes igItIn{0%{opacity:0;transform:translate(-50%,-140%) scale(0.2)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes igRot{0%{transform:scaleX(1)}20%{transform:scaleX(-1)}40%{transform:scaleX(1)}60%{transform:scaleX(-1)}80%{transform:scaleX(1)}100%{transform:scaleX(1)}}
+@keyframes igBob2{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-10px) rotate(3deg)}}
+.igTtl{position:absolute;left:0;right:0;top:9%;text-align:center;opacity:0}
+.igTtl .igT1{font-size:min(10.2vw,46px);font-weight:900;line-height:1;white-space:nowrap;color:#fff6b0;
+  text-shadow:0 0 1px #000,3px 0 0 #b2470a,-3px 0 0 #b2470a,0 3px 0 #b2470a,0 -3px 0 #b2470a,2px 2px 0 #b2470a,-2px 2px 0 #b2470a,2px -2px 0 #b2470a,-2px -2px 0 #b2470a,0 7px 0 #6e2500,0 0 26px rgba(255,190,60,0.9)}
+.igTtl .igT1 i{display:inline-block;font-style:normal}
+#igFx.on .igTtl .igT1 i{animation:igHop .55s ease-out calc(.75s + var(--d)) both}
+@keyframes igHop{0%{transform:translateY(0)}35%{transform:translateY(-16px) scale(1.15)}70%{transform:translateY(3px)}100%{transform:translateY(0)}}
+.igTtl .igT2{display:inline-block;margin-top:10px;padding:5px 16px;border-radius:999px;font-size:min(4.6vw,18px);font-weight:900;color:#5a2a00;
+  background:linear-gradient(180deg,#fff7c8,#ffc93a);box-shadow:0 3px 0 #b77a10,0 0 16px rgba(255,210,80,0.7)}
+#igFx.on .igTtl{animation:igSlam .5s cubic-bezier(.3,1.6,.5,1) .7s forwards}
+@keyframes igSlam{0%{opacity:0;transform:scale(3.2)}60%{opacity:1;transform:scale(0.92)}100%{opacity:1;transform:scale(1)}}
+.igFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#igFx.on .igFlash{animation:igFlA .55s ease-out forwards}
+#igFx.on .igFlash.f2{animation:igFlA .45s ease-out .7s forwards}
+@keyframes igFlA{0%{opacity:0.95}100%{opacity:0}}
+.igPlate{position:absolute;left:50%;bottom:16%;transform:translate(-50%,40px);width:min(86vw,340px);text-align:center;opacity:0;
+  padding:12px 14px 13px;border-radius:18px;box-sizing:border-box;background:linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,240,200,0.97));
+  color:#4a2a00;border:3px solid #ffd24a;box-shadow:0 6px 0 rgba(0,0,0,0.25),0 0 30px rgba(255,210,80,0.6)}
+.igPlate b{display:block;font-size:min(6.4vw,26px);font-weight:900;color:#d42020;text-shadow:0 2px 0 rgba(255,255,255,0.9)}
+.igPlate span{display:block;font-size:min(3.8vw,15px);font-weight:bold;margin-top:4px;line-height:1.45}
+#igFx.on .igPlate{animation:igPlIn .5s cubic-bezier(.2,1.4,.4,1) 1.45s forwards}
+@keyframes igPlIn{to{opacity:1;transform:translate(-50%,0)}}
+.igOk{position:absolute;left:50%;bottom:5%;transform:translateX(-50%) scale(0.6);opacity:0;padding:12px 40px;border-radius:16px;font-size:20px;font-weight:900;
+  color:#fff;background:linear-gradient(180deg,#7ff07f,#26b33d);border:3px solid #fff;box-shadow:0 5px 0 #13792a,0 8px 16px rgba(0,0,0,0.4);text-shadow:0 2px 0 rgba(0,0,0,0.25)}
+#igFx.on .igOk{animation:igOkIn .4s cubic-bezier(.2,1.6,.4,1) 2.3s forwards}
+@keyframes igOkIn{to{opacity:1;transform:translateX(-50%) scale(1)}}
 </style>
 </head><body>
 <div id="wrap">
@@ -196,7 +282,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">番外編・試作21</div>
+    <div id="tag">大運動会・試作22</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -691,7 +777,7 @@ function hideTa(v){ document.getElementById('taBox').style.display=v?'none':''; 
 function menuMode(on){ document.getElementById('hud').style.visibility=on?'hidden':''; }   // ★試作11 メニューの画面では 上の表示（ハート・のこり…）をかくす
 function title(){ st='title'; build(); hideTa(1); menuMode(1); mus(null);
   var b=best(), n=rkLoad().length;
-  show('<div class="logo"><div class="rib">My HERO 番外編</div><div class="t1">500<small>m</small></div><div class="t2">タイムアタック</div></div>'
+  show('<div class="logo"><div class="rib">MyHEROの大運動会</div><div class="t1">500<small>m</small></div><div class="t2">走</div></div>'   /* ★試作22 名前を「MyHEROの大運動会〜500m走〜」に（ユーザー 2026-11-18） */
     +'<div style="display:flex;flex-direction:column;align-items:center;gap:13px">'
       +'<div class="uiPanel best tap" id="hb"><div class="l">じこベスト<br><span style="color:#8fa6bd">ランキング ▶</span></div><div class="v">'+(b?(medalOf(b)?medalOf(b)[1]+' ':'')+fmt(b):'--:--.-')+'</div></div>'
       +'<div class="uiBtn go lg" id="go">▶ スタート</div>'
@@ -732,13 +818,64 @@ function ranking(){ menuMode(1); var a=rkSort(rkLoad()).slice(0,10), h='';
   show('<div class="uiTitle">🏆 ランキング</div><div class="rk">'+(h||'<p class="note" style="text-align:center;padding:20px 0">まだ記録がないよ。走ってみよう！</p>')+'</div>'
     +'<p class="note" style="font-size:11px">この端末の記録（完走はタイム順・失格は走った距離の順）</p><div class="uiBtn info mid" id="rx">◀ もどる</div>'); ov.className='';
   onTap(document.getElementById('rx'),title); }
+// ★試作22 ごほうびの剣・盾（ユーザー指定 2026-11-18「金メダル1回で 盾も剣も は豪華すぎる。どちらか えらべる。2回目の金メダルで もう1つ」。種目が ふえたら 条件を かえる予定）
+//   記録は FLAG_KEY の items（もらった物の id）。ゲーム（taItemGrant）も 同じ items を見て 渡す。絵は build.py が ゲームの ITEM_SPR から入れる
+var ITEMS_IMG=/*ITEMS*/null, IT_INFO={kohaku:['🎀 紅白の剣','まものを たおすと 育つ剣！<br>Lv5 で 金色のオーラ'],medalshield:['🏅 金メダルの盾','ガード時間 +50%・ガード成功で HP +1<br>1位の しるし！']};
+function taItemsOf(fl){ if(!fl.items){ fl.items=[]; if(fl.first) fl.items.push('kohaku'); if(fl.m0) fl.items.push('medalshield'); } return fl.items; }   // 試作21 までの記録：完走で剣・金メダルで盾を もう渡していた
+function itemNote(k){ return k==='choose'?'🎁 金メダルの ごほうびを えらぼう！':'🎁 '+IT_INFO[k][0]+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span>'; }
+function itemSave(k){ var fl={}; try{ fl=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')||{}; }catch(e){} var its=taItemsOf(fl); if(its.indexOf(k)<0) its.push(k); try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); }catch(e){} }
+var igL=null, igG=null, igP=[], igRun=false, igT0=0, igK=-1, igW=0, igH=0;
+function igTone(f,t0,d,type,v){ if(!AC) return; try{ var o=AC.createOscillator(), gg=AC.createGain(); o.type=type||'square'; o.frequency.value=f; o.connect(gg); gg.connect(AC.destination);
+  var t=AC.currentTime+t0; gg.gain.setValueAtTime(0,t); gg.gain.linearRampToValueAtTime(v||0.08,t+0.012); gg.gain.exponentialRampToValueAtTime(0.0008,t+d); o.start(t); o.stop(t+d+0.05); }catch(e){} }
+function igFanfare(){ audioOn();   // じゃららら → ジャーン！ → キラキラ（ドンは iPhone のスピーカーでも聞こえる 196Hz）
+  [523,659,784,1047,1319].forEach(function(f,i){ igTone(f,i*0.07,0.16,'square',0.06); });
+  [523,659,784,1047].forEach(function(f){ igTone(f,0.7,1.6,'sawtooth',0.035); igTone(f*2,0.7,1.2,'square',0.025); });
+  [1568,2093,2637,3136,2637,3136,4186].forEach(function(f,i){ igTone(f,0.95+i*0.09,0.25,'triangle',0.05); }); igTone(196,0.7,0.5,'triangle',0.12); }
+function igMake(){ if(igL) return; igL=document.createElement('div'); igL.id='igL';
+  var T='NEW ITEM GET!!';
+  igL.innerHTML='<div class="igSky"></div><div id="igPick"><div class="igMedal">🥇</div><div class="igP1">金メダル おめでとう！</div><div class="igP2">ごほうびを 1つ えらんでね</div><div class="igCards">'
+    +['kohaku','medalshield'].map(function(k){ return '<div class="igCard" data-it="'+k+'"><div class="igPic"><img src="'+(ITEMS_IMG?ITEMS_IMG[k]:'')+'" alt=""></div><b>'+IT_INFO[k][0]+'</b><span>'+(k==='kohaku'?'まものを たおすと<br>どんどん 強くなる':'ガードが 長くなって<br>HP も 回復')+'</span></div>'; }).join('')
+    +'</div><div class="igHint">のこりの 1つは 2回目の 金メダルで もらえるよ</div></div>'
+    +'<div id="igFx"><div class="igDim"></div><div class="igRays"></div><div class="igRays r2"></div><div class="igPillar"></div><div class="igGlow"></div><div class="igRing"></div><div class="igRing k2"></div><div class="igRing k3"></div>'
+    +'<div class="igItem" id="igIt"><img id="igBig" alt=""></div><div class="igTtl"><div class="igT1">'+T.split('').map(function(c,i){ return c===' '?'<i style="width:.3em"> </i>':'<i style="--d:'+(i*0.05)+'s">'+c+'</i>'; }).join('')+'</div><div class="igT2">ニューアイテム ゲット！</div></div>'
+    +'<div class="igPlate"><b id="igPn"></b><span id="igPd"></span></div><div class="igOk" id="igOk">やったー！</div><div class="igFlash"></div><div class="igFlash f2"></div></div><canvas id="igCv"></canvas>';
+  document.body.appendChild(igL); igG=document.getElementById('igCv').getContext('2d');
+  [].forEach.call(igL.querySelectorAll('.igCard'),function(c){ onTap(c,function(){ var k=c.dataset.it; itemSave(k);   /* data-k は コントローラーのボタンの しるしなので使わない（§1-3） */ P.pick=k; var n=document.getElementById('resItem'); if(n) n.innerHTML=itemNote(k); igPlay(k); }); });
+  onTap(document.getElementById('igOk'),function(){ document.getElementById('igFx').classList.remove('on','shake'); igL.classList.remove('on'); igRun=false; igP=[]; }); }
+function itemShow(k){ igMake(); igL.classList.add('on'); var pk=document.getElementById('igPick');
+  if(k==='choose'){ pk.classList.remove('off'); document.getElementById('igFx').classList.remove('on','shake'); sfx('star'); }
+  else igPlay(k); }
+var IG_COL=['#ff5a5a','#ffd84a','#6aff8a','#5ad4ff','#b88aff','#ff9ad5','#ffffff'];
+function igConf(x,y,n,dir){ for(var i=0;i<n;i++){ var a=dir+(Math.random()-0.5)*1.1, v=7+Math.random()*9; igP.push({k:'c',x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:Math.random()*6.3,vr:(Math.random()-0.5)*0.4,w:6+Math.random()*6,h:3+Math.random()*4,c:IG_COL[i%IG_COL.length],l:200}); } }
+function igFire(x,y){ var c=IG_COL[Math.floor(Math.random()*6)]; for(var i=0;i<46;i++){ var a=i/46*6.283, v=2.4+Math.random()*3.4; igP.push({k:'f',x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c:c,l:60+Math.random()*20,ml:80}); } igP.push({k:'b',x:x,y:y,l:14,ml:14}); }
+function igCoins(n){ for(var i=0;i<n;i++) igP.push({k:'g',x:Math.random()*igW,y:-20-Math.random()*igH*0.6,vy:3+Math.random()*3,vx:(Math.random()-0.5)*1.2,ph:Math.random()*6,l:400}); }
+function igStar(x,y,r,rot){ igG.beginPath(); for(var i=0;i<8;i++){ var rr=i%2?r*0.28:r, a=rot+i*Math.PI/4; igG[i?'lineTo':'moveTo'](x+Math.cos(a)*rr,y+Math.sin(a)*rr); } igG.closePath(); }
+function igLoop(now){ if(!igRun) return; var g=igG, t=(now-igT0)/1000, W2=igW, H2=igH; g.clearRect(0,0,W2,H2);
+  if(t>0.7 && t<3.6 && Math.floor(t/0.33)!==igK){ igK=Math.floor(t/0.33); igFire(W2*(0.15+Math.random()*0.7),H2*(0.08+Math.random()*0.32)); }
+  var cx=W2/2, cy=H2*0.42; if(t>=0.25) for(var i=0;i<14;i++){ var a=t*0.9+i*0.449, rr=Math.min(W2,H2)*(0.2+0.06*Math.sin(t*2+i)), s=(Math.sin(t*6+i*1.7)+1)*0.5; g.fillStyle='rgba(255,255,230,'+(0.35+0.65*s).toFixed(2)+')'; igStar(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr*0.9,3+7*s,t); g.fill(); }
+  for(var j=igP.length-1;j>=0;j--){ var q=igP[j]; q.l--;
+    if(q.k==='c'){ q.vx*=0.985; q.vy=q.vy*0.985+0.22; q.x+=q.vx; q.y+=q.vy; q.r+=q.vr; g.save(); g.translate(q.x,q.y); g.rotate(q.r); g.scale(1,Math.cos(q.r*2)); g.fillStyle=q.c; g.fillRect(-q.w/2,-q.h/2,q.w,q.h); g.restore(); }
+    else if(q.k==='f'){ q.vx*=0.97; q.vy=q.vy*0.97+0.06; q.x+=q.vx; q.y+=q.vy; g.globalAlpha=Math.max(0,q.l/q.ml); g.fillStyle=q.c; g.beginPath(); g.arc(q.x,q.y,2.2,0,6.283); g.fill(); g.fillStyle='#fff'; g.beginPath(); g.arc(q.x,q.y,0.9,0,6.283); g.fill(); g.globalAlpha=1; }
+    else if(q.k==='b'){ var kk=1-q.l/q.ml; g.globalAlpha=1-kk; g.fillStyle='#fff'; g.beginPath(); g.arc(q.x,q.y,6+30*kk,0,6.283); g.fill(); g.globalAlpha=1; }
+    else if(q.k==='g'){ q.y+=q.vy; q.x+=q.vx; q.ph+=0.16; g.save(); g.translate(q.x,q.y); g.scale(Math.max(0.15,Math.abs(Math.cos(q.ph))),1);
+      g.fillStyle='#b8860b'; g.beginPath(); g.arc(0,1.5,9,0,6.283); g.fill(); g.fillStyle='#ffd84a'; g.beginPath(); g.arc(0,0,9,0,6.283); g.fill(); g.fillStyle='#fff6b0'; g.beginPath(); g.arc(-2.5,-2.5,3,0,6.283); g.fill(); g.restore(); if(q.y>H2+20) q.l=0; }
+    if(q.l<=0 || (q.k==='c' && q.y>H2+30)) igP.splice(j,1); }
+  requestAnimationFrame(igLoop); }
+function igPlay(k){ igFanfare(); var cv2=document.getElementById('igCv'), d=Math.min(2,window.devicePixelRatio||1); igW=innerWidth; igH=innerHeight; cv2.width=igW*d; cv2.height=igH*d; igG.setTransform(d,0,0,d,0,0);
+  document.getElementById('igBig').src=ITEMS_IMG?ITEMS_IMG[k]:''; document.getElementById('igIt').className='igItem'+(k==='medalshield'?' sh':'');
+  document.getElementById('igPn').textContent=IT_INFO[k][0]; document.getElementById('igPd').innerHTML=IT_INFO[k][1]+'<br><span style="font-size:12px;color:#8a5a10">My HERO の そうびで 使えるよ</span>';
+  var fx=document.getElementById('igFx'); document.getElementById('igPick').classList.add('off'); fx.classList.remove('on','shake'); void fx.offsetWidth; fx.classList.add('on');
+  setTimeout(function(){ fx.classList.add('shake'); igConf(0,igH,70,-1.05); igConf(igW,igH,70,-2.09); igConf(igW/2,igH*0.42,40,-1.57); },700);
+  setTimeout(function(){ igCoins(36); },1000); setTimeout(function(){ igConf(0,igH*0.6,40,-0.7); igConf(igW,igH*0.6,40,-2.44); },1800);
+  igP=[]; igK=-1; igT0=performance.now(); if(!igRun){ igRun=true; requestAnimationFrame(igLoop); } }
 function finish(){ face='happy'; gT=0; camO=0; resShown=false; hideTa(1); mus('C'); sfx('star'); var b=best(); P.wasBest=b; P.at=Date.now(); lastRes=P.at; P.rank=rkAdd({t:P.fin,d:GOAL,k:kills,c:got,at:P.at}); P.first=!b; P.nb=!b||P.fin<b;
   splits.push(+P.fin.toFixed(2)); if(P.nb){ try{ localStorage.setItem(GH_KEY,JSON.stringify({t:P.fin,d:rec,sp:splits})); }catch(e){} }      // ベストなら ゴーストを入れかえ
   // ⑥ ごほうび（My HERO のゴールド）：完走 30G・はじめての完走 +300G・メダルは 色ごとに はじめての1回だけ（金100・銀60・銅30）
   var m=medalOf(P.fin), fl={}, gd=30, why=['完走 30G']; try{ fl=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')||{}; }catch(e){}
-  P.items=[];   // ★試作19 My HERO（テスト版）の そうびの ごほうび。ゲームは この記録（FLAG_KEY）を見て 渡す（first＝紅白の剣・m0＝金メダルの盾）
-  if(!fl.first){ fl.first=1; gd+=300; why.push('はじめての完走 300G'); P.items.push('🎀 紅白の剣'); }
-  if(m){ var mi=MEDAL.indexOf(m), bn=[100,60,30][mi]; if(!fl['m'+mi]){ fl['m'+mi]=1; gd+=bn; why.push(m[2]+'メダル '+bn+'G'); if(mi===0) P.items.push('🏅 金メダルの盾'); } }
+  var its=taItemsOf(fl); P.pick=null;   // ★試作22 My HERO（テスト版）の そうびの ごほうび（fl.items）。金メダル1回目＝どちらか1つ えらぶ・2回目＝のこりの1つ（ゲームは fl.items を見て 渡す）
+  if(!fl.first){ fl.first=1; gd+=300; why.push('はじめての完走 300G'); }
+  if(m){ var mi=MEDAL.indexOf(m), bn=[100,60,30][mi]; if(!fl['m'+mi]){ fl['m'+mi]=1; gd+=bn; why.push(m[2]+'メダル '+bn+'G'); }
+    if(mi===0 && its.length<2){ if(!its.length) P.pick='choose'; else { var rest=its[0]==='kohaku'?'medalshield':'kohaku'; its.push(rest); P.pick=rest; } } }
   try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); localStorage.setItem(GOLD_KEY,String((parseInt(localStorage.getItem(GOLD_KEY)||'0',10)||0)+gd)); }catch(e){}
   P.medal=m; P.gold=gd; P.goldWhy=why; }
 function showResult(){ ov.className='res';
@@ -747,17 +884,18 @@ function showResult(){ ov.className='res';
     +'<p>ランキング <span style="color:#ffe44d;font-size:22px">'+P.rank+'位</span></p>'
     +'<div class="stats"><span>👾 '+kills+'</span><span>🪙 '+got+'</span><span style="color:#ff5a6e">'+new Array(Math.max(0,life)+1).join('♥')+'</span></div>'
     +'<p class="note" style="color:#ffe9a8">💰 +'+P.gold+'G（My HERO で もらえる）<br><span style="font-size:11px;color:#b4c6dc">'+P.goldWhy.join('・')+'</span></p>'
-    +(P.items.length?'<p class="note" style="color:#ffd0e8">🎁 '+P.items.join('・')+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span></p>':'')
+    +(P.pick?'<p class="note" id="resItem" style="color:#ffd0e8">'+itemNote(P.pick)+'</p>':'')
     +'<div class="row"><div class="uiBtn gold half" id="shot">📸 記念の画像</div><div class="uiBtn go half" id="again" style="font-size:16px">⏱ もう一回</div></div><div class="row"><div class="uiBtn info half" id="r2">🏆 ランキング</div><div class="uiBtn info half" id="h2">🏠 ホーム</div></div>');
   onTap(document.getElementById('shot'),shotShow);
   ov.className='res';
   onTap(document.getElementById('again'),start); onTap(document.getElementById('r2'),ranking); onTap(document.getElementById('h2'),title);
+  if(P.pick){ var pk=P.pick; setTimeout(function(){ if(st==='goal') itemShow(pk); },1100); }   // ★試作22 タイムが数え終わったら ごほうびの演出
   var el=document.getElementById('rtt'), t0=performance.now(); (function up(){ var k=Math.min(1,(performance.now()-t0)/900); el.textContent=fmt(P.fin*k); if(k<1) requestAnimationFrame(up); })(); }
 // ★試作14 記念の画像：いまのゲーム画面（ゴールの場面）に タイム・メダル・順位を のせた1枚。長押しで保存
 function shotMake(){ var c=document.createElement('canvas'), w=780, h=Math.round(780*H/W)+170; c.width=w; c.height=h; var x=c.getContext('2d');
   x.fillStyle='#0b1838'; x.fillRect(0,0,w,h); x.drawImage(cv,0,0,w,h-170);
   function T(s,px,X,Y,col,al){ x.font='900 '+px+'px sans-serif'; x.textAlign=al||'center'; x.lineJoin='round'; x.lineWidth=px*0.2; x.strokeStyle='#0a1a3a'; x.strokeText(s,X,Y); x.fillStyle=col; x.fillText(s,X,Y); }
-  T('My HERO 番外編',30,w/2,h-126,'#ffe9a8'); T('500m タイムアタック',40,w/2,h-78,'#ffffff');
+  T('MyHEROの大運動会',30,w/2,h-126,'#ffe9a8'); T('500m走',40,w/2,h-78,'#ffffff');
   T((P.medal?P.medal[1]+' ':'')+fmt(P.fin)+'　'+P.rank+'位',52,w/2,h-18,'#ffe44d');
   var d=new Date(P.at); T(d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(),20,w-14,h-150,'#b4c6dc','right');
   return c.toDataURL('image/jpeg',0.9); }
