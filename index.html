@@ -861,7 +861,13 @@ html,body{width:100%;height:100%;background:#0d0d1a;display:flex;flex-direction:
 /* ★v374 白いふち・青と緑の原色をやめて、上の四角いボタン4つ（絵に描かれた あい色 #7080b0→#1a234c）と同じ色に（実機「位置は完璧。白縁が無駄に目立ちすぎ。取ってつけたみたいに主張がすごい。背景に馴染むように」） */
 /* ★v375 2つの種類が分かるように、記録は黄・チャットは緑。明るさ・つやは四角いボタンと同じ幅のまま（実機「記録は黄色っぽく、チャットは緑っぽくしつつボタンの種類があるようにはしたい。馴染む色合いの方向性はあってる」） */
 #overlay.home .hrRec{left:11.1%;background:linear-gradient(180deg,#c9ac62 0%,#9a7a34 45%,#5c4417 100%);border-color:#3a2a0c;}
-#overlay.home .hrChat{left:88.85%;background:linear-gradient(180deg,#86b062 0%,#4f7a37 45%,#2c4d22 100%);border-color:#1a3314;}
+#overlay.home .hrChat{left:88.85%;background:linear-gradient(180deg,#8df07a 0%,#2fc24a 48%,#13862f 100%);border-color:#0b4d1b;}   /* ★v381 あざやかな緑（ユーザー「チャットはもう少し目立つ緑」。遊び方は青に分けた） */
+/* ★v381 遊び方：ホームの絵に描かれた緑の「あそびかた」（幅 約141px）の上に 青いボタンを重ねて かくす（ユーザー「遊び方の文言にして青」）。
+   前の当たり判定（幅55.5%＝216px）は絵より広く、::before のつやが 絵のまわりに うすい帯として見えていた → 絵をかくす大きさ（幅44%・真ん中）にそろえる。静的HTML側とJS側の両方が class="btnInfo" */
+#overlay.home #howtoBtn.btnInfo{left:28%;width:44%;top:calc(60% + 43.1vw);height:11.6vw;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#8fd0ff 0%,#3d9bf0 48%,#1f6dd8 100%) !important;border:0.6vw solid #0d3d86 !important;
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.55),0 0.9vw 0 #0a2f66,0 1.6vw 2.4vw rgba(0,0,0,0.35) !important;
+  color:#fff !important;font-size:4.9vw !important;font-weight:900;letter-spacing:0.06em;text-shadow:0 0.4vw 0 #0d3d86,0 0 0.6vw rgba(0,0,0,0.35) !important;}
 </style>
 </head>
 <body>
@@ -946,7 +952,7 @@ function showErrEarly(msg){ mkBanner('⚠ '+msg); }
       <div id="achBtn" class="menuBtnSub">🎖️<br>じっせき</div>
       <div id="rankBtn" class="menuBtnSub">🏆<br>ランキング</div>
     </div>
-    <div id="howtoBtn" class="btnInfo" style="margin-top:12px;font-size:12px;padding:9px 16px">📖 あそびかた</div>
+    <div id="howtoBtn" class="btnInfo" style="margin-top:12px;font-size:12px;padding:9px 16px">📖 遊び方</div>
   </div>
   <div class="home-grass"><i class="gr1"></i><i class="gr2"></i></div>
 </div>
@@ -2150,7 +2156,7 @@ var SHIELD_SKINS=[
 //   効果（ユーザー了承）：ガード中にぶつかってきた敵に炎のダメージ（burn。弾をはね返したときと同じ2、ボスは1）
 if(NEW_BODY_ON) SHIELD_SKINS.splice(1,0,{id:'fireshield', name:'炎の盾', icon:'🔥', price:5000, shape:'normal', desc:'ガードした敵に炎のダメージ', burn:2});
 // ★v379 テスト版：番外編（test/ta3d.html）のごほうび。お金では買えない（ta:1）。もらい方は taItemGrant。強さは雷の盾（ガード時間）と闇の盾（回復）の間（ユーザー「間ぐらいの強さ」）
-if(NEW_BODY_ON) SHIELD_SKINS.push({id:'medalshield', name:'金メダルの盾', icon:'🏅', price:0, ta:1, taHow:'番外編で 金メダルを とると もらえるよ', shape:'normal', desc:'ガード時間 +50%・ガード成功で HP +1', guardMul:1.5, blockHeal:1});
+if(NEW_BODY_ON) SHIELD_SKINS.push({id:'medalshield', name:'金メダルの盾', icon:'🏅', price:0, ta:1, taHow:'500m走で 金メダルを とると もらえるよ（1回目に 剣か盾を えらぶ・2回目で もう1つ）', shape:'normal', desc:'ガード時間 +50%・ガード成功で HP +1', guardMul:1.5, blockHeal:1});
 // 剣スキン定義（id, 名前, アイコン, 価格, 刃グラデ3色, 光の筋色, オーラ色）
 var SWORD_SKINS=[
   {id:'silver', name:'銀の剣',   icon:'⚔️', price:0,    blade:['#f2f5f8','#cfd6dd','#9aa3ac'], streak:'rgba(255,255,255,0.5)', aura:null, desc:'ふつうの剣'},
@@ -2166,7 +2172,7 @@ var SWORD_SKINS=[
 //   見た目：Lv2 白く光る／Lv3 雷（_kohakuFx）／Lv4 炎（_kohakuFx）／Lv5 雷＋炎＋体ごと金色のオーラ（_kohakuAura）
 var KOHAKU_LV=[{n:0,atk:1,spd:0},{n:20,atk:2,spd:0},{n:60,atk:2,spd:0.8},{n:120,atk:3,spd:0.8},{n:200,atk:4,spd:0.8}];
 var KOHAKU_GLOW=[null,'rgba(255,255,255,0.95)','rgba(150,215,255,0.95)','rgba(255,150,60,0.95)','rgba(255,215,80,1)'];
-if(NEW_BODY_ON) SWORD_SKINS.push({id:'kohaku', name:'紅白の剣', icon:'🎀', price:0, ta:1, taHow:'番外編で はじめて完走すると もらえるよ', blade:['#ffffff','#ff7070','#d42020'], streak:'rgba(255,235,235,0.9)', aura:null, desc:'', atk:1});
+if(NEW_BODY_ON) SWORD_SKINS.push({id:'kohaku', name:'紅白の剣', icon:'🎀', price:0, ta:1, taHow:'500m走で 金メダルを とると もらえるよ（1回目に 剣か盾を えらぶ・2回目で もう1つ）', blade:['#ffffff','#ff7070','#d42020'], streak:'rgba(255,235,235,0.9)', aura:null, desc:'', atk:1});
 function kohakuN(){ return Math.max(0,parseInt(store.get('yk_kohaku_n')||'0',10)||0); }
 function kohakuLv(){ var n=kohakuN(), l=1; for(var i=1;i<KOHAKU_LV.length;i++) if(n>=KOHAKU_LV[i].n) l=i+1; return l; }
 function kohakuNext(){ var l=kohakuLv(); return l>=KOHAKU_LV.length?'':'あと '+(KOHAKU_LV[l].n-kohakuN())+'体で Lv'+(l+1); }
@@ -2285,12 +2291,13 @@ if(TEST_MODE){
   });
   if(_tAdd>0) store.set('yk_owned',JSON.stringify(ownedItems));
 }
-// ★v379 テスト版だけ：番外編のごほうびの剣と盾。番外編の記録（ta3d_flags_500r＝同じサイトの localStorage。first＝はじめての完走・m0＝金メダル）を見て、まだ持っていなければ渡す
+// ★v379 テスト版だけ：番外編のごほうびの剣と盾。番外編の記録（ta3d_flags_500r＝同じサイトの localStorage。★v381 items＝もらった物。金メダル1回目＝えらんだ1つ・2回目＝のこり）を見て、まだ持っていなければ渡す
 //   前に完走・金メダルをとっていた人も、次に開いたときに もらえる。もらった物は taExtraHTML で知らせる
 var _taItemsGot=[];
 function taItemGrant(){
   if(!TEST_MODE) return; var fl={}; try{ fl=JSON.parse(localStorage.getItem('ta3d_flags_500r')||'{}')||{}; }catch(e){}
-  [['kohaku',fl.first],['medalshield',fl.m0]].forEach(function(r){ if(r[1] && ownedItems.indexOf(r[0])<0){ ownedItems.push(r[0]); _taItemsGot.push(r[0]); } });
+  var its=fl.items; if(!its){ its=[]; if(fl.first) its.push('kohaku'); if(fl.m0) its.push('medalshield'); }   // ★v381 番外編の items（金メダル1回目＝えらんだ1つ・2回目＝のこり）。試作21 までの記録は 完走で剣・金メダルで盾を渡していた
+  its.forEach(function(id){ if((id==='kohaku'||id==='medalshield') && ownedItems.indexOf(id)<0){ ownedItems.push(id); _taItemsGot.push(id); } });
   if(_taItemsGot.length) store.set('yk_owned',JSON.stringify(ownedItems));
 }
 taItemGrant();
@@ -4068,10 +4075,14 @@ function navHTML(active){
   }
   return h+'</div>';
 }
+// ★v381 テスト版：ゲームを えらぶ（ユーザー 2026-11-18「ステージのタブを『ゲーム』に。メインの『MyHEROの冒険』と、サブにミニゲーム『MyHEROの大運動会』。
+//   タップしてスタートのあとは まずゲームの選択 → キャラの選択」）。本番は今までどおり（タブは「ステージ」・スタートでキャラ選択）
+var GAME_SEL_ON=TEST_MODE;
+if(GAME_SEL_ON){ NAV_ITEMS[1].ico='\ud83c\udfae'; NAV_ITEMS[1].txt='\u30b2\u30fc\u30e0'; }   // 🎮 ゲーム
 function navGo(k){
   if(k==='home'){ gs='title'; showTitleScreen(); }
   else if(k==='char'){ SELECT_STEP=1; showCharSelect(); }
-  else if(k==='world'){ showStageMap(); }
+  else if(k==='world'){ if(GAME_SEL_ON) showGameSelect(); else showStageMap(); }
   else if(k==='shop'){ showShop(); }
 }
 function bindNav(){
@@ -10386,6 +10397,7 @@ function advanceStory(){
 function endStory(){
   storyPage=0;
   seenStory=true; store.set('yk_seen_story','1');
+  if(GAME_SEL_ON){ showGameSelect(); return; }   // ★v381 テスト版：お話のあとも まずゲームの選択
   SELECT_STEP=1; showCharSelect();
 }
 
@@ -10645,7 +10657,7 @@ function showTitleScreen(){
       +'<div id="achBtn" class="menuBtnSub">🎖️<br>じっせき</div>'
       +'<div id="rankBtn" class="menuBtnSub">🏆<br>ランキング</div>'
     +'</div>'
-    +'<div id="howtoBtn" class="btnInfo" style="margin-top:12px;font-size:12px;padding:9px 16px">📖 あそびかた</div>'
+    +'<div id="howtoBtn" class="btnInfo" style="margin-top:12px;font-size:12px;padding:9px 16px">📖 遊び方</div>'
     +'</div>'
     // ★v214(②): 草原。.home-btns の外＝#overlay直下に置く
     +'<div class="home-grass"><i class="gr1"></i><i class="gr2"></i></div>';
@@ -10661,7 +10673,7 @@ function startFromTitle(){
   if(_startBusy||gs!=='title') return;
   _startBusy=true; setTimeout(function(){_startBusy=false;},400);
   sndInit();
-  if(!seenStory){ showStory(); } else { SELECT_STEP=1; showCharSelect(); }
+  if(!seenStory){ showStory(); } else if(GAME_SEL_ON){ showGameSelect(); } else { SELECT_STEP=1; showCharSelect(); }   // ★v381
 }
 // ═══ ★v224(⑦): 時間帯連動 ═══
 // ★実機調整: 帯ごとの [色, 濃さ]。濃さを 0 にすればその帯だけ無効化できる。
@@ -10679,11 +10691,8 @@ function homeTintBand(){
     var m=(location.hash||'').match(/t=(dawn|day|dusk|night)/);
     if(m) return m[1];
   }catch(e){}
-  var h=new Date().getHours();
-  if(h>=5 && h<8)  return 'dawn';
-  if(h>=8 && h<16) return 'day';
-  if(h>=16 && h<19) return 'dusk';
-  return 'night';
+  return 'day';   // ★v381 いつも昼の明るさ（ユーザー：夜に暗くなるのが こわれて見えた。「夜に合わせるなら夜空も変えなあかん」→ いつも昼）。時間帯の色に戻すなら 下の行を戻す
+  /* var h=new Date().getHours(); if(h>=5 && h<8) return 'dawn'; if(h>=8 && h<16) return 'day'; if(h>=16 && h<19) return 'dusk'; return 'night'; */
 }
 // ★v226-B: mix-blend-mode(multiply) と mask-image を廃止。
 //   実測A/Bで、この2つだけでホームが約5fps落ちていた（WKWebViewの合成コスト）。
@@ -10900,14 +10909,84 @@ var stageCoinTotal=0, stageCoinGot=0, stageEnemyTotal=0, stageEnemyKilled=0;
 var lastClearStar=0, lastClearScore=0; // 直近クリアの星・スコア
 var WORLD_NAMES=['草原','夕暮れの森','洞窟','雪山','火山','夜の城','空中','海底','魔界','天空神殿'];
 var WORLD_ICONS=['🌱','🌆','🕳️','⛄','🌋','🏰','☁️','🌊','👹','⛩️'];
+// ★v381 テスト版：ゲームを えらぶ画面。上に大きく「MyHEROの冒険」（メイン）、下に「ミニゲーム」として「MyHEROの大運動会」（サブ）。§10-5：見せたい方を上・大きく
+function _sportsThumb(h){   // 運動会の小さい絵（空・旗・芝・トラック・走る人・旗）。taCardHTML と同じ作り
+  return '<div style="flex:0 0 auto;width:'+h+'px;aspect-ratio:256/150;border-radius:9px;box-shadow:0 1px 4px rgba(0,0,0,0.5);position:relative;overflow:hidden;'
+    +'background:linear-gradient(180deg,#58aef0 0,#a8dcfa 56%,#4f9a3c 56%,#4f9a3c 66%,#dcbb8a 66%,#dcbb8a 84%,#fff 84%,#fff 86%,#c98a52 86%)">'
+    +'<div style="position:absolute;left:0;right:0;top:16%;height:6px;background:repeating-linear-gradient(90deg,#e8443a 0 7px,transparent 7px 10px,#3a6fe0 10px 17px,transparent 17px 20px,#f6c432 20px 27px,transparent 27px 30px,#3fae5a 30px 37px,transparent 37px 40px)"></div>'
+    +'<div style="position:absolute;left:10%;bottom:6%;font-size:'+Math.round(h*0.24)+'px;line-height:1">🏃</div><div style="position:absolute;right:8%;bottom:8%;font-size:'+Math.round(h*0.2)+'px;line-height:1">🏁</div></div>';
+}
+function _sportsNews(){   // 500m走で もらった ゴールド・剣・盾（ゲームを開いたときに受けとった分）
+  return (_taGoldGot>0?'<div style="color:#ffe44d;font-size:11.5px;font-weight:bold;margin-top:3px">💰 ごほうび +'+_taGoldGot+'G を受けとったよ</div>':'')
+    +(_taItemsGot.length?'<div style="color:#ffd0e8;font-size:11.5px;font-weight:bold;margin-top:2px">🎁 '+_taItemsGot.map(function(id){ return id==='kohaku'?'🎀 紅白の剣':'🏅 金メダルの盾'; }).join('・')+' を受けとったよ</div>':'');
+}
+function _openScreen(h){ gs='ranking'; musScene('J'); ov.classList.remove('home'); ov.innerHTML=h; ov.className='scrollable hasnav'; ov.style.display='flex'; ov.scrollTop=0; }
+function showGameSelect(){
+  var w=1; for(var i=1;i<=NUM_WORLDS;i++) if((i-1)*STAGES_PER_WORLD+1<=unlockedStage) w=i;   // いま行ける いちばん先のワールドの絵
+  var h='<div style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;padding-bottom:20px">'
+    +'<div class="uiTitle">🎮 ゲームを えらぶ</div>'
+    +'<div id="gselAdv" style="width:100%;margin-top:6px;border-radius:18px;overflow:hidden;box-sizing:border-box;border:3px solid #ffd24a;cursor:pointer;'
+      +'background:linear-gradient(180deg,#2b5fb0,#0f2f66);box-shadow:0 6px 0 #0a1f44,0 10px 20px rgba(0,0,0,0.45),0 0 22px rgba(255,210,80,0.35)">'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:linear-gradient(90deg,rgba(255,210,80,0.45),rgba(255,255,255,0))">'
+        +'<span style="font-size:24px;line-height:1">⚔️</span><span style="font-size:19px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,0.6)">MyHEROの冒険</span></div>'
+      +'<div class="wThumb" style="margin:2px 12px 0;aspect-ratio:256/133;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.5);background-position:0 '+((w-1)*100/9).toFixed(3)+'%"></div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px 12px">'
+        +'<span style="color:#ffd24a;font-weight:bold;font-size:13px;text-align:left">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'<br><span style="color:#cfe3ff;font-size:11px">ワールド '+w+' まで 行けるよ</span></span>'
+        +'<span class="uiBtn go" style="font-size:16px;padding:7px 18px;min-height:0">▶ あそぶ</span></div></div>'
+    +'<div style="align-self:flex-start;color:#8fc1ff;font-size:12px;font-weight:900;letter-spacing:2px;margin:18px 4px 6px">ミニゲーム</div>'
+    +'<div id="gselSports" style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:14px;box-sizing:border-box;cursor:pointer;'
+      +'border:2px solid #ff8a5a;background:linear-gradient(180deg,rgba(255,138,90,0.24),rgba(10,24,52,0.85));box-shadow:0 3px 8px rgba(0,0,0,0.4)">'
+      +_sportsThumb(92)
+      +'<div style="flex:1 1 auto;min-width:0;text-align:left"><div style="color:#fff;font-size:15px;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,0.6)">🏅 MyHEROの大運動会</div>'
+        +'<div style="color:#ffd9c0;font-size:11px;font-weight:bold">500m走 ほか</div>'+(_sportsNews()?'<div style="color:#ffe44d;font-size:11px;font-weight:bold;margin-top:2px">🎁 ごほうびが とどいたよ！</div>':'')+'</div>'   // くわしくは 大運動会の画面
+      +'<span style="color:#ffd24a;font-size:20px;font-weight:900">▶</span></div>'
+    +'<div id="gselBack" class="menuBtnSub" style="width:160px;margin-top:20px">◀ ホームに戻る</div>'
+    +'</div>'+navHTML('world');
+  _openScreen(h);
+  setTimeout(function(){
+    bindNav();
+    var a=document.getElementById('gselAdv'); if(a) _csTap(a,function(){ TA_ON=false; showStageMap(); });
+    var b=document.getElementById('gselSports'); if(b) _csTap(b,showSportsDay);
+    var k=document.getElementById('gselBack'); if(k) _csTap(k,function(){ ov.classList.remove('scrollable'); gs='title'; showTitleScreen(); });
+  },30);
+}
+// ★v381 テスト版：大運動会の 種目を えらぶ画面。いまは 500m走（test/ta3d.html）だけ。ほかの種目（玉入れ・応援団・組体操）は「じゅんび中」
+function showSportsDay(){
+  var best=0; try{ (JSON.parse(localStorage.getItem('ta3d_rank_500r')||'[]')||[]).forEach(function(e){ if(e && e.t!=null && (!best || e.t<best)) best=e.t; }); }catch(e){}   // 500m走の じこベスト（500m走のページの記録）
+  function bt(t){ t=Math.floor(t*10+1e-6)/10; var m=Math.floor(t/60), r=(t-m*60).toFixed(1); return m+':'+(r.length<4?'0':'')+r; }
+  function soon(ic,nm,tx){ return '<div style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:14px;box-sizing:border-box;border:2px dashed rgba(255,255,255,0.22);background:rgba(255,255,255,0.04);opacity:0.7">'
+    +'<span style="flex:0 0 auto;width:46px;font-size:30px;line-height:1;text-align:center">'+ic+'</span><div style="flex:1;text-align:left"><div style="color:#fff;font-size:14px;font-weight:900">'+nm+'</div><div style="color:#b4c6dc;font-size:11px;font-weight:bold">'+tx+'</div></div>'
+    +'<span style="color:#ffd24a;font-size:11px;font-weight:900;white-space:nowrap">じゅんび中</span></div>'; }
+  var h='<div style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px;padding-bottom:20px">'
+    +'<div class="uiTitle">🏅 MyHEROの大運動会</div>'
+    +'<div id="sd500" style="width:100%;border-radius:18px;overflow:hidden;box-sizing:border-box;border:3px solid #ff8a5a;cursor:pointer;'
+      +'background:linear-gradient(180deg,rgba(255,138,90,0.30),rgba(10,24,52,0.9));box-shadow:0 6px 0 #5a2412,0 10px 20px rgba(0,0,0,0.45)">'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:linear-gradient(90deg,rgba(255,138,90,0.55),rgba(255,255,255,0))">'
+        +'<span style="font-size:22px;line-height:1">🏁</span><span style="font-size:18px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,0.6)">500m走</span></div>'
+      +'<div style="display:flex;align-items:center;gap:10px;padding:8px 12px 12px">'+_sportsThumb(130)
+        +'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="color:#dfeeff;font-size:11px;font-weight:bold">じこベスト<br><span style="color:#ffe44d;font-size:17px;font-weight:900">'+(best?bt(best):'--:--.-')+'</span></div>'
+        +'<span class="uiBtn go" style="font-size:15px;padding:6px 16px;min-height:0">▶ はしる</span></div></div>'
+      +(_sportsNews()?'<div style="padding:0 12px 10px;text-align:left">'+_sportsNews()+'</div>':'')+'</div>'
+    +soon('🧺','玉入れ','カゴに 玉を いっぱい 入れよう')
+    +soon('📣','応援団','リズムに あわせて 応援しよう')
+    +soon('🤸','組体操','みんなで ピラミッドを つくろう')
+    +'<div id="sdBack" class="menuBtnSub" style="width:160px;margin-top:10px">◀ もどる</div>'
+    +'</div>'+navHTML('world');
+  _openScreen(h);
+  setTimeout(function(){
+    bindNav();
+    var a=document.getElementById('sd500'); if(a) _csTap(a,function(){ try{ MUS.stop(); }catch(e){} location.href=(location.pathname.indexOf('/game/')>=0?'../':'')+'test/ta3d.html?from=game'; });
+    var k=document.getElementById('sdBack'); if(k) _csTap(k,showGameSelect);
+  },30);
+}
 function showStageMap(){
   gs='ranking'; // タップでゲーム開始しないよう流用
   musScene('J');   // ★v346 マップはホームと同じ曲（クリア画面から来たときも鳴らす）
   ov.classList.remove('home');
   var h='<div style="width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;padding-bottom:20px">'
     +'<div class="uiTitle">🗺️ ステージ選択</div>'
-    +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:'+(taUnlocked()?8:16)+'px">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
-    +(taUnlocked()?'<div style="display:flex;gap:6px;margin-bottom:12px"><div id="mapModeN" class="uiBtn '+(TA_ON?'info':'go')+'" style="width:128px;font-size:13px;min-height:36px">⭐ ふつう</div>'   // ★v366 全クリアのあと
+    +'<div style="color:#ffd24a;font-size:13px;font-weight:bold;margin-bottom:'+(taUnlocked() && !GAME_SEL_ON?8:16)+'px">⭐ '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
+    +(taUnlocked() && !GAME_SEL_ON?'<div style="display:flex;gap:6px;margin-bottom:12px"><div id="mapModeN" class="uiBtn '+(TA_ON?'info':'go')+'" style="width:128px;font-size:13px;min-height:36px">⭐ ふつう</div>'   // ★v366 全クリアのあと
       +'<div id="mapModeT" class="uiBtn '+(TA_ON?'go':'info')+'" style="width:150px;font-size:13px;min-height:36px">⏱ タイムアタック</div></div>':'')
     // ★v243 ワールドを 2列に。1ワールド=1ステージなので縦1列だと全長1711px（2.5画面分）あった。
     +'<div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">';
@@ -10955,7 +11034,7 @@ function showStageMap(){
     //   一番下までスクロールした時に出ればよい（実機フィードバック）。
     //   ステージはセルをタップした時点で始まるので開始ボタンも不要。
     +'<div style="width:100%;padding:20px 0 6px;display:flex;flex-direction:column;align-items:center;gap:9px">'
-    +'<div id="mapBackBtn" class="menuBtnSub" style="width:160px">◀ ホームに戻る</div>'
+    +'<div id="mapBackBtn" class="menuBtnSub" style="width:160px">'+(GAME_SEL_ON?'◀ もどる':'◀ ホームに戻る')+'</div>'   // ★v381 テスト版は ゲームの選択へ
     +'</div></div>'+navHTML('world');
   ov.innerHTML=h;
   // ★v280 className を明示指定する（add だと前の画面の csfull 等が残る）
@@ -11002,7 +11081,7 @@ function showStageMap(){
     bindNav();
     var bb=document.getElementById('mapBackBtn');
     if(bb){
-      function back(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); ov.classList.remove('scrollable'); gs='title'; showTitleScreen(); }
+      function back(e){ e.stopPropagation(); if(e.cancelable)e.preventDefault(); ov.classList.remove('scrollable'); if(GAME_SEL_ON){ showGameSelect(); return; } gs='title'; showTitleScreen(); }
       bb.addEventListener('touchstart',back,{passive:false});
       bb.addEventListener('click',back);
     }
@@ -11190,7 +11269,7 @@ function showEnding(star,first){
       +'<div style="color:#7dff8a;font-size:15px;font-weight:bold">'+(first?'🔓 2周目「タイムアタック」解放！':'⏱ 2周目「タイムアタック」')+'</div>'
       +'<div style="color:#dfeeff;font-size:12px;line-height:1.6;margin-top:3px">ステージを速くクリアして<br>🥇金・🥈銀・🥉銅のメダルを集めよう！</div>'
     +'</div>'
-    +'<div id="edTA" class="uiBtn go" style="width:250px;font-size:16px;min-height:52px;margin-top:10px">⏱ タイムアタックに挑戦</div>'
+    +'<div id="edTA" class="uiBtn go" style="width:250px;font-size:16px;min-height:52px;margin-top:10px">'+(GAME_SEL_ON?'🏅 大運動会に挑戦':'⏱ タイムアタックに挑戦')+'</div>'   // ★v381 テスト版：タイムアタックは 大運動会の 500m走 になった
     +'<div style="color:#ffd24a;font-size:14px;font-weight:bold;margin-top:12px;'+_sh+'">⭐ 合計 '+totalStars()+' / '+(MAX_STAGE*3)+'</div>'
     +'<div class="scDiv"><b></b></div>'
     +'<div class="scRew">'
@@ -11213,7 +11292,7 @@ function showEnding(star,first){
         var ob=_blurK; _blurK=cv._r||1; drawCharPreview(g,100,139,cid,false,2.1,false,false,null,o); _blurK=ob; }
     }catch(e){}
     setTimeout(function(){ var bz=document.getElementById('clrBurst'); if(bz&&bz.parentNode) bz.parentNode.removeChild(bz); },1700);
-    _csTap(document.getElementById('edTA'),function(){ TA_ON=true; showStageMap(); });
+    _csTap(document.getElementById('edTA'),function(){ if(GAME_SEL_ON){ showSportsDay(); return; } TA_ON=true; showStageMap(); });
     _csTap(document.getElementById('edMap'),function(){ TA_ON=false; showStageMap(); });
     _csTap(document.getElementById('edHome'),function(){ gs='title'; showTitleScreen(); });
   },30);
@@ -11912,7 +11991,7 @@ function showPauseMenu(){
   ov.className='';
   ov.innerHTML='<div class="uiTitle" style="font-size:22px;margin-bottom:22px">⏸ PAUSED</div>'
     +'<div id="pauseResume" class="uiBtn go" style="width:236px;font-size:16px;min-height:52px;margin-bottom:14px">▶ 再開する</div>'
-    +'<div id="pauseHowto" class="uiBtn info" style="width:190px;margin-bottom:22px">📖 あそびかた</div>'
+    +'<div id="pauseHowto" class="uiBtn info" style="width:190px;margin-bottom:22px">📖 遊び方</div>'
     +'<div id="pauseHome" class="uiBtn warn" style="width:190px">🏠 ホームに戻る</div>';
   ov.style.display='flex';
   setTimeout(function(){
