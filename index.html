@@ -10950,10 +10950,11 @@ function showGameSelect(){
     var k=document.getElementById('gselBack'); if(k) _csTap(k,function(){ ov.classList.remove('scrollable'); gs='title'; showTitleScreen(); });
   },30);
 }
-// ★v381 テスト版：大運動会の 種目を えらぶ画面。いまは 500m走（test/ta3d.html）だけ。ほかの種目（玉入れ・応援団・組体操）は「じゅんび中」
+// ★v381 テスト版：大運動会の 種目を えらぶ画面。500m走（test/ta3d.html）・★v382 玉入れ（test/tamaire.html・試作1）。のこり（応援団・組体操）は「じゅんび中」
 function showSportsDay(){
   var best=0; try{ (JSON.parse(localStorage.getItem('ta3d_rank_500r')||'[]')||[]).forEach(function(e){ if(e && e.t!=null && (!best || e.t<best)) best=e.t; }); }catch(e){}   // 500m走の じこベスト（500m走のページの記録）
   function bt(t){ t=Math.floor(t*10+1e-6)/10; var m=Math.floor(t/60), r=(t-m*60).toFixed(1); return m+':'+(r.length<4?'0':'')+r; }
+  var tb=0; try{ tb=(JSON.parse(localStorage.getItem('tama_rec')||'{}')||{}).best||0; }catch(e){}   // ★v382 玉入れの じこベスト（じぶんが入れた数。玉入れのページの記録）
   function soon(ic,nm,tx){ return '<div style="width:100%;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:14px;box-sizing:border-box;border:2px dashed rgba(255,255,255,0.22);background:rgba(255,255,255,0.04);opacity:0.7">'
     +'<span style="flex:0 0 auto;width:46px;font-size:30px;line-height:1;text-align:center">'+ic+'</span><div style="flex:1;text-align:left"><div style="color:#fff;font-size:14px;font-weight:900">'+nm+'</div><div style="color:#b4c6dc;font-size:11px;font-weight:bold">'+tx+'</div></div>'
     +'<span style="color:#ffd24a;font-size:11px;font-weight:900;white-space:nowrap">じゅんび中</span></div>'; }
@@ -10967,7 +10968,14 @@ function showSportsDay(){
         +'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div style="color:#dfeeff;font-size:11px;font-weight:bold">じこベスト<br><span style="color:#ffe44d;font-size:17px;font-weight:900">'+(best?bt(best):'--:--.-')+'</span></div>'
         +'<span class="uiBtn go" style="font-size:15px;padding:6px 16px;min-height:0">▶ はしる</span></div></div>'
       +(_sportsNews()?'<div style="padding:0 12px 10px;text-align:left">'+_sportsNews()+'</div>':'')+'</div>'
-    +soon('🧺','玉入れ','カゴに 玉を いっぱい 入れよう')
+    +'<div id="sdTama" style="width:100%;border-radius:18px;overflow:hidden;box-sizing:border-box;border:3px solid #ff5a6e;cursor:pointer;'   /* ★v382 玉入れ（試作1・test/tamaire.html） */
+      +'background:linear-gradient(180deg,rgba(255,90,110,0.28),rgba(10,24,52,0.9));box-shadow:0 6px 0 #5a1220,0 10px 20px rgba(0,0,0,0.45)">'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:linear-gradient(90deg,rgba(255,90,110,0.55),rgba(255,255,255,0))">'
+        +'<span style="font-size:22px;line-height:1">🧺</span><span style="font-size:18px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,0.6)">玉入れ</span>'
+        +'<span style="margin-left:auto;color:#ffd24a;font-size:11px;font-weight:900">しさく</span></div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px 12px">'
+        +'<div style="color:#dfeeff;font-size:12px;font-weight:bold;text-align:left;line-height:1.5">あかぐみ たい しろぐみ<br>じこベスト <span style="color:#ffe44d;font-size:17px;font-weight:900">'+tb+'こ</span></div>'
+        +'<span class="uiBtn go" style="font-size:15px;padding:6px 16px;min-height:0">▶ なげる</span></div></div>'
     +soon('📣','応援団','リズムに あわせて 応援しよう')
     +soon('🤸','組体操','みんなで ピラミッドを つくろう')
     +'<div id="sdBack" class="menuBtnSub" style="width:160px;margin-top:10px">◀ もどる</div>'
@@ -10976,6 +10984,7 @@ function showSportsDay(){
   setTimeout(function(){
     bindNav();
     var a=document.getElementById('sd500'); if(a) _csTap(a,function(){ try{ MUS.stop(); }catch(e){} location.href=(location.pathname.indexOf('/game/')>=0?'../':'')+'test/ta3d.html?from=game'; });
+    var tm=document.getElementById('sdTama'); if(tm) _csTap(tm,function(){ try{ MUS.stop(); }catch(e){} location.href=(location.pathname.indexOf('/game/')>=0?'../':'')+'test/tamaire.html?from=game'; });   // ★v382
     var k=document.getElementById('sdBack'); if(k) _csTap(k,showGameSelect);
   },30);
 }
