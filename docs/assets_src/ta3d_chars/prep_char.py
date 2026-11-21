@@ -39,6 +39,7 @@ def keyimg(im,green=False):
     if not green:   # ふちの 2〜3px に まざった 緑を とる（茶色の髪の まわりの うすい緑の線）。緑のキャラは やらない（髪・服の緑が 消える）
         rim=(np.asarray(Image.fromarray((B*255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7)))>0)&(al>0)
         mx=np.maximum(F[...,0],F[...,2]); F[...,1]=np.where(rim&(F[...,1]>mx),mx,F[...,1])
+        al=np.minimum(al,np.asarray(Image.fromarray((al*255).astype(np.uint8)).filter(ImageFilter.MinFilter(5))).astype(np.float32)/255)   # ★2026-11-21 いちばん外の 2px を けずる（エルザの 金髪・白い服の ふちに 黄緑の線が のこった）
     return np.dstack([F,al*255]).astype(np.uint8)
 def bands(v,minlen):
     out=[]; i=0; n=len(v)
