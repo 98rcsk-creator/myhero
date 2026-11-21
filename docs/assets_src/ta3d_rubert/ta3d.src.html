@@ -105,6 +105,14 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 .logo .t1{font-size:66px;color:#ffe44d;letter-spacing:-1px}
 .logo .t1 small{font-size:40px}
 .logo .t2{font-size:31px;color:#fff;margin-top:2px}
+/* ★試作25 キャラを えらぶ（顔のアイコン8つ。えらんだ顔は 黄色のわく。絵が まだのキャラは うすく） */
+#chPick{display:flex;flex-direction:column;align-items:center;gap:5px}
+.chRow{display:flex;gap:4px}
+.chI{width:39px;height:39px;border-radius:50%;overflow:hidden;box-sizing:border-box;border:2px solid rgba(255,255,255,0.3);background:radial-gradient(circle at 50% 40%,#3d6fc0,#1a2f5c);transition:transform .1s}
+.chI img{display:block;width:100%;height:100%;pointer-events:none}
+.chI.on{border:3px solid #ffd24a;transform:scale(1.14);box-shadow:0 0 10px rgba(255,210,74,0.7)}
+.chI.off{opacity:0.35;filter:grayscale(1)}
+#chNm{font-size:13px;font-weight:900;color:#fff2b8;text-shadow:0 1px 3px rgba(0,0,0,0.8);min-height:17px}
 #ov .best{width:290px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
 #ov .best .l{font-size:12px;font-weight:bold;color:#b4c6dc;text-align:left}
 #ov .best .v{font:900 26px Menlo,"SF Mono",monospace;color:#ffe44d}
@@ -286,7 +294,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">大運動会・試作24</div>
+    <div id="tag">大運動会・試作25</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div></div>
   </div>
   <div id="pad">
@@ -326,6 +334,20 @@ function setRes(d){ DPR=d; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DP
 setRes(DPR);
 var ART=/*ART*/null, PS={}, FACE=[];
 if(ART){ Object.keys(ART.poses).forEach(function(k){ var p=ART.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; PS[k]={im:im,w:p.w,h:p.h,ax:p.ax}; }); ART.face.forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; FACE.push(im); }); }
+// ★試作25 キャラを えらべる。ルーベルトの絵は このページに入っている。ほかの7人は えらんだときだけ test/ta3d_chars/<ID>.js を読みこむ（1人 約0.4〜0.55MB。ページの最初の重さは かわらない）
+//   絵は docs/assets_src/ta3d_chars/prep_char.py が作る（ルーベルトと同じ名前のポーズ・顔7つ）。アイコンは キャラ選択の顔（heads_v316）を小さくしたもの
+var CHARS=[['men_0','ルーベルト'],['men_1','バルト'],['men_2','ジルヴェスター'],['men_3','ユリアン'],['women_0','クララ'],['women_1','エルザ'],['women_2','メルティ'],['women_3','ブリギッタ']];
+var CHICON=/*CHICON*/{}, CHVER=/*CHVER*/{}, CH={men_0:{PS:PS,FACE:FACE}}, curChar='men_0', chBusy=null, chWait=null, CH_KEY='ta3d_char';
+window.TA3D_CHAR=function(id,o){ var ps={}, fc=[]; Object.keys(o.poses).forEach(function(k){ var p=o.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; ps[k]={im:im,w:p.w,h:p.h,ax:p.ax}; });
+  o.face.forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; fc.push(im); }); CH[id]={PS:ps,FACE:fc}; };
+function charUse(id){ var c=CH[id]; if(!c) return; PS=c.PS; FACE=c.FACE; curChar=id; try{ localStorage.setItem(CH_KEY,id); }catch(e){} chUI(); }
+function charLoad(id){ if(CH[id]){ charUse(id); return; } if(!CHVER[id] || chBusy) return; chBusy=id; chUI();
+  var sc=document.createElement('script'); sc.src='ta3d_chars/'+id+'.js?v='+CHVER[id];
+  sc.onload=function(){ chBusy=null; if(CH[id]) charUse(id); else chUI(); if(chWait){ var f=chWait; chWait=null; f(); } };
+  sc.onerror=function(){ chBusy=null; chUI(); var e=document.getElementById('chNm'); if(e) e.textContent='よみこめなかった（つうしんを たしかめてね）'; chWait=null; };
+  document.head.appendChild(sc); }
+function chUI(){ var w=document.getElementById('chPick'); if(!w) return; for(var i=0;i<CHARS.length;i++){ var el=document.getElementById('chI'+i); if(el) el.className='chI tap'+(CHARS[i][0]===(chBusy||curChar)?' on':'')+(CHVER[CHARS[i][0]]||i===0?'':' off'); }
+  var nm=document.getElementById('chNm'), c=CHARS.filter(function(x){ return x[0]===(chBusy||curChar); })[0]; if(nm) nm.textContent=chBusy?(c[1]+' を よみこみ中…'):c[1]; }
 var CROWD=/*CROWD*/null, CE={}, CB=[];   // CE＝まもの（ゲームの絵）／CB＝応援するヒーロー（体つき・AIの絵。★試作20 21体＝crowd_src・crowd2_src（別のポーズ）・crowd_pair_src（まものと仲良し））
 if(CROWD){ Object.keys(CROWD.e).forEach(function(k){ var im=new Image(); im.src='data:image/png;base64,'+CROWD.e[k]; CE[k]=im; }); (CROWD.hb||[]).forEach(function(d){ var im=new Image(); im.src='data:image/webp;base64,'+d; CB.push(im); }); }
 var SPR={}; Object.keys(SPRD).forEach(function(k){ var im=new Image(); im.src='data:image/png;base64,'+SPRD[k]; SPR[k]=im; });
@@ -824,13 +846,15 @@ function rkAdd(e){ var a=rkSort(rkLoad().concat([e])).slice(0,20); try{ localSto
 function best(){ var a=rkSort(rkLoad()); return a.length && a[0].t!=null?a[0].t:0; }
 function md(at){ var d=new Date(at); return (d.getMonth()+1)+'/'+d.getDate(); }
 function show(h){ ov.innerHTML=h; ov.style.display='flex'; }
-function start(){ audioOn(); build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='count'; tRun=0; mus('U'); }
+function start(){ audioOn(); if(chBusy){ chWait=start; return; }   /* ★試作25 えらんだキャラの絵を 読みこみ中なら、おわってから はじめる */
+  build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='count'; tRun=0; mus('U'); }
 function hideTa(v){ document.getElementById('taBox').style.display=v?'none':''; }
 function menuMode(on){ document.getElementById('hud').style.visibility=on?'hidden':''; }   // ★試作11 メニューの画面では 上の表示（ハート・のこり…）をかくす
 function title(){ st='title'; build(); hideTa(1); menuMode(1); mus(null);
   var b=best(), n=rkLoad().length;
   show('<div class="logo"><div class="rib">MyHEROの大運動会</div><div class="t1">500<small>m</small></div><div class="t2">走</div></div>'   /* ★試作22 名前を「MyHEROの大運動会〜500m走〜」に（ユーザー 2026-11-18） */
     +'<div style="display:flex;flex-direction:column;align-items:center;gap:13px">'
+      +'<div id="chPick"><div class="chRow">'+CHARS.map(function(c,i){ return '<div class="chI" id="chI'+i+'">'+(CHICON[c[0]]?'<img src="data:image/webp;base64,'+CHICON[c[0]]+'" alt="">':'')+'</div>'; }).join('')+'</div><div id="chNm"></div></div>'   /* ★試作25 キャラを えらぶ */
       +'<div class="uiPanel best tap" id="hb"><div class="l">じこベスト<br><span style="color:#8fa6bd">ランキング ▶</span></div><div class="v">'+(b?(medalOf(b)?medalOf(b)[1]+' ':'')+fmt(b):'--:--.-')+'</div></div>'
       +'<div class="uiBtn go lg" id="go">▶ スタート</div>'
       +'<div class="row"><div class="uiBtn gold half" id="hr">🏆 ランキング</div><div class="uiBtn info half" id="hh">📖 あそびかた</div></div>'
@@ -838,6 +862,7 @@ function title(){ st='title'; build(); hideTa(1); menuMode(1); mus(null);
     +'</div>');
   ov.className='home';
   onTap(document.getElementById('go'),start); onTap(document.getElementById('hr'),ranking); onTap(document.getElementById('hb'),ranking); onTap(document.getElementById('hh'),howto);
+  CHARS.forEach(function(c,i){ onTap(document.getElementById('chI'+i),function(){ audioOn(); if(i>0 && !CHVER[c[0]]){ var e=document.getElementById('chNm'); if(e) e.textContent=c[1]+' は 絵を じゅんび中'; return; } sfx('coin'); if(i===0) charUse('men_0'); else charLoad(c[0]); }); }); chUI();
   if(FROM_GAME) onTap(document.getElementById('bk'),function(){ mus(null); location.href='../index.html?test=1&from=ta'; }); }   /* ★試作21 from=ta＝ゲームはオープニングを出さずにホームへ */
 function howto(){ menuMode(1);
   // ★試作16 そうさは コントローラーの図で説明（並び・色・絵は本物と同じ。ボタンの絵は本物から写すので 二重に書かない）
@@ -965,6 +990,7 @@ function loop(now){ var dt=now-last; if(st==='run' && !QP){ fN++; fT+=dt; if(fN>
   var rd=Math.min(0.1,(now-last)/1000); last=now; if(st==='goal'){ gT+=rd; if(gT>=0.9 && camO===0) camO=Math.PI; if(gT>=2.7 && !resShown){ resShown=true; showResult(); } }
   TS=(st==='goal' && gT<0.8)?0.3:1; acc+=rd*TS; while(acc>=DT){ step(); acc-=DT; } draw(); hud(); requestAnimationFrame(loop); }   // ★試作11 ゴールの直後 0.8秒は 0.3倍のスロー
 window.__P=function(){ return {balls:balls,breads:breads,gap:gap,ghost:!!ghost,splits:splits,boostT:boostT,sdG:sdG,starN:starN,starK:starK,medal:P.medal,gold:P.gold,pose:heroPose().nm,flip:heroPose().flip,fa:+P.fa.toFixed(2),dpr:DPR,st:st,P:P,kills:kills,got:got,starC:starC,starT:starT,stam:stam,face:face,n:[ens.length,coins.length,hurd.length,pits.length],pits:pits,ens:ens,hurd:hurd,mus:musOn,joy:joy,hold:hold,why:lostWhy}; };
+(function(){ var id=null; try{ id=localStorage.getItem(CH_KEY); }catch(e){} if(id && id!=='men_0' && CHVER[id]) charLoad(id); })();   // ★試作25 前に えらんだキャラ
 title(); step(); requestAnimationFrame(loop);
 })();
 </script>
