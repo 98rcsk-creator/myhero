@@ -161,10 +161,10 @@ def build(cid,RP,RF):
     return poses,fims
 def greenleft(im):   # 不透明なのに 背景の緑に近い 点の数（切りのこし）
     a=np.asarray(im).astype(int); op=a[...,3]>200; g=(a[...,1]>200)&(a[...,0]<90)&(a[...,2]<90); return int((op&g).sum())
-LITE=['b_stand','b_ready','b_run0','b_run1','b_jump','b_slide']   # ★試作26 ライバル用（うしろ姿だけ）
+LITE=['b_stand','b_ready','b_run0','b_run1','b_jump','b_slide','f_run0']   # ★試作26 ライバル用（うしろ姿だけ）。★試作27 表彰台の 正面の絵（f_run0）も
 def write_lite(cid):   # できた <ID>.js から ライバル用の 小さい <ID>_r.js を作る（絵は 同じ ものを そのまま）
     fn=os.path.join(ROOT,'test','ta3d_chars',cid+'.js'); t=open(fn,encoding='utf-8').read(); i=t.index(',',t.index('TA3D_CHAR('))+1
-    o,_=json.JSONDecoder().raw_decode(t[i:]); lo={'poses':{k:o['poses'][k] for k in LITE}}
+    o,_=json.JSONDecoder().raw_decode(t[i:]); lo={'poses':{k:o['poses'][k] for k in LITE+['f_win'] if k in o['poses']}}   # f_win＝表彰台の よろこびの絵（あれば）
     out=os.path.join(ROOT,'test','ta3d_chars',cid+'_r.js')
     s2='/* MyHEROの大運動会 500m走：ライバルの '+NAMES.get(cid,cid)+'（うしろ姿だけ・'+cid+'.js から prep_char.py が作る。手で直さない） */\nTA3D_CHAR_R('+json.dumps(cid)+','+json.dumps(lo,separators=(',',':'))+');\n'
     open(out,'w',encoding='utf-8').write(s2); return out,len(s2.encode())
