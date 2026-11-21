@@ -1,6 +1,7 @@
 # ほかの7人の絵（ChatGPT で ルーベルトの絵を入れかえたもの）を切り分けて、500m走が あとから読みこむ ファイルにする
 #   使い方: python3 docs/assets_src/ta3d_chars/prep_char.py <キャラID> [<キャラID> ...]   → test/ta3d_chars/<キャラID>.js
 #           python3 docs/assets_src/ta3d_chars/prep_char.py --check <出力フォルダ> <キャラID> ...   → 切り分けた絵の一覧（ルーベルトと並べた画像）
+#           python3 docs/assets_src/ta3d_chars/prep_char.py --lite <キャラID> ...   → できた <ID>.js から ライバル用の <ID>_r.js だけ作る（★試作26）
 #   元の絵（このフォルダの <キャラID>/）：
 #     back2_src.png … 直立・剣を抜く（使わない）・パンチ・よーい（1段4体）
 #     all4_src.png  … 白い線で 田の字に4つ：左上＝走る・走る・ジャンプ・うでをふる（使わない）／右上＝スライディング2体（右を使う）／
@@ -160,6 +161,13 @@ def build(cid,RP,RF):
     return poses,fims
 def greenleft(im):   # 不透明なのに 背景の緑に近い 点の数（切りのこし）
     a=np.asarray(im).astype(int); op=a[...,3]>200; g=(a[...,1]>200)&(a[...,0]<90)&(a[...,2]<90); return int((op&g).sum())
+LITE=['b_stand','b_ready','b_run0','b_run1','b_jump','b_slide']   # ★試作26 ライバル用（うしろ姿だけ）
+def write_lite(cid):   # できた <ID>.js から ライバル用の 小さい <ID>_r.js を作る（絵は 同じ ものを そのまま）
+    fn=os.path.join(ROOT,'test','ta3d_chars',cid+'.js'); t=open(fn,encoding='utf-8').read(); i=t.index(',',t.index('TA3D_CHAR('))+1
+    o,_=json.JSONDecoder().raw_decode(t[i:]); lo={'poses':{k:o['poses'][k] for k in LITE}}
+    out=os.path.join(ROOT,'test','ta3d_chars',cid+'_r.js')
+    s2='/* MyHEROの大運動会 500m走：ライバルの '+NAMES.get(cid,cid)+'（うしろ姿だけ・'+cid+'.js から prep_char.py が作る。手で直さない） */\nTA3D_CHAR_R('+json.dumps(cid)+','+json.dumps(lo,separators=(',',':'))+');\n'
+    open(out,'w',encoding='utf-8').write(s2); return out,len(s2.encode())
 def write_js(cid,poses,fims):
     o={'poses':{n:{'d':b64(p['im']),'w':p['im'].width,'h':p['im'].height,'ax':p['ax']} for n,p in poses.items()},'face':[b64(f) for f in fims]}
     os.makedirs(os.path.join(ROOT,'test','ta3d_chars'),exist_ok=True); fn=os.path.join(ROOT,'test','ta3d_chars',cid+'.js')
@@ -179,10 +187,13 @@ def check(out,cid,poses,fims,RP,RF):   # ルーベルト（上の段）と こ�
     p=os.path.join(out,cid+'_check.png'); sheet.convert('RGB').save(p); return p
 if __name__=='__main__':
     args=sys.argv[1:]; out=None
+    if args and args[0]=='--lite':
+        for cid in args[1:]: print(*write_lite(cid))
+        sys.exit(0)
     if args and args[0]=='--check': out=args[1]; args=args[2:]
     RP,RF=rubert()
     for cid in args:
         print('--',cid,NAMES.get(cid)); poses,fims=build(cid,RP,RF)
         gl={n:greenleft(p['im']) for n,p in poses.items()}; gl.update({'face%d'%i:greenleft(f) for i,f in enumerate(fims)}); print('  緑の切りのこし（10点以上）:',{k:v for k,v in gl.items() if v>=10} or 'なし')
         if out: print(check(out,cid,poses,fims,RP,RF))
-        else: print(*write_js(cid,poses,fims))
+        else: print(*write_js(cid,poses,fims)); print(*write_lite(cid))
