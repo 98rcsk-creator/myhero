@@ -74,7 +74,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
     <canvas id="cv"></canvas>
     <div id="tmBox"><div id="tmT">60</div><div id="tmMe">じぶん <b id="tmN">0</b> こ</div></div>
     <div id="tmPause" class="tap">⏸</div>
-    <div id="tag">大運動会・玉入れ 試作1</div>
+    <div id="tag">大運動会・玉入れ 試作2</div>
   </div>
   <div id="ov"></div>
 </div>
@@ -85,19 +85,23 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 (function(){
 'use strict';
 // ===== 大運動会「玉入れ」の試作（ゲーム本体とは別のページ）=====
-//   うしろから見る。画面を上へ はじくと 赤い玉を なげる。60秒で 赤組のかごに たくさん入れて、さいごに みんなで かぞえる（白組より多ければ かち）
+//   うしろから見る。画面を上へ はじくと 赤い玉を なげる。30秒で 赤組のかごに たくさん入れて、さいごに みんなで かぞえる（白組より多ければ かち）
 //   場所は「横 x・高さ y・奥 z（メートル）」。カメラは主人公のうしろ CAM_B・高さ CAM_Y で まっすぐ奥を見る
 var FROM_GAME=/[?&]from=game/.test(location.search);
-var ART=/*ART*/null, CROWD=/*CROWD*/null;
+var ART=/*ART*/null, CROWD=/*CROWD*/null, MON=/*MON*/null;   // MON＝じゃまをする まもの（ゲームの絵・飛ぶまもの）
 var W=390, H=600, F=600, HOR=280, SC=1;
 var CAM_Y=1.5, CAM_B=3.2;                       // カメラ（主人公の 3.2m うしろ・高さ 1.5m）
 var RIM_Y=3.0, RIM_R=0.30, MAG_R=0.40, RIM_HIT=0.52, BAG_D=0.42, POLE_W=0.07;   // かご：ふちの高さ・半径・吸いこむ半径・ふちに当たる半径・あみの深さ
 var BALL_R=0.065, GRAV=9.8, THETA=70*Math.PI/180;   // 玉：半径・重力・なげ上げる角度
-var GAME_T=60, P_TARGET=10, CPU_IN=25, CPU_HIT=0.44;   // 60秒。赤組のなかまは 約25こ入れる。白組は「なかま＋10こ（±2）」＝じぶんが 11こ前後 入れると かてる
+// ★試作2 ユーザー「敵が弱い（はじめてで90こ近く入った）。60秒なら最低60こ入れてくるレベルに」「時間は30秒くらい」
+var GAME_T=30, P_TARGET=30, CPU_IN=6, HIT_R=0.44, HIT_W=0.6;   // 30秒。赤組のなかまは 約6こ。白組は「なかま＋30こ（±2）」＝36こ前後（60秒なら約72こ）＝じぶんが 31こ前後 入れないと かてない
+// ★試作2 だんだん むずかしく（ユーザー「かごが ゆれたり左右に動いたり、障害物があっても」）：0〜10秒 止まる／10〜20秒 ゆっくり ゆれる／20〜30秒 速く ゆれる＋まものが かごの前を横切って 玉を はね返す
+var SWAY=[[10,0.5,3],[20,0.7,2]];                // [はじまる秒, かごが 左右に動く はば(m), 1往復の秒]。かごの所で 1m ≒ 画面 100px
+var MON_T=[20.5], MON_V=1.3, MON_X=1.4, MON_Z=2.9, MON_Y=3.25, MON_R=0.4;   // まものが出る秒・速さ(m/秒)・行ったり来たりする はば(±m)・奥・高さ・当たる半径（玉が かごに落ちる手前の高さ）
 var L_K=0.2, P_SOFT=0.45, LAT_K=0.45, MIN_L=22;  // はじき：ちょうどいい長さ＝画面の高さ×0.2。強さの差を 0.55倍に やわらげる。左右は角度の0.45倍
 var THROW_CD=0.42;                              // 1こ なげてから 次を なげられるまで（ひろう時間）
 var HERO={x:-0.25,z:0}, HK=1.25/300;            // 主人公の立つ所・絵1px が何m か（500m走の絵は 高さ 約300px）
-var TEAM={r:{x:0,z:3.2,n:0,col:'#e8323c',kids:[],plan:[],gap:1,nx:0},w:{x:2.9,z:10,n:0,col:'#ffffff',kids:[],plan:[],gap:1,nx:0}};
+var TEAM={r:{x:0,bx:0,z:3.2,n:0,col:'#e8323c',kids:[],plan:[],gap:1,nx:0},w:{x:2.9,bx:2.9,z:10,n:0,col:'#ffffff',kids:[],plan:[],gap:1,nx:0}};
 var cv=document.getElementById('cv'), g=cv.getContext('2d'), ov=document.getElementById('ov');
 var DPR=Math.min(3,window.devicePixelRatio||1);
 function setRes(d){ DPR=d; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); bgCv=null; TEAM.r.cv=TEAM.w.cv=null; }
@@ -109,6 +113,7 @@ function pj(x,y,z){ var d=z+CAM_B; if(d<0.25) return null; var s=F/d; return {x:
 var PS={}, KID=[];
 if(ART) Object.keys(ART).forEach(function(k){ var p=ART[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; PS[k]={im:im,w:p.w,h:p.h,ax:p.ax}; });
 if(CROWD) CROWD.forEach(function(d){ var im=new Image(); im.src=d; KID.push(im); });
+var MONIM=null; if(MON){ MONIM=new Image(); MONIM.src=MON; }
 // ポーズ（玉入れの絵が届いたら ここを差しかえる）。ball＝玉を描く手の位置（絵の中のpx）。null＝描かない
 var POSE={hold:{nm:'b_stand',ball:[121,216]}, throwP:{nm:'b_punch',ball:null}, pick:{nm:'b_ready',ball:null}, ready:{nm:'b_ready',ball:null}, win:{nm:'b_jump',ball:null}, lose:{nm:'b_stand',ball:null}};
 var HAND={nm:'b_punch',x:180,y:95};             // 投げる手（ここから玉が出る）
@@ -165,7 +170,7 @@ function bakeBg(){ var c=document.createElement('canvas'); c.width=Math.round(W*
   gr=x.createLinearGradient(0,HOR,0,H); gr.addColorStop(0,'#dcbb84'); gr.addColorStop(1,'#b98b52'); x.fillStyle=gr; x.fillRect(0,HOR,W,H-HOR);
   x.fillStyle='rgba(120,80,40,0.16)'; for(var q=0;q<160;q++){ var py=HOR+Math.pow((q*37%100)/100,1.6)*(H-HOR), px=(q*71%97)/97*W, pr=0.6+(py-HOR)/(H-HOR)*1.6; x.beginPath(); x.arc(px,py,pr,0,6.2832); x.fill(); }
   // なげる線（かごのまわりの白い円）
-  ['r','w'].forEach(function(k){ var T=TEAM[k]; x.strokeStyle='rgba(255,255,255,0.9)'; x.beginPath(); for(var a=0;a<=48;a++){ var an=a/48*6.2832, o=pj(T.x+Math.sin(an)*2.6,0,T.z+Math.cos(an)*2.6); if(!o) continue; x.lineWidth=Math.max(1,0.05*o.s); if(a) x.lineTo(o.x,o.y); else x.moveTo(o.x,o.y); } x.stroke(); });
+  ['r','w'].forEach(function(k){ var T=TEAM[k]; x.strokeStyle='rgba(255,255,255,0.9)'; x.beginPath(); for(var a=0;a<=48;a++){ var an=a/48*6.2832, o=pj(T.bx+Math.sin(an)*2.6,0,T.z+Math.cos(an)*2.6); if(!o) continue; x.lineWidth=Math.max(1,0.05*o.s); if(a) x.lineTo(o.x,o.y); else x.moveTo(o.x,o.y); } x.stroke(); });
   // 万国旗（2本のひもを 画面の上に）
   function flags(x0,y0,x1,y1,sag,ph){ x.strokeStyle='rgba(60,60,60,0.7)'; x.lineWidth=1; x.beginPath(); for(var i=0;i<=30;i++){ var t=i/30, fx=x0+(x1-x0)*t, fy=y0+(y1-y0)*t+Math.sin(t*Math.PI)*sag; if(i) x.lineTo(fx,fy); else x.moveTo(fx,fy); } x.stroke();
     var C=['#e8323c','#ffd23f','#2a9df4','#3cc46a','#ffffff','#ff8a3c','#9b5de5']; for(var j=1;j<16;j++){ var t2=j/16, fx2=x0+(x1-x0)*t2, fy2=y0+(y1-y0)*t2+Math.sin(t2*Math.PI)*sag; x.fillStyle=C[(j+ph)%7]; x.beginPath(); x.moveTo(fx2-7,fy2); x.lineTo(fx2+7,fy2); x.lineTo(fx2,fy2+13); x.closePath(); x.fill(); } }
@@ -187,21 +192,25 @@ function bakeBasket(T,tm){ var G=basketGeo(T), pad=Math.ceil(G.rx*0.4)+4, cw=Mat
   x.lineWidth=Math.max(1.5,G.s*0.04); x.strokeStyle=red?'#d4202c':'#f4f6fb'; x.beginPath(); x.save(); x.translate(cx,cy); x.scale(rx,ry); x.moveTo(1,0); x.arc(0,0,1,0,6.2832); x.restore(); x.stroke();
   x.lineWidth=Math.max(1,G.s*0.015); x.strokeStyle=red?'rgba(255,170,170,0.9)':'#ffffff'; x.beginPath(); x.save(); x.translate(cx,cy); x.scale(rx,ry); x.moveTo(0.7,0.72); x.arc(0,0,1,0.8,2.3); x.restore(); x.stroke();
   T.cv=c; T.cw=cw; T.ch=ch; T.pad=pad; T.dirty=0; }
-function basketDraw(T,tm){ var G=basketGeo(T), base=pj(T.x,0,T.z); if(!T.cv||T.dirty) bakeBasket(T,tm);
-  var pw=Math.max(2,POLE_W*G.s), gr=g.createLinearGradient(G.o.x-pw/2,0,G.o.x+pw/2,0); gr.addColorStop(0,'#9aa3b0'); gr.addColorStop(0.45,'#ffffff'); gr.addColorStop(1,'#7d8694');
-  g.fillStyle=gr; g.fillRect(G.o.x-pw/2,G.o.y+G.bd*0.8,pw,base.y-G.o.y-G.bd*0.8);
+function basketDraw(T,tm){ var G=basketGeo(T), base=pj(T.bx,0,T.z); if(!T.cv||T.dirty) bakeBasket(T,tm);
+  // ポール：根もと（動かない）から かごの下まで。★試作2 かごが ゆれると ななめになる
+  var pw=Math.max(2,POLE_W*G.s), ty=G.o.y+G.bd*0.8; g.lineCap='butt'; g.lineWidth=pw; g.strokeStyle='#a7afbb'; g.beginPath(); g.moveTo(base.x,base.y); g.lineTo(G.o.x,ty); g.stroke();
+  g.lineWidth=Math.max(1,pw*0.35); g.strokeStyle='rgba(255,255,255,0.9)'; g.beginPath(); g.moveTo(base.x-pw*0.12,base.y); g.lineTo(G.o.x-pw*0.12,ty); g.stroke();
   g.drawImage(T.cv,G.o.x-T.cw/2,G.o.y-T.pad-G.ry,T.cw,T.ch); }
 
 // ---- まわりの子（観客の絵を 赤組・白組の子に）：かごの むこうがわに立って、こちら向きに 投げる ----
 function kidsBuild(){ var R=[0,1,2,3], Wt=[4,5,6,7];   // CROWD は build.py で 赤組4人・白組4人の順に入れている
   TEAM.r.kids=[]; TEAM.w.kids=[];
-  [-60,-42,22,44].forEach(function(b,i){ var a=b*Math.PI/180; TEAM.r.kids.push({x:TEAM.r.x+Math.sin(a)*2.6,z:TEAM.r.z+Math.cos(a)*2.6,im:R[i],hop:0,ph:i*1.7}); });
-  [-50,-20,12,42].forEach(function(b,i){ var a=b*Math.PI/180; TEAM.w.kids.push({x:TEAM.w.x+Math.sin(a)*2.6,z:TEAM.w.z+Math.cos(a)*2.6,im:Wt[i],hop:0,ph:i*2.1}); }); }
+  [-60,-42,22,44].forEach(function(b,i){ var a=b*Math.PI/180; TEAM.r.kids.push({x:TEAM.r.bx+Math.sin(a)*2.6,z:TEAM.r.z+Math.cos(a)*2.6,im:R[i],hop:0,ph:i*1.7}); });
+  [-50,-20,12,42].forEach(function(b,i){ var a=b*Math.PI/180; TEAM.w.kids.push({x:TEAM.w.bx+Math.sin(a)*2.6,z:TEAM.w.z+Math.cos(a)*2.6,im:Wt[i],hop:0,ph:i*2.1}); }); }
 kidsBuild();
 function kidDraw(k,tAll){ var o=pj(k.x,0,k.z), im=KID[k.im]; if(!o||!im||!im.complete||!im.naturalWidth) return; var h=1.15*o.s, w=h*im.naturalWidth/im.naturalHeight,
     up=k.hop>0?Math.sin((1-k.hop/0.4)*Math.PI)*0.28*o.s:Math.abs(Math.sin(tAll*2.4+k.ph))*0.03*o.s;
   g.drawImage(shadowSprite(),o.x-w*0.45,o.y-w*0.12,w*0.9,w*0.24); g.drawImage(im,o.x-w/2,o.y-h-up,w,h); }
 
+// ---- じゃまをする まもの（★試作2）：かごの手前を 羽ばたいて横切る。当たると ゆれる ----
+function monDraw(M){ var o=pj(M.x,M.y,M.z); if(!o||!MONIM||!MONIM.complete||!MONIM.naturalWidth) return; var w=0.8*o.s, h=w*MONIM.naturalHeight/MONIM.naturalWidth, fl=1+Math.sin(M.ph*14)*0.08, wb=M.wob>0?Math.sin(M.wob*40)*0.25:0;
+  g.save(); g.translate(o.x,o.y); g.rotate(wb); g.scale(M.vx<0?-1:1,fl); g.drawImage(MONIM,-w/2,-h/2,w,h); g.restore(); }
 // ---- 主人公 ----
 var hero={pose:'hold',t:0};
 function heroDraw(tAll){ var ps=POSE[hero.pose]||POSE.hold, p=PS[ps.nm]; if(!p||!p.im.complete||!p.im.naturalWidth) return; var o=pj(HERO.x,0,HERO.z), k=o.s*HK, bob=0;
@@ -216,12 +225,15 @@ function heroDraw(tAll){ var ps=POSE[hero.pose]||POSE.hold, p=PS[ps.nm]; if(!p||
 var balls=[], pops=[], parts=[], trail=[], banner=null;
 function launch(S,tx,tz,tm,own,th){ var dx=tx-S.x, dz=tz-S.z, R=Math.sqrt(dx*dx+dz*dz), dy=RIM_Y-S.y, t=Math.tan(th||THETA), den=Math.max(0.25,R*t-dy), vh=Math.sqrt(GRAV*R*R/(2*den));
   var b={x:S.x,y:S.y,z:S.z,vx:dx/R*vh,vy:vh*t,vz:dz/R*vh,tm:tm,own:own,st:'fly',bn:0,age:0}; balls.push(b); return b; }
-function myThrow(dx,L){ var S=relPt(), T=TEAM.r, hx=T.x-S.x, hz=T.z-S.z, D=Math.sqrt(hx*hx+hz*hz), p=L/(L_K*H), pe=clamp(1+(p-1)*P_SOFT,0.4,1.8), a=clamp(Math.atan2(dx,L),-0.7,0.7)*LAT_K, a0=Math.atan2(hx,hz), R=D*pe;
+function myThrow(dx,L){ var S=relPt(), T=TEAM.r, hx=T.bx-S.x, hz=T.z-S.z, D=Math.sqrt(hx*hx+hz*hz), p=L/(L_K*H), pe=clamp(1+(p-1)*P_SOFT,0.4,1.8), a=clamp(Math.atan2(dx,L),-0.7,0.7)*LAT_K, a0=Math.atan2(hx,hz), R=D*pe;
   var b=launch(S,S.x+Math.sin(a0+a)*R,S.z+Math.cos(a0+a)*R,'r',true); b.dir=[Math.sin(a0),Math.cos(a0)]; me.thr++; sfxN(2300,650,0.13,0.2); hero.pose='throwP'; hero.t=0; cd=THROW_CD; }
+function flightT(S,tx,tz,th){ var dx=tx-S.x, dz=tz-S.z, R=Math.sqrt(dx*dx+dz*dz), t=Math.tan(th), den=Math.max(0.25,R*t-(RIM_Y-S.y)); return R/Math.sqrt(GRAV*R*R/(2*den)); }
+function rimXAt(T,tf){ return T===TEAM.r?T.bx+swA*Math.sin(swPh+tf*6.2832/swP):T.x; }   // ★試作2 tf 秒あとの かごの位置（コンピューターは 先を読んで 投げる）
 function cpuThrow(tm,hit){ var T=TEAM[tm], S, k;
   if(Math.random()<0.5 && T.kids.length){ k=T.kids[Math.random()*T.kids.length|0]; k.hop=0.4; S={x:k.x+0.15,y:0.85,z:k.z-0.1}; }
-  else { var a=(Math.random()<0.5?-1:1)*(1.25+Math.random()*0.9); S={x:T.x+Math.sin(a)*2.6,y:0.85,z:T.z+Math.cos(a)*2.6}; }
-  var an=Math.random()*6.2832, rr=hit?0.25*Math.sqrt(Math.random()):0.5+Math.random()*0.6; launch(S,T.x+Math.cos(an)*rr,T.z+Math.sin(an)*rr,tm,false,(62+Math.random()*12)*Math.PI/180); }   // 入る／入らないは 先に決めた順（plan）。外すときは ふちに当たるくらい〜大きく外す
+  else { var a=(Math.random()<0.5?-1:1)*(1.25+Math.random()*0.9); S={x:T.bx+Math.sin(a)*2.6,y:0.85,z:T.z+Math.cos(a)*2.6}; }
+  var an=Math.random()*6.2832, rr=hit?0.25*Math.sqrt(Math.random()):0.5+Math.random()*0.6, th=(62+Math.random()*12)*Math.PI/180, ox=Math.cos(an)*rr, oz=T.z+Math.sin(an)*rr, tx=T.x+ox;
+  for(var it=0;it<2;it++) tx=rimXAt(T,flightT(S,tx,oz,th))+ox; launch(S,tx,oz,tm,false,th); }   // 入る／入らないは 先に決めた順（plan）。外すときは ふちに当たるくらい〜大きく外す
 function judgeMiss(b,T){ if(!b.own||b.judged) return; b.judged=1; combo=0; var dx=b.x-T.x, dz=b.z-T.z, al=dx*b.dir[0]+dz*b.dir[1], lat=dx*b.dir[1]-dz*b.dir[0], t;
   if(Math.sqrt(dx*dx+dz*dz)<RIM_HIT+0.05) t='おしい！'; else if(Math.abs(al)>=Math.abs(lat)) t=al<0?'とどかない！ もうすこし ながく':'とびすぎ！ もうすこし みじかく'; else t=lat>0?'みぎに それた':'ひだりに それた';
   var o=pj(T.x,RIM_Y,T.z); pops.push({x:o.x,y:o.y-26,t:t,c:'#ffffff',life:1.0,sz:15}); }
@@ -233,6 +245,8 @@ function ballStep(dt){
   for(var i=balls.length-1;i>=0;i--){ var b=balls[i], T=TEAM[b.tm]; b.age+=dt;
     if(b.st==='fly'){ var py=b.y; b.x+=b.vx*dt; b.y+=b.vy*dt; b.z+=b.vz*dt; b.vy-=GRAV*dt;
       var dx=b.x-T.x, dz=b.z-T.z, d=Math.sqrt(dx*dx+dz*dz);
+      if(b.tm==='r' && !b.rim) for(var m=0;m<mons.length;m++){ var M=mons[m], mx=b.x-M.x, my=b.y-M.y, mz=b.z-M.z; if(mx*mx+my*my+mz*mz<MON_R*MON_R){   // ★試作2 まものに当たった：手前へ はね返る
+          b.rim=1; b.vz=-Math.abs(b.vz)*0.45-0.6; b.vy=Math.max(0,b.vy)*0.3+1.2; b.vx+=mx*3; M.wob=0.35; if(b.own){ tone('triangle',330,660,0.12,0.07); combo=0; b.judged=1; var mo=pj(M.x,M.y,M.z); if(mo) pops.push({x:mo.x,y:mo.y-30,t:'じゃまされた！',c:'#ffb0e0',life:1.0,sz:16}); } break; } }
       if(py>RIM_Y && b.y<=RIM_Y && b.vy<0 && !b.rim){
         if(d<MAG_R){ b.st='in'; scoreIn(b,T,b.tm); continue; }
         if(d<RIM_HIT){ b.rim=1; var nx=dx/(d||1), nz=dz/(d||1); b.vx=nx*1.5+b.vx*0.25; b.vz=nz*1.5+b.vz*0.25; b.vy=Math.abs(b.vy)*0.3; b.y=RIM_Y+0.01; if(b.own) tone('square',1500,1350,0.07,0.04); }
@@ -273,17 +287,24 @@ addEventListener('mouseup',function(e){ if(mDown){ mDown=null; swEnd({identifier
 document.addEventListener('click',function(e){ var el=e.target.closest&&e.target.closest('.tap'); if(el && el._tap) el._tap(); });
 function onTap(el,fn){ el.classList.add('tap'); el._tap=fn; }
 
-// ---- すすみかた：title → ready（よーい）→ play（60秒）→ stop（そこまで！）→ count（かぞえる）→ final → res ----
+// ---- すすみかた：title → ready（よーい）→ play（30秒）→ stop（そこまで！）→ count（かぞえる）→ final → res ----
 var st='title', tAll=0, stT=0, left=GAME_T, ci=0, cT=0, winner='';
-function resetGame(){ balls=[]; pops=[]; parts=[]; trail=[]; banner=null; TEAM.r.n=TEAM.w.n=0; TEAM.r.dirty=TEAM.w.dirty=1; me={n:0,thr:0}; combo=0; cd=0; queued=null; left=GAME_T; hero.pose='hold';
+var swA=0, swP=3, swPh=0, phase=0, mons=[], monI=0;   // ★試作2 かごの ゆれ（はば・1往復の秒・角度）・いまの段階・まもの
+function resetGame(){ balls=[]; pops=[]; parts=[]; trail=[]; banner=null; TEAM.r.n=TEAM.w.n=0; TEAM.r.dirty=TEAM.w.dirty=1; me={n:0,thr:0}; combo=0; cd=0; queued=null; left=GAME_T; hero.pose='hold'; swA=0; swP=3; swPh=0; phase=0; mons=[]; monI=0; TEAM.r.x=TEAM.r.bx;
   // なかま（赤組）と白組が入れる数を 先に決めて、入る／入らないを まぜて 順に投げる。運だけで 大きく かわらないように（じぶんが 何こ入れれば かてるか ±2 におさまる）
-  var rIn=CPU_IN+rint(-2,2); plan(TEAM.r,rIn); plan(TEAM.w,rIn+P_TARGET+rint(-2,2)); hud(); }
+  var rIn=CPU_IN+rint(-1,1); plan(TEAM.r,rIn,HIT_R); plan(TEAM.w,rIn+P_TARGET+rint(-2,2),HIT_W); hud(); }
 function rint(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
-function plan(T,nIn){ var n=Math.round(nIn/CPU_HIT), a=[]; for(var i=0;i<n;i++) a.push(i<nIn); for(i=n-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; }
+function plan(T,nIn,hit){ var n=Math.round(nIn/hit), a=[]; for(var i=0;i<n;i++) a.push(i<nIn); for(i=n-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; }
   T.plan=a; T.gap=(GAME_T-4)/n; T.nx=0.5+Math.random()*T.gap; }
 function say(t,c,sz,life){ banner={t:t,c:c||'#fff',sz:sz||44,life:life||1.0,max:life||1.0}; }
 function step(dt){ tAll+=dt; stT+=dt;
   TEAM.r.kids.concat(TEAM.w.kids).forEach(function(k){ if(k.hop>0) k.hop=Math.max(0,k.hop-dt); });
+  // ★試作2 かごの ゆれ：段階ごとの はば へ なめらかに近づく（とつぜん 動かない）。おわったら まん中へ もどる
+  var el=GAME_T-left, ph=st==='play'?(el>=SWAY[1][0]?2:(el>=SWAY[0][0]?1:0)):0, tA=ph?SWAY[ph-1][1]:0; if(ph) swP=SWAY[ph-1][2];
+  swA+=(tA-swA)*Math.min(1,dt*1.5); swPh+=dt*6.2832/swP; TEAM.r.x=TEAM.r.bx+swA*Math.sin(swPh);
+  if(st==='play' && ph>phase){ phase=ph; if(ph===1) say('かごが うごくよ！','#ffe44d',36,1.3); else say('ラスト10びょう！','#ff8a8a',40,1.3); }
+  if(st==='play' && monI<MON_T.length && el>=MON_T[monI]){ var dir=monI%2?-1:1; mons.push({x:-2.8*dir,y:MON_Y,z:MON_Z,vx:MON_V*dir,ph:0,wob:0}); monI++; sfxN(700,260,0.25,0.12); }
+  for(var mi=mons.length-1;mi>=0;mi--){ var M=mons[mi]; M.x+=M.vx*dt; M.ph+=dt; if(st==='play' && Math.abs(M.x)>MON_X && M.x*M.vx>0) M.vx=-M.vx;   /* おわるまで かごの上を 行ったり来たり・おわったら 横へ 出ていく */ M.y=MON_Y+Math.sin(M.ph*5)*0.08; if(M.wob>0) M.wob-=dt; if(Math.abs(M.x)>3.2) mons.splice(mi,1); }
   if(st==='ready'){ hero.pose=stT<0.9?'hold':'ready'; if(stT>=1.6){ st='play'; stT=0; whistle(0.22); say('スタート！','#ffe44d',46,0.8); mus('U'); hero.pose='hold'; } }
   else if(st==='play'){ left-=dt; if(left<=0){ left=0; st='stop'; stT=0; whistle(0.95); say('そこまで！','#ffffff',48,1.6); mus(null); hero.pose='hold'; }
     ['r','w'].forEach(function(tm){ var T=TEAM[tm]; T.nx-=dt; if(T.nx<=0 && T.plan.length){ cpuThrow(tm,T.plan.pop()); T.nx=T.gap*(0.55+Math.random()*0.9); } });
@@ -312,8 +333,9 @@ function skipCount(){ if(st!=='count') return; while(st==='count'){ ci++; var an
 
 // ---- 記録（じぶんが入れた数のベスト・あそんだ回数・かった回数）。My HERO の「大運動会」の画面も ここを読む ----
 var REC_KEY='tama_rec';
-function recLoad(){ try{ var o=JSON.parse(localStorage.getItem(REC_KEY)||'null'); return (o && typeof o==='object')?o:{best:0,play:0,win:0}; }catch(e){ return {best:0,play:0,win:0}; } }
+function recLoad(){ try{ var o=JSON.parse(localStorage.getItem(REC_KEY)||'null'); return (o && typeof o==='object' && o.v===2)?o:{best:0,play:0,win:0,v:2}; }catch(e){ return {best:0,play:0,win:0,v:2}; } }   // ★試作2 v:2＝30秒の記録（60秒のころの記録は 0 から やりなおす）
 var lastNew=false;
+(function(){ var o=recLoad(); try{ localStorage.setItem(REC_KEY,JSON.stringify(o)); }catch(e){} })();   // ★試作2 60秒のころの記録を ひらいた時点で 0 に（My HERO の大運動会の画面も 0 になる）
 function recSave(){ var o=recLoad(); o.play=(o.play||0)+1; if(winner==='r') o.win=(o.win||0)+1; lastNew=me.n>(o.best||0); if(lastNew) o.best=me.n; try{ localStorage.setItem(REC_KEY,JSON.stringify(o)); }catch(e){} }
 
 // ---- 描く ----
@@ -325,6 +347,7 @@ function draw(){ g.setTransform(DPR,0,0,DPR,0,0);
   TEAM.r.kids.forEach(function(k){ L.push({d:k.z,f:function(){ kidDraw(k,tAll); }}); });
   L.push({d:TEAM.w.z,f:function(){ basketDraw(TEAM.w,'w'); }}); L.push({d:TEAM.r.z,f:function(){ basketDraw(TEAM.r,'r'); }});
   balls.forEach(function(b){ L.push({d:b.z-(b.st==='in'||b.st==='out'?0.4:0),f:function(){ var o=pj(b.x,b.y,b.z); if(o) ballAt(b.tm,o.x,o.y,Math.max(1.2,BALL_R*o.s)); }}); });
+  mons.forEach(function(M){ L.push({d:M.z,f:function(){ monDraw(M); }}); });
   L.push({d:HERO.z,f:function(){ heroDraw(tAll); }});
   L.sort(function(a,c){ return c.d-a.d; }); for(i=0;i<L.length;i++) L[i].f();
   // はじいた あと（指の線）
@@ -365,7 +388,8 @@ function howto(){ show('<div class="uiTitle">📖 あそびかた</div>'
       +'<div class="htChip"><big>👆</big><span>画面を <em>上へ シュッ！</em>と はじくと<br>玉を なげる</span></div>'
       +'<div class="htChip"><big>📏</big><span><em>ながく</em> はじくと とおくへ<br><em>みじかく</em> はじくと ちかくへ</span></div>'
       +'<div class="htChip"><big>↗️</big><span>ななめに はじくと 左右へ</span></div>'
-      +'<div class="htChip"><big>🧺</big><span>60びょうで <em>赤組の かご</em>に<br>たくさん 入れよう</span></div>'
+      +'<div class="htChip"><big>🧺</big><span>'+GAME_T+'びょうで <em>赤組の かご</em>に<br>たくさん 入れよう</span></div>'
+      +'<div class="htChip"><big>⚠️</big><span>とちゅうから <em>かごが ゆれる</em><br>さいごは まものが じゃまするよ</span></div>'
       +'<div class="htChip"><big>🔢</big><span>さいごに みんなで かぞえる<br>白組より 多ければ <em>かち！</em></span></div>'
     +'</div>'
     +'<div class="uiBtn go mid" id="hg" style="margin-top:6px">▶ スタート</div><div class="uiBtn info mid" id="hb">◀ もどる</div>','htv');
