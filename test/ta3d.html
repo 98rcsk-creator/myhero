@@ -118,6 +118,10 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 .chI.on{border:3px solid #ffd24a;transform:scale(1.14);box-shadow:0 0 10px rgba(255,210,74,0.7)}
 .chI.off{opacity:0.35;filter:grayscale(1)}
 #chNm{font-size:13px;font-weight:900;color:#fff2b8;text-shadow:0 1px 3px rgba(0,0,0,0.8);min-height:17px}
+/* ★試作29 むずかしさ（4つ。えらんだのは 色つき・白いわく） */
+#lvPick{display:flex;gap:5px}
+.lvB{width:78px;padding:7px 0;border-radius:999px;box-sizing:border-box;text-align:center;white-space:nowrap;font-size:12px;font-weight:900;letter-spacing:-0.3px;color:#c9d6ea;background:rgba(10,24,60,0.78);border:2px solid rgba(255,255,255,0.25)}
+.lvB.on{color:#fff;background:var(--c);border-color:#fff;box-shadow:0 3px 0 rgba(0,0,0,0.3),0 0 10px var(--c)}
 #ov .best{width:290px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
 #ov .best .l{font-size:12px;font-weight:bold;color:#b4c6dc;text-align:left}
 #ov .best .v{font:900 26px Menlo,"SF Mono",monospace;color:#ffe44d}
@@ -325,7 +329,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">大運動会・試作28</div>
+    <div id="tag">大運動会・試作29</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div><div id="taRk"></div></div>
   </div>
   <div id="pad">
@@ -839,8 +843,14 @@ function chUI(){ var w=document.getElementById('chPick'); if(!w) return; for(var
   var nm=document.getElementById('chNm'), c=CHARS.filter(function(x){ return x[0]===(chBusy||curChar); })[0]; if(nm) nm.textContent=chBusy?(c[1]+' を よみこみ中…'):c[1]; }
 // ★試作26 4人で レース（ユーザー「えらんだキャラ いがいで ランダムに3人。自分を入れて4人で 順位を きそう」）。ライバルは となりのレーンを まっすぐ走る（ハードル・穴は とぶ／ゲートは すべる）。
 //   まもの・主人公とは ぶつからない。うしろ姿の絵だけ使うので 小さいファイル test/ta3d_chars/<ID>_r.js（1人 約0.1MB）を ホームで 先に読む
-var CHR={}, RIV=[], rivPick=[], rivBusy=0, raceT=0, RIV_N=4, RIV_T0=[62,66,70,75], RIV_D=[-4,-1,2,6];   // ★試作27 5人で レース（ライバル4人＝レース5つ ぜんぶ）。ゴールの目やす：じこベスト＋RIV_D 秒（記録が まだなら RIV_T0）。55〜80秒・くじで わりあて（±0.75秒）
-function rivTargets(){ var b=best(); return (b?RIV_D.map(function(d){ return b+d; }):RIV_T0.slice()).map(function(v){ return clamp(v,55,80); }); }
+var CHR={}, RIV=[], rivPick=[], rivBusy=0, raceT=0, RIV_N=4;   // ★試作27 5人で レース（ライバル4人＝レース5つ ぜんぶ）
+// ★試作29 むずかしさを 4つから えらぶ（ユーザー「思った以上に 敵のレベル高い。結構ちゃんとやって5位。イージー、ハード、ベリーハードみたいに 何段階か」）。
+//   試作27 の「じこベストに あわせる」は やめた：1回 いい記録（54秒くらい）が出ると、そのあと ずっと 55〜58秒の ライバルになる（スクショ 56.7/57.1/58.0 で 5位。試算でも 60秒なら 88% 5位）。
+//   数字は ゴールの目やす（秒）。±0.75 の くじ・ひきはなすと おそく／おくれると はやく（rivStep）は そのまま。400回の試算（じぶんが 一定の はやさ）：
+//   イージー 65秒より はやければ 1位・70秒で 2位／ノーマル 58秒で 1位・60秒で 8割 1位・62秒で 2位／ハード 55秒で 8割 1位・58秒で 3位／ベリーハード 49秒（ずっとダッシュ）で 1位
+var LV=[['イージー',[68,71,74,77],'#33b257'],['ノーマル',[61,64,67,70],'#2f86e0'],['ハード',[56,58,60,63],'#f07c1e'],['ベリーハード',[51,53,55,57],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
+try{ var lvS=parseInt(localStorage.getItem(LV_KEY),10); if(lvS>=0 && lvS<LV.length) lv=lvS; }catch(e){}
+function rivTargets(){ return LV[lv][1].slice(); }
 window.TA3D_CHAR_R=function(id,o){ var ps={}; Object.keys(o.poses).forEach(function(k){ var p=o.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; ps[k]={im:im,w:p.w,h:p.h,ax:p.ax}; }); CHR[id]={PS:ps}; };
 function shuf(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function rivArt(id){ return CH[id]?CH[id].PS:(CHR[id]?CHR[id].PS:null); }
@@ -1311,16 +1321,33 @@ function podStart(){ st='podium'; podT=0; podSnd=[0,0,0]; podEv={}; podK=-1; pod
 function podSkip(){ podT=Math.max(podT,POD_END); podEv={go:1,cn:1,c2:1,l0:1,l1:1,l2:1,me:1,end:1}; podSnd=[1,1,1]; pdL.classList.add('go','end'); }   // タップ：さいごの場面へ（フラッシュ・音は なし）
 function podEnd(){ if(st!=='podium') return; st='goal'; if(pdL){ pdL.className=''; pdIn.className=''; } igP=[]; mus('C'); showResult(); }
 function podBurst(x,y,c,n){ for(var i=0;i<n;i++){ var a=i/n*6.283, v=2+Math.random()*3.2; igP.push({k:'f',x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c:i%3?c:'#ffffff',l:40+Math.random()*20,ml:60}); } igP.push({k:'b',x:x,y:y,l:16,ml:16}); }
-function neckOf(p){ return p.nk||(p.nk={x:p.ax, y:p.h-160}); }   // 首＝足から 160（★試作28 絵は 体の高さを ルーベルトに そろえてあるので 8人とも 同じ。
-//   はばの いちばん 細い行で さがすと、髪が長い・かざりが たれる子（エルザ・ブリギッタ）は 胸や こしを ひろう。細い行で はかった 4人は 156〜161。f_win が とどいたら はかりなおす）
-function medalDraw(x,y,rk){ var C=[['#fff3a8','#ffd23a','#c9930f'],['#ffffff','#d9e2ec','#8e9bab'],['#ffd2a8','#e08a48','#9a5222']][rk];
-  g.lineCap='round'; g.lineWidth=5; g.strokeStyle='#e8323c'; g.beginPath(); g.moveTo(x-9,y-3); g.lineTo(x-2,y+13); g.stroke(); g.strokeStyle='#2a6fd0'; g.beginPath(); g.moveTo(x+9,y-3); g.lineTo(x+2,y+13); g.stroke();
-  var gr=g.createRadialGradient(x-4,y+18,2,x,y+22,13); gr.addColorStop(0,C[0]); gr.addColorStop(0.6,C[1]); gr.addColorStop(1,C[2]); g.fillStyle=gr; g.beginPath(); g.arc(x,y+22,12,0,7); g.fill(); g.lineWidth=1.5; g.strokeStyle=C[2]; g.stroke();
-  g.lineWidth=1; g.strokeStyle='rgba(255,255,255,0.7)'; g.beginPath(); g.arc(x,y+22,8.6,0,7); g.stroke();   // ★試作28 内側の わく
-  g.save(); g.beginPath(); g.arc(x,y+22,12,0,7); g.clip(); g.translate(x+((podT*0.7+rk*0.37)%1.4-0.45)*48,y+22); g.rotate(0.55); g.fillStyle='rgba(255,255,255,0.6)'; g.fillRect(-3,-20,6,40); g.restore();   // ★試作28 ツヤが すっと 走る
-  txt(String(rk+1),x,y+27,13,'#ffffff'); }
+// ★試作29 メダルを「首に かけた」見た目に（ユーザー「首から かけたと 言うより、ただ 貼り付けたみたい」）。
+//   試作28 は あご（8人とも 足から 157〜160）の上から 短い V字の リボン＋すぐ下に 大きい円（直径 約37px）で、体と いっしょに 動くだけ＝胸の バッジに 見えた。
+//   いまは：首の 両わき（足から 155・まん中から ±13）から 帯が 2本 → 金具 → メダル。上は 首に 止めたまま、下だけ ふりこのように ゆれて、少し くるっと まわる（光が うごく）。
+//   体に うすい 影。かける ときは 輪の形の リボンが 上から おりてきて 首に かかる。長さの 単位は 絵の 1（体の高さ 300＝ルーベルト）
+var MED_C=[['#fff3a8','#ffd23a','#c9930f'],['#ffffff','#d9e2ec','#8e9bab'],['#ffd2a8','#e08a48','#9a5222']], MED_NY=155, MED_W=13, MED_L=20, MED_R=23;
+function medStrap(xt,yt,xb,yb,wt,wb){ g.beginPath(); g.moveTo(xt-wt/2,yt); g.lineTo(xt+wt/2,yt); g.lineTo(xb+wb/2,yb); g.lineTo(xb-wb/2,yb); g.closePath(); }
+function medDisk(rk,R,tw,t){ var C=MED_C[rk], sx=0.8+0.2*Math.cos(tw), ex=(1-sx)*R*0.9*(Math.sin(tw)<0?-1:1);   // tw＝くるっと まわる角度（横に ちぢむ＋ふちの 厚み）
+  g.fillStyle='rgba(0,0,0,0.25)'; g.beginPath(); oval(R*0.12,R*0.18,R*sx,R); g.fill();   // 体に おちる 影
+  g.fillStyle=C[2]; g.beginPath(); oval(ex,0,R*sx,R); g.fill();   // ふちの 厚み
+  var gr=g.createRadialGradient(-R*0.35*sx,-R*0.35,R*0.1,0,0,R*1.05); gr.addColorStop(0,C[0]); gr.addColorStop(0.6,C[1]); gr.addColorStop(1,C[2]); g.fillStyle=gr; g.beginPath(); oval(0,0,R*sx,R); g.fill();
+  g.lineWidth=Math.max(1,R*0.07); g.strokeStyle='rgba(255,255,255,0.7)'; g.beginPath(); oval(0,0,R*0.72*sx,R*0.72); g.stroke();
+  g.save(); g.beginPath(); oval(0,0,R*sx,R); g.clip(); g.translate(((t*0.7+rk*0.37)%1.4-0.45)*R*4,0); g.rotate(0.55); g.fillStyle='rgba(255,255,255,0.55)'; g.fillRect(-R*0.25,-R*1.7,R*0.5,R*3.4); g.restore();   // ツヤが すっと 走る
+  g.save(); g.scale(sx,1); txt(String(rk+1),0,R*0.36,R*1.05,'#ffffff'); g.restore(); }
+function podMedal(rk,u,t,mt,mk){ var ay=-MED_NY*u, R=MED_R*u, C=MED_C[rk];   // いまの 座標：足の まん中（頭の まん中の 真下）が 0
+  if(mk<1){ var dy=-(1-mk)*(1-mk)*podH*0.7-46*u*(1-mk), ly=ay-8*u+dy;   // おりてくる：輪の リボン＋メダル
+    g.lineWidth=5*u; g.lineCap='round'; g.strokeStyle='#e8323c'; g.beginPath(); g.arc(0,ly,22*u,Math.PI*0.5,Math.PI*1.5); g.stroke(); g.strokeStyle='#2a6fd0'; g.beginPath(); g.arc(0,ly,22*u,-Math.PI*0.5,Math.PI*0.5); g.stroke();
+    g.save(); g.translate(0,ly+22*u+R); medDisk(rk,R,0,t); g.restore(); return; }
+  var tau=t-mt-0.5, th=0.07*Math.sin(t*2.3+rk*1.9)+0.3*Math.exp(-3*tau)*Math.sin(9*tau), sp=5*u*Math.exp(-5*tau)*Math.cos(14*tau),
+      cx=Math.sin(th)*MED_L*u, cy=ay+Math.cos(th)*MED_L*u+sp, tw=0.9*Math.sin(t*1.3+rk*2.1);   // 金具の 位置（ふりこ＋かけた 時の ばね）
+  g.fillStyle='rgba(0,0,0,0.22)'; medStrap(-MED_W*u+1.5,ay+2,cx-2.5*u+1.5,cy+2,7*u,5*u); g.fill(); medStrap(MED_W*u+1.5,ay+2,cx+2.5*u+1.5,cy+2,7*u,5*u); g.fill();   // 帯の 影
+  g.fillStyle='#e8323c'; medStrap(-MED_W*u,ay,cx-2.5*u,cy,7*u,5*u); g.fill(); g.fillStyle='#2a6fd0'; medStrap(MED_W*u,ay,cx+2.5*u,cy,7*u,5*u); g.fill();
+  g.fillStyle='rgba(255,255,255,0.35)'; medStrap(-MED_W*u-1.2*u,ay,cx-3.2*u,cy,1.4*u,1*u); g.fill(); medStrap(MED_W*u-1.2*u,ay,cx+1.8*u,cy,1.4*u,1*u); g.fill();   // 帯の つや
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(-MED_W*u-3.5*u,ay,7*u,3*u); g.fillRect(MED_W*u-3.5*u,ay,7*u,3*u);   // 首の うしろへ まわる 所（あごの 影）
+  g.save(); g.translate(cx,cy); g.rotate(th); g.fillStyle=C[2]; g.beginPath(); rrect(-5*u,-2*u,10*u,6*u,2*u); g.fill(); g.fillStyle=C[1]; g.beginPath(); rrect(-3.8*u,-1*u,7.6*u,3.6*u,1.5*u); g.fill();   // 金具
+  g.translate(0,3*u+R); medDisk(rk,R,tw,t); g.restore(); }
 function fitTxt(s,x,y,px,fill,mw){ g.font='900 '+px+'px sans-serif'; var w=g.measureText(s).width; txt(s,x,y,w>mw?px*mw/w:px,fill); }
-function podDraw(){ var g0=g; g=pdG; try{ podPaint(); } finally{ g=g0; } }   // 表彰式の canvas に 描く（txt・oval・medalDraw を そのまま使う）
+function podDraw(){ var g0=g; g=pdG; try{ podPaint(); } finally{ g=g0; } }   // 表彰式の canvas に 描く（txt・oval・rrect を そのまま使う）
 function podPaint(){ var t=podT, L=podLay(), i, e, cx=podW/2, top=(P.order||[]).slice(0,3), y1=L.base-L.HH[0]-L.ch*0.6;
   g.setTransform(podDp,0,0,podDp,0,0); g.clearRect(0,0,podW,podH);
   if(t>=POD_T1 && !podEv.go){ podEv.go=1; pdL.classList.add('go','fl'); pdIn.classList.add('shake'); igConf(0,podH,70,-1.05); igConf(podW,podH,70,-2.09); igConf(cx,y1,40,-1.57); }   // 1位：剣・盾と 同じ
@@ -1343,10 +1370,9 @@ function podPaint(){ var t=podT, L=podLay(), i, e, cx=podW/2, top=(P.order||[]).
     if(p && p.im.complete && p.im.naturalWidth){ var sc=L.ch*(i===0?1.12:1)/300, dy=-(1-k)*(1-k)*podH*0.55, sq=k>=1?Math.max(0,1-(t-tl-0.4)/0.25):0, bob=t>tl+0.8?Math.abs(Math.sin((t-tl)*4+i*1.3))*6:0;
       g.fillStyle='rgba(0,0,0,0.3)'; g.beginPath(); oval(fx,fy,p.w*sc*0.36,6); g.fill();
       g.save(); g.translate(fx,fy+dy-bob); g.scale(1+0.18*sq,1-0.16*sq); g.drawImage(p.im,-p.ax*sc,-p.h*sc,p.w*sc,p.h*sc);
-      var mt=POD_M[i], mk=clamp((t-mt)/0.5,0,1); if(mk>0){ var nk=neckOf(p), nx=(nk.x-p.ax)*sc, ny=-(p.h-nk.y)*sc, md=-(1-mk)*(1-mk)*podH*0.6, MS=L.ch/178*1.55, sw=mk>=1?Math.sin((t-mt)*6)*Math.max(0,1-(t-mt-0.5))*0.25:0;
-        g.save(); g.translate(nx,ny+md); g.rotate(sw); g.scale(MS,MS); medalDraw(0,0,i); g.restore();   // メダル（試作27 の 1.55倍）
-        if(mk>=1 && !podSnd[i]){ podSnd[i]=1; var mx=fx+nx, my=fy-bob+ny+22*MS; podBurst(mx,my,['#ffd23a','#e8eef6','#e8954f'][i],30); sfx('coin'); igTone(1568,0,0.18,'triangle',0.05); igTone(2093,0.08,0.18,'triangle',0.05); igTone(3136,0.16,0.4,'triangle',0.05);
-          if(e.me && !podEv.me){ podEv.me=1; igConf(mx,my,50,-1.57); igConf(0,podH*0.8,30,-0.9); igConf(podW,podH*0.8,30,-2.24); } } }   // じぶんの メダル：もう1回 はじける
+      var mt=POD_M[i], mk=clamp((t-mt)/0.5,0,1); if(mk>0) podMedal(i,sc,t,mt,mk);   // ★試作29 首に かけた メダル
+      if(mk>=1 && !podSnd[i]){ podSnd[i]=1; var mx=fx, my=fy-bob-(MED_NY-MED_L-3-MED_R)*sc; podBurst(mx,my,['#ffd23a','#e8eef6','#e8954f'][i],30); sfx('coin'); igTone(1568,0,0.18,'triangle',0.05); igTone(2093,0.08,0.18,'triangle',0.05); igTone(3136,0.16,0.4,'triangle',0.05);
+        if(e.me && !podEv.me){ podEv.me=1; igConf(mx,my,50,-1.57); igConf(0,podH*0.8,30,-0.9); igConf(podW,podH*0.8,30,-2.24); } }   // じぶんの メダル：もう1回 はじける
       g.restore(); }
     if(k>=1){ var pw=L.bw-10, px0=fx-pw/2, py0=L.base+6; g.fillStyle=e.me?'#fff3b0':'#ffffff'; g.beginPath(); rrect(px0,py0,pw,L.pl,9); g.fill();   // 名札（名前と タイム）
       g.textAlign='center'; g.fillStyle=e.me?'#c0161e':'#20284a'; g.font='900 '+(L.pl<40?13:14)+'px sans-serif'; var nm=e.me?'じぶん':e.nm, nw=g.measureText(nm).width; if(nw>pw-8) g.font='900 '+Math.floor((L.pl<40?13:14)*(pw-8)/nw)+'px sans-serif';
@@ -1357,6 +1383,7 @@ function podPaint(){ var t=podT, L=podLay(), i, e, cx=podW/2, top=(P.order||[]).
   var ek=clamp((t-POD_END)/0.3,0,1); if(ek>0 && P.race){ var my2=podH*0.95-74; g.globalAlpha=ek;
     if(P.race<=3) fitTxt('じぶん '+P.race+'位！ '+['金','銀','銅'][P.race-1]+'メダル ゲット！',cx,my2,22,['#ffe44d','#eef4ff','#ffc08a'][P.race-1],podW-24);
     else fitTxt('じぶんは '+P.race+'位　つぎは メダルを ねらおう！',cx,my2,17,'#ffffff',podW-24); g.globalAlpha=1; }
+  g.font='900 12px sans-serif'; var lw=g.measureText(LV[lv][0]).width+18; g.fillStyle=LV[lv][2]; g.beginPath(); rrect(podW-10-lw,10,lw,22,11); g.fill(); g.fillStyle='#ffffff'; g.textAlign='center'; g.fillText(LV[lv][0],podW-10-lw/2,25);   // ★試作29 むずかしさ
   igParts(g,podH); }
 // ★試作27 はじめての1回：「2」で 止めて ダッシュボタンを 指さす
 function tutDraw(){ g.fillStyle='rgba(0,0,0,0.35)'; g.fillRect(0,0,W,H); txt('いまだ！',W/2,HOR+150,44,'#ffe44d'); txt('ダッシュボタンを おしつづけて！',W/2,HOR+192,19,'#ffffff');
@@ -1451,7 +1478,7 @@ var rkEl=document.getElementById('taRk'), tmEl=document.getElementById('taT'), r
 function fmt(t){ t=Math.floor(t*10+1e-6)/10; var m=Math.floor(t/60), r=(t-m*60).toFixed(1);   /* ★試作21 0.1秒の下は切りすて（59.96秒が「0:60.0」と出て 金なのに60秒に見えないように） */ return m+':'+(r.length<4?'0':'')+r; }
 var hudC='';
 function hud(){ var rem=Math.max(0,Math.ceil(GOAL-P.s)), t=st==='goal'||st==='lost'?(P.fin||tRun):(st==='count'||st==='title'||st==='intro'||st==='prc'?0:tRun), sig=fmt(t)+rem+got+kills+Math.round(stam*50)+life+'|'+st+raceRank()+(practice?prOK+'/'+prN:'');
-  if(sig===hudC) return; hudC=sig; tmEl.textContent=fmt(t); remEl.textContent=rem; var rk=st==='goal'?P.race:raceRank(); rkEl.innerHTML=(st==='run'||st==='fall'||st==='goal')?'いま <b class="r'+rk+'">'+rk+'</b> 位':(practice?'れんしゅう　ロケット <b>'+prOK+'</b> / '+prN+'回':(st==='count'||st==='intro'?(RIV.length+1)+'人で レース！':'')); els.hRem.textContent=rem+'m'; els.hLife.innerHTML='<span style="color:#ff5a6e">'+new Array(Math.max(0,life)+1).join('♥')+'</span><span style="color:#444">'+new Array(LIFE_MAX-Math.max(0,life)+1).join('♥')+'</span>'; els.hCo.textContent=got; els.hKi.textContent=kills;
+  if(sig===hudC) return; hudC=sig; tmEl.textContent=fmt(t); remEl.textContent=rem; var rk=st==='goal'?P.race:raceRank(); rkEl.innerHTML=(st==='run'||st==='fall'||st==='goal')?'いま <b class="r'+rk+'">'+rk+'</b> 位':(practice?'れんしゅう　ロケット <b>'+prOK+'</b> / '+prN+'回':(st==='count'||st==='intro'?LV[lv][0]+'　'+(RIV.length+1)+'人で レース！':'')); els.hRem.textContent=rem+'m'; els.hLife.innerHTML='<span style="color:#ff5a6e">'+new Array(Math.max(0,life)+1).join('♥')+'</span><span style="color:#444">'+new Array(LIFE_MAX-Math.max(0,life)+1).join('♥')+'</span>'; els.hCo.textContent=got; els.hKi.textContent=kills;
   els.hpFill.style.width=(stam*100)+'%'; els.hpTxt.textContent=Math.round(stam*100); els.bdash.className='abtn'+(stam<0.05?' empty':'')+(hold.dash?' act':'')+(st==='count'||st==='intro'||st==='prc'?' sdCue':'');
   }
 // ★試作11 ランキング（この端末の記録）。完走はタイムの順、失格は そのあと 走った距離の順。日時は記録したときの時刻
@@ -1476,6 +1503,7 @@ function title(){ st='title'; practice=false; tutWait=false; prEndBtn(0); rivCho
   show('<div class="logo"><div class="rib">MyHEROの大運動会</div><div class="t1">500<small>m</small></div><div class="t2">走</div></div>'   /* ★試作22 名前を「MyHEROの大運動会〜500m走〜」に（ユーザー 2026-11-18） */
     +'<div style="display:flex;flex-direction:column;align-items:center;gap:13px">'
       +'<div id="chPick"><div class="chRow">'+CHARS.map(function(c,i){ return '<div class="chI" id="chI'+i+'">'+(CHICON[c[0]]?'<img src="data:image/webp;base64,'+CHICON[c[0]]+'" alt="">':'')+'</div>'; }).join('')+'</div><div id="chNm"></div></div>'   /* ★試作25 キャラを えらぶ */
+      +'<div id="lvPick">'+LV.map(function(v,i){ return '<div class="lvB'+(i===lv?' on':'')+'" id="lvB'+i+'" style="--c:'+v[2]+'">'+v[0]+'</div>'; }).join('')+'</div>'   /* ★試作29 むずかしさ */
       +'<div class="uiPanel best tap" id="hb"><div class="l">じこベスト<br><span style="color:#8fa6bd">ランキング ▶</span></div><div class="v">'+(b?(medalOf(b)?medalOf(b)[1]+' ':'')+fmt(b):'--:--.-')+'</div></div>'
       +'<div class="uiBtn go lg" id="go">▶ スタート</div>'
       +'<div class="row"><div class="uiBtn gold half" id="hr">🏆 ランキング</div><div class="uiBtn info half" id="hh">📖 あそびかた</div></div>'
@@ -1483,6 +1511,8 @@ function title(){ st='title'; practice=false; tutWait=false; prEndBtn(0); rivCho
     +'</div>');
   ov.className='home';
   onTap(document.getElementById('go'),start); onTap(document.getElementById('hr'),ranking); onTap(document.getElementById('hb'),ranking); onTap(document.getElementById('hh'),howto);
+  LV.forEach(function(v,i){ onTap(document.getElementById('lvB'+i),function(){ audioOn(); sfx('coin'); lv=i; try{ localStorage.setItem(LV_KEY,String(i)); }catch(e){}   // ★試作29 えらびなおしても 画面は 作りなおさない（§2-14）
+    for(var j=0;j<LV.length;j++) document.getElementById('lvB'+j).classList.toggle('on',j===i); }); });
   CHARS.forEach(function(c,i){ onTap(document.getElementById('chI'+i),function(){ audioOn(); if(i>0 && !CHVER[c[0]]){ var e=document.getElementById('chNm'); if(e) e.textContent=c[1]+' は 絵を じゅんび中'; return; } sfx('coin'); if(i===0) charUse('men_0'); else charLoad(c[0]); }); }); chUI();
   if(FROM_GAME) onTap(document.getElementById('bk'),function(){ mus(null); location.href='../index.html?test=1&from=ta'; }); }   /* ★試作21 from=ta＝ゲームはオープニングを出さずにホームへ */
 function howto(){ menuMode(1);
@@ -1583,7 +1613,7 @@ function finish(){ P.race=raceRank();   // ★試作26 4人の 順位（まだ�
 function showResult(){ ov.className='res';
   show('<div class="big" id="rt">'+(P.medal?'<span style="font-size:44px">'+P.medal[1]+'</span> ':'')+'<span id="rtt">0:00.0</span></div>'
     +(P.nb?'<div class="stamp">'+(P.first?'はじめての 完走！':'NEW RECORD！')+'</div>':'<p class="note">ベスト '+fmt(P.wasBest)+'</p>')
-    +'<p>🏁 レース <span style="color:#ffe44d;font-size:24px">'+P.race+'位</span>　<span style="font-size:12px;color:#8fa6bd">ランキング '+P.rank+'位</span></p>'
+    +'<p>🏁 '+LV[lv][0]+'の レース <span style="color:#ffe44d;font-size:24px">'+P.race+'位</span>　<span style="font-size:12px;color:#8fa6bd">ランキング '+P.rank+'位</span></p>'
     +'<div class="rcRes">'+P.order.map(function(e,i){ return '<div class="rcRow'+(e.me?' me':'')+'"><b>'+(i+1)+'</b>'+(CHICON[e.id]?'<img src="data:image/webp;base64,'+CHICON[e.id]+'" alt="">':'')+'<span>'+e.nm+'</span><i>'+fmt(e.t)+'</i></div>'; }).join('')+'</div>'   /* ★試作26 4人の けっか */
     +'<div class="stats"><span>👾 '+kills+'</span><span>🪙 '+got+'</span><span style="color:#ff5a6e">'+new Array(Math.max(0,life)+1).join('♥')+'</span></div>'
     +'<p class="note" style="color:#ffe9a8">💰 +'+P.gold+'G（My HERO で もらえる）<br><span style="font-size:11px;color:#b4c6dc">'+P.goldWhy.join('・')+'</span></p>'
@@ -1599,7 +1629,7 @@ function shotMake(){ var c=document.createElement('canvas'), w=780, h=Math.round
   x.fillStyle='#0b1838'; x.fillRect(0,0,w,h); x.drawImage(cv,0,0,w,h-170);
   function T(s,px,X,Y,col,al){ x.font='900 '+px+'px sans-serif'; x.textAlign=al||'center'; x.lineJoin='round'; x.lineWidth=px*0.2; x.strokeStyle='#0a1a3a'; x.strokeText(s,X,Y); x.fillStyle=col; x.fillText(s,X,Y); }
   T('MyHEROの大運動会',30,w/2,h-126,'#ffe9a8'); T('500m走',40,w/2,h-78,'#ffffff');
-  T((P.medal?P.medal[1]+' ':'')+fmt(P.fin)+'　🏁'+P.race+'位',52,w/2,h-18,'#ffe44d');
+  T((P.medal?P.medal[1]+' ':'')+fmt(P.fin)+'　🏁'+P.race+'位',52,w/2,h-18,'#ffe44d'); T(LV[lv][0],22,14,h-150,'#ffffff','left');   // ★試作29 むずかしさ（日づけの 左）
   var d=new Date(P.at); T(d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(),20,w-14,h-150,'#b4c6dc','right');
   return c.toDataURL('image/jpeg',0.9); }
 function shotShow(){ var u; try{ u=shotMake(); }catch(e){ u=''; }
