@@ -1319,16 +1319,58 @@ function podMake(){ if(pdL) return; pdL=document.createElement('div'); pdL.id='p
   pdL.innerHTML='<div class="pdSky"></div><div id="pdIn"><div class="igRays"></div><div class="igRays r2"></div><div class="igGlow"></div><div class="igRing"></div><div class="igRing k2"></div><div class="igRing k3"></div><canvas id="pdCv"></canvas></div>'
     +'<div class="igFlash"></div><div class="igFlash f2"></div><div class="igOk" id="pdOk"></div>';
   document.body.appendChild(pdL); pdIn=document.getElementById('pdIn'); pdG=document.getElementById('pdCv').getContext('2d'); onTap(document.getElementById('pdOk'),podEnd); }
+// ★試作30 表彰式の 音を じぶんの 順位で かえる（ユーザー「5位は 拍手ぐらい、4位は ひゅーひゅー、3位は おおお パチパチ、2位は Yeah おおお パチパチ、
+//   1位は デデデデデーン ボーン ヒューンヒューン ドーン うぉぉぉ（たとえ。この通りに しないで）」）。音の ファイルは 使わず その場で 作る。
+//   iPhone の スピーカーは 300Hz より下が ほぼ 鳴らない（§1-24）ので、拍手・歓声・指笛・花火は 400Hz〜4kHz に よせる。ことば（Yeah など）は 合成すると 不自然なので「ワーッ」「おおー」に。
+//   1位：ドンドンドドドン → ジャーン＋ドーン＋ワーッ → 花火 4発 → メダルで 大歓声＋大きい拍手（6秒）＋指笛2回
+//   2位：メダルで ワーッ → おおー＋拍手（5秒）＋指笛2回＋明るい メロディ／3位：メダルで おおー＋拍手（4秒）＋短い メロディ／4位：さいごに 拍手（3秒）＋指笛／5位：さいごに 小さめの 拍手
+//   2〜5位の ときは ライバルの 1位の ジャーンを 短く 小さく（じぶんの 場面が いちばん 盛り上がるように）。ぜんぶ podStart で 予定を 入れる（タップで とばしても そのまま 鳴る）。
+//   表彰式の 音は podBus を とおして、おわったら 2秒で 小さくする。うしろで ずっと 観客の ざわざわ
+var podBus=null, podAmb=null, igOut=null, NZL=null;
+function podOut(){ return podBus||AC.destination; }
+function noiseLong(){ if(NZL||!AC) return NZL; var n=AC.sampleRate*2|0; NZL=AC.createBuffer(1,n,AC.sampleRate); var d=NZL.getChannelData(0); for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return NZL; }   // 0.3秒の noiseBuf を くりかえすと ざわざわが 波うつので 2秒
 function podHit(t0,f,dur,vol,type){ if(!AC) return; try{ var t=AC.currentTime+t0, src=AC.createBufferSource(), bq=AC.createBiquadFilter(), v=AC.createGain(); src.buffer=noiseBuf(); src.loop=true; bq.type=type||'bandpass'; bq.frequency.value=f; bq.Q.value=0.9;
-  src.connect(bq); bq.connect(v); v.connect(AC.destination); v.gain.setValueAtTime(0.0008,AC.currentTime); v.gain.setValueAtTime(vol,t); v.gain.exponentialRampToValueAtTime(0.0008,t+dur); src.start(t); src.stop(t+dur+0.02); }catch(e){} }
-function podSound(){ var t=0.25, k; while(t<POD_T1-0.06){ k=(t-0.25)/(POD_T1-0.3); podHit(t,1900,0.07,0.05+0.17*k); t+=0.085-0.045*k; }   // ダダダダ…（だんだん 速く 大きく。1.9kHz は iPhone のスピーカーで よく鳴る）
-  podHit(POD_T1,6000,1.4,0.22,'highpass'); igFanfare(POD_T1-0.7); }   // ジャーン（シンバル）＋剣・盾と 同じ ファンファーレ（和音が 1位の のる時に そろう）
+  src.connect(bq); bq.connect(v); v.connect(podOut()); v.gain.setValueAtTime(0.0008,AC.currentTime); v.gain.setValueAtTime(vol,t); v.gain.exponentialRampToValueAtTime(0.0008,t+dur); src.start(t); src.stop(t+dur+0.02); }catch(e){} }
+function sClap(t0,dur,rate,vol){ if(!AC) return; try{ var sr=AC.sampleRate, n=Math.ceil(dur*sr), b=AC.createBuffer(1,n,sr), d=b.getChannelData(0), k=Math.round(dur*rate), c, j;   // 拍手＝短い パチッを たくさん ばらまく
+  for(c=0;c<k;c++){ var tc=Math.random()*dur, e=Math.min(1,tc/0.15)*Math.min(1,(dur-tc)/(dur*0.4)), a=(0.4+Math.random()*0.6)*e, L=Math.round(sr*(0.004+Math.random()*0.008)), i0=Math.round(tc*sr);
+    for(j=0;j<L && i0+j<n;j++) d[i0+j]+=a*(Math.random()*2-1)*Math.exp(-j/(L*0.3)); }
+  var s=AC.createBufferSource(), f=AC.createBiquadFilter(), v=AC.createGain(); s.buffer=b; f.type='bandpass'; f.frequency.value=1600; f.Q.value=0.6; v.gain.value=vol;
+  s.connect(f); f.connect(v); v.connect(podOut()); s.start(AC.currentTime+t0); }catch(e){} }
+function sCrowd(t0,dur,vol,lo,up,att){ if(!AC) return; try{ var t=AC.currentTime+t0, out=AC.createGain(), mix=AC.createGain(), i;   // 歓声＝ザーッ＋声の 高さの 波を「お」「あ」の 声の 高さ（lo と その 1.85倍）に しぼる。up＝だんだん 上がる
+  out.connect(podOut()); out.gain.setValueAtTime(0.0001,t); out.gain.exponentialRampToValueAtTime(vol,t+att); out.gain.setValueAtTime(vol,t+dur*0.55); out.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  [[lo,5],[lo*1.85,6]].forEach(function(q){ var bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=q[1]; bp.frequency.setValueAtTime(q[0],t); bp.frequency.linearRampToValueAtTime(q[0]*up,t+dur*0.6); mix.connect(bp); bp.connect(out); });
+  var ns=AC.createBufferSource(), ng=AC.createGain(); ns.buffer=noiseLong(); ns.loop=true; ng.gain.value=0.9; ns.connect(ng); ng.connect(mix); ns.start(t); ns.stop(t+dur+0.05);
+  for(i=0;i<7;i++){ var o=AC.createOscillator(), og=AC.createGain(), f0=170+Math.random()*170; o.type='sawtooth'; o.frequency.setValueAtTime(f0,t); o.frequency.linearRampToValueAtTime(f0*(1.06+Math.random()*0.14),t+dur*0.5); og.gain.value=0.05; o.connect(og); og.connect(mix); o.start(t); o.stop(t+dur+0.05); } }catch(e){} }
+function sWhistle(t0,v){ if(!AC) return; try{ [[0,1200,2600,0.25],[0.33,2600,1400,0.3]].forEach(function(q){ var t=AC.currentTime+t0+q[0], o=AC.createOscillator(), gg=AC.createGain(); o.type='sine';   // 指笛 ピュー・イ
+    o.frequency.setValueAtTime(q[1],t); o.frequency.exponentialRampToValueAtTime(q[2],t+q[3]); gg.gain.setValueAtTime(0.0001,t); gg.gain.exponentialRampToValueAtTime(v,t+0.03); gg.gain.setValueAtTime(v,t+q[3]-0.05); gg.gain.exponentialRampToValueAtTime(0.0001,t+q[3]+0.03);
+    o.connect(gg); gg.connect(podOut()); o.start(t); o.stop(t+q[3]+0.05); }); }catch(e){} }
+function sFirework(t0,v){ if(!AC) return; try{ var t=AC.currentTime+t0, o=AC.createOscillator(), gg=AC.createGain(); o.type='sine'; o.frequency.setValueAtTime(700,t); o.frequency.exponentialRampToValueAtTime(2300,t+0.65);   // ヒュ〜 → パーン
+  gg.gain.setValueAtTime(0.0001,t); gg.gain.exponentialRampToValueAtTime(v*0.25,t+0.1); gg.gain.exponentialRampToValueAtTime(0.0001,t+0.7); o.connect(gg); gg.connect(podOut()); o.start(t); o.stop(t+0.75); }catch(e){}
+  podHit(t0+0.7,900,0.55,v,'bandpass'); podHit(t0+0.72,3500,0.3,v*0.5,'highpass'); }
+function sBoom(t0,v){ if(!AC) return; try{ var t=AC.currentTime+t0, o=AC.createOscillator(), gg=AC.createGain(); o.type='square'; o.frequency.setValueAtTime(320,t); o.frequency.exponentialRampToValueAtTime(70,t+0.6);   // ドン（四角い波＝倍音で 小さい スピーカーでも 聞こえる）
+  gg.gain.setValueAtTime(v,t); gg.gain.exponentialRampToValueAtTime(0.0001,t+0.7); o.connect(gg); gg.connect(podOut()); o.start(t); o.stop(t+0.75); }catch(e){} podHit(t0,500,0.6,v*1.5,'lowpass'); }
+function sAmb(){ if(!AC) return null; try{ var t=AC.currentTime, ns=AC.createBufferSource(), bp=AC.createBiquadFilter(), gg=AC.createGain(); ns.buffer=noiseLong(); ns.loop=true; bp.type='bandpass'; bp.frequency.value=900; bp.Q.value=0.8;   // ざわざわ
+  gg.gain.setValueAtTime(0.0001,t); gg.gain.exponentialRampToValueAtTime(0.03,t+0.8); ns.connect(bp); bp.connect(gg); gg.connect(podOut()); ns.start(t); return ns; }catch(e){ return null; } }
+function podSound(r){ var T=POD_T1, M=POD_M, E=POD_END, t=0.25, k; if(!AC) return; igOut=podBus; podAmb=sAmb();
+  while(t<T-0.06){ k=(t-0.25)/(T-0.3); podHit(t,1900,0.07,0.05+0.17*k); t+=0.085-0.045*k; }   // ダダダダ…（みんな。だんだん 速く 大きく）
+  if(r===1){ [0.55,0.42,0.3,0.2,0.1].forEach(function(d,i){ sBoom(T-d,0.07+i*0.01); });
+    podHit(T,6000,1.6,0.18,'highpass'); igFanfare(T-0.7); sBoom(T,0.09); sCrowd(T+0.05,1.6,0.14,700,1.1,0.08);
+    [0.4,1.1,1.8,2.5].forEach(function(d){ sFirework(T+d,0.2); });
+    sCrowd(M[0],3.4,0.26,430,1.35,0.6); sClap(M[0]+0.2,6,70,0.7); sWhistle(M[0]+0.6,0.06); sWhistle(M[0]+1.9,0.05); }
+  else { podHit(T,6000,0.9,0.12,'highpass'); [523,659,784].forEach(function(f){ igTone(f,T,0.5,'square',0.025); }); sClap(T+0.1,1.6,18,0.25);
+    if(r===2){ sCrowd(M[1],1.0,0.15,720,1.15,0.06); sCrowd(M[1]+0.5,2.6,0.14,450,1.25,0.4); sClap(M[1]+0.2,5,50,0.45); sWhistle(M[1]+0.8,0.055); sWhistle(M[1]+1.7,0.05);
+      [392,523,659,784,1047].forEach(function(f,i){ igTone(f,M[1]+0.1+i*0.08,0.22,'square',0.04); }); igTone(1047,M[1]+0.5,0.6,'triangle',0.05); }
+    else if(r===3){ sCrowd(M[2],2.4,0.15,450,1.2,0.4); sClap(M[2]+0.2,4,38,0.45); [523,659,784].forEach(function(f,i){ igTone(f,M[2]+0.15+i*0.1,0.2,'square',0.035); }); igTone(1047,M[2]+0.45,0.45,'triangle',0.045); }
+    else if(r===4){ sClap(E,3,26,0.27); sWhistle(E+0.5,0.04); }
+    else sClap(E,2.5,16,0.28); }
+  igOut=null; }
 function podStart(){ st='podium'; podT=0; podSnd=[0,0,0]; podEv={}; podK=-1; podMake(); audioOn(); mus(null);
   podW=innerWidth; podH=innerHeight; podDp=Math.min(2,window.devicePixelRatio||1); var c=pdG.canvas; c.width=Math.round(podW*podDp); c.height=Math.round(podH*podDp);
   var L=podLay(); pdL.style.setProperty('--py',Math.round(L.base-L.HH[0]-L.ch*0.6)+'px');
-  document.getElementById('pdOk').textContent=P.race<=3?'やったー！':'つぎへ ▶'; pdL.className='on'; pdIn.className=''; igP=[]; igW=podW; igH=podH; podSound(); }
+  document.getElementById('pdOk').textContent=P.race<=3?'やったー！':'つぎへ ▶'; pdL.className='on'; pdIn.className=''; igP=[]; igW=podW; igH=podH; if(AC){ podBus=AC.createGain(); podBus.connect(AC.destination); } podSound(P.race||5); }
 function podSkip(){ podT=Math.max(podT,POD_END); podEv={go:1,cn:1,c2:1,l0:1,l1:1,l2:1,me:1,end:1}; podSnd=[1,1,1]; pdL.classList.add('go','end'); }   // タップ：さいごの場面へ（フラッシュ・音は なし）
-function podEnd(){ if(st!=='podium') return; st='goal'; if(pdL){ pdL.className=''; pdIn.className=''; } igP=[]; mus('C'); showResult(); }
+function podEnd(){ if(st!=='podium') return; st='goal'; if(pdL){ pdL.className=''; pdIn.className=''; } igP=[];
+  if(AC && podBus){ var t=AC.currentTime; podBus.gain.setValueAtTime(1,t); podBus.gain.linearRampToValueAtTime(0,t+2); if(podAmb) try{ podAmb.stop(t+2.1); }catch(e){} } podBus=null; podAmb=null; mus('C'); showResult(); }   // ★試作30 拍手は 2秒で 小さく
 function podBurst(x,y,c,n){ for(var i=0;i<n;i++){ var a=i/n*6.283, v=2+Math.random()*3.2; igP.push({k:'f',x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c:i%3?c:'#ffffff',l:40+Math.random()*20,ml:60}); } igP.push({k:'b',x:x,y:y,l:16,ml:16}); }
 // ★試作29 メダルを「首に かけた」見た目に（ユーザー「首から かけたと 言うより、ただ 貼り付けたみたい」）。
 //   試作28 は あご（8人とも 足から 157〜160）の上から 短い V字の リボン＋すぐ下に 大きい円（直径 約37px）で、体と いっしょに 動くだけ＝胸の バッジに 見えた。
@@ -1562,7 +1604,7 @@ function taItemsOf(fl){ if(!fl.items){ fl.items=[]; if(fl.first) fl.items.push('
 function itemNote(k){ return k==='choose'?'🎁 金メダルの ごほうびを えらぼう！':'🎁 '+IT_INFO[k][0]+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span>'; }
 function itemSave(k){ var fl={}; try{ fl=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')||{}; }catch(e){} var its=taItemsOf(fl); if(its.indexOf(k)<0) its.push(k); try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); }catch(e){} }
 var igL=null, igG=null, igP=[], igRun=false, igT0=0, igK=-1, igW=0, igH=0;
-function igTone(f,t0,d,type,v){ if(!AC) return; try{ var o=AC.createOscillator(), gg=AC.createGain(); o.type=type||'square'; o.frequency.value=f; o.connect(gg); gg.connect(AC.destination);
+function igTone(f,t0,d,type,v){ if(!AC) return; try{ var o=AC.createOscillator(), gg=AC.createGain(); o.type=type||'square'; o.frequency.value=f; o.connect(gg); gg.connect(igOut||AC.destination);
   var t=AC.currentTime+t0; gg.gain.setValueAtTime(0,t); gg.gain.linearRampToValueAtTime(v||0.08,t+0.012); gg.gain.exponentialRampToValueAtTime(0.0008,t+d); o.start(t); o.stop(t+d+0.05); }catch(e){} }
 function igFanfare(o){ audioOn(); o=o||0;   // じゃららら → ジャーン！ → キラキラ（ドンは iPhone のスピーカーでも聞こえる 196Hz）。o＝何秒 あとから（★試作28 表彰式）
   [523,659,784,1047,1319].forEach(function(f,i){ igTone(f,o+i*0.07,0.16,'square',0.06); });
