@@ -1199,7 +1199,8 @@ function ranking(){ menuMode(1); var a=rkSort(rkLoad()).slice(0,10), h='';
 //   記録は FLAG_KEY の items（もらった物の id）。ゲーム（taItemGrant）も 同じ items を見て 渡す。絵は build.py が ゲームの ITEM_SPR から入れる
 var ITEMS_IMG=/*ITEMS*/null, IT_INFO={kohaku:['🎀 紅白の剣','まものを たおすと 育つ剣！<br>Lv5 で 金色のオーラ'],medalshield:['🏅 金メダルの盾','ガード時間 +50%・ガード成功で HP +1<br>1位の しるし！']};
 function taItemsOf(fl){ if(!fl.items){ fl.items=[]; if(fl.first) fl.items.push('kohaku'); if(fl.m0) fl.items.push('medalshield'); } return fl.items; }   // 試作21 までの記録：完走で剣・金メダルで盾を もう渡していた
-function itemNote(k){ return k==='choose'?'🎁 金メダルの ごほうびを えらぼう！':'🎁 '+IT_INFO[k][0]+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span>'; }
+var IT_T2=55;   // ★試作32 2つ目の 剣・盾の タイム
+function itemNote(k){ return k==='choose'?'🎁 1位の ごほうびを えらぼう！':'🎁 '+IT_INFO[k][0]+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span>'; }
 function itemSave(k){ var fl={}; try{ fl=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')||{}; }catch(e){} var its=taItemsOf(fl); if(its.indexOf(k)<0) its.push(k); try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); }catch(e){} }
 var igL=null, igG=null, igP=[], igRun=false, igT0=0, igK=-1, igW=0, igH=0;
 function igTone(f,t0,d,type,v){ if(!AC) return; try{ var o=AC.createOscillator(), gg=AC.createGain(); o.type=type||'square'; o.frequency.value=f; o.connect(gg); gg.connect(igOut||AC.destination);
@@ -1210,9 +1211,9 @@ function igFanfare(o){ audioOn(); o=o||0;   // じゃららら → ジャーン�
   [1568,2093,2637,3136,2637,3136,4186].forEach(function(f,i){ igTone(f,o+0.95+i*0.09,0.25,'triangle',0.05); }); igTone(196,o+0.7,0.5,'triangle',0.12); }
 function igMake(){ if(igL) return; igL=document.createElement('div'); igL.id='igL';
   var T='NEW ITEM GET!!';
-  igL.innerHTML='<div class="igSky"></div><div id="igPick"><div class="igMedal">🥇</div><div class="igP1">金メダル おめでとう！</div><div class="igP2">ごほうびを 1つ えらんでね</div><div class="igCards">'
+  igL.innerHTML='<div class="igSky"></div><div id="igPick"><div class="igMedal">🥇</div><div class="igP1">1位 おめでとう！</div><div class="igP2">ごほうびを 1つ えらんでね</div><div class="igCards">'
     +['kohaku','medalshield'].map(function(k){ return '<div class="igCard" data-it="'+k+'"><div class="igPic"><img src="'+(ITEMS_IMG?ITEMS_IMG[k]:'')+'" alt=""></div><b>'+IT_INFO[k][0]+'</b><span>'+(k==='kohaku'?'まものを たおすと<br>どんどん 強くなる':'ガードが 長くなって<br>HP も 回復')+'</span></div>'; }).join('')
-    +'</div><div class="igHint">のこりの 1つは 2回目の 金メダルで もらえるよ</div></div>'
+    +'</div><div class="igHint">のこりの 1つは ベリーハードで<br>1位＋55秒切りで もらえるよ</div></div>'
     +'<div id="igFx"><div class="igDim"></div><div class="igRays"></div><div class="igRays r2"></div><div class="igPillar"></div><div class="igGlow"></div><div class="igRing"></div><div class="igRing k2"></div><div class="igRing k3"></div>'
     +'<div class="igItem" id="igIt"><img id="igBig" alt=""></div><div class="igTtl"><div class="igT1">'+T.split('').map(function(c,i){ return c===' '?'<i style="width:.3em"> </i>':'<i style="--d:'+(i*0.05)+'s">'+c+'</i>'; }).join('')+'</div><div class="igT2">ニューアイテム ゲット！</div></div>'
     +'<div class="igPlate"><b id="igPn"></b><span id="igPd"></span></div><div class="igOk" id="igOk">やったー！</div><div class="igFlash"></div><div class="igFlash f2"></div></div><canvas id="igCv"></canvas>';
@@ -1256,7 +1257,10 @@ function finish(){ gTutEnd(); P.race=raceRank();   // ★試作26 4人の 順位
   var its=taItemsOf(fl); P.pick=null;   // ★試作22 My HERO（テスト版）の そうびの ごほうび（fl.items）。金メダル1回目＝どちらか1つ えらぶ・2回目＝のこりの1つ（ゲームは fl.items を見て 渡す）
   if(!fl.first){ fl.first=1; gd+=300; why.push('はじめての完走 300G'); }
   if(m){ var mi=MEDAL.indexOf(m), bn=[100,60,30][mi]; if(!fl['m'+mi]){ fl['m'+mi]=1; gd+=bn; why.push(m[2]+'メダル '+bn+'G'); }
-    if(mi===0 && its.length<2){ if(!its.length) P.pick='choose'; else { var rest=its[0]==='kohaku'?'medalshield':'kohaku'; its.push(rest); P.pick=rest; } } }
+  }
+  // ★試作32 剣・盾は レースの 順位で（ユーザー「ベリーハードで 1位に なった上で 55秒切ったら とか」→ 2段にした：1つ目＝ハードか ベリーハードで 1位・2つ目＝ベリーハードで 1位＋55秒切り）。
+  //   試作22〜31 は むずかしさに かんけい なく 金メダル（60秒切り）の 1回目・2回目。もう もっている 物は そのまま
+  if(!practice && P.race===1){ if(!its.length && lv>=2) P.pick='choose'; else if(its.length===1 && lv===3 && P.fin<IT_T2){ var rest=its[0]==='kohaku'?'medalshield':'kohaku'; its.push(rest); P.pick=rest; } }
   try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); localStorage.setItem(GOLD_KEY,String((parseInt(localStorage.getItem(GOLD_KEY)||'0',10)||0)+gd)); }catch(e){}
   P.medal=m; P.gold=gd; P.goldWhy=why; }
 function showResult(){ ov.className='res';
