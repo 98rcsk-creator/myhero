@@ -2156,7 +2156,7 @@ var SHIELD_SKINS=[
 //   効果（ユーザー了承）：ガード中にぶつかってきた敵に炎のダメージ（burn。弾をはね返したときと同じ2、ボスは1）
 if(NEW_BODY_ON) SHIELD_SKINS.splice(1,0,{id:'fireshield', name:'炎の盾', icon:'🔥', price:5000, shape:'normal', desc:'ガードした敵に炎のダメージ', burn:2});
 // ★v379 テスト版：番外編（test/ta3d.html）のごほうび。お金では買えない（ta:1）。もらい方は taItemGrant。強さは雷の盾（ガード時間）と闇の盾（回復）の間（ユーザー「間ぐらいの強さ」）
-if(NEW_BODY_ON) SHIELD_SKINS.push({id:'medalshield', name:'金メダルの盾', icon:'🏅', price:0, ta:1, taHow:'500m走で 金メダルを とると もらえるよ（1回目に 剣か盾を えらぶ・2回目で もう1つ）', shape:'normal', desc:'ガード時間 +50%・ガード成功で HP +1', guardMul:1.5, blockHeal:1});
+if(NEW_BODY_ON) SHIELD_SKINS.push({id:'medalshield', name:'金メダルの盾', icon:'🏅', price:0, ta:1, taHow:'500m走の ハードか ベリーハードで 1位に なると もらえるよ（1回目に 剣か盾を えらぶ・もう1つは ベリーハードで 1位＋55秒切り）', shape:'normal', desc:'ガード時間 +50%・ガード成功で HP +1', guardMul:1.5, blockHeal:1});
 // 剣スキン定義（id, 名前, アイコン, 価格, 刃グラデ3色, 光の筋色, オーラ色）
 var SWORD_SKINS=[
   {id:'silver', name:'銀の剣',   icon:'⚔️', price:0,    blade:['#f2f5f8','#cfd6dd','#9aa3ac'], streak:'rgba(255,255,255,0.5)', aura:null, desc:'ふつうの剣'},
@@ -2172,7 +2172,7 @@ var SWORD_SKINS=[
 //   見た目：Lv2 白く光る／Lv3 雷（_kohakuFx）／Lv4 炎（_kohakuFx）／Lv5 雷＋炎＋体ごと金色のオーラ（_kohakuAura）
 var KOHAKU_LV=[{n:0,atk:1,spd:0},{n:20,atk:2,spd:0},{n:60,atk:2,spd:0.8},{n:120,atk:3,spd:0.8},{n:200,atk:4,spd:0.8}];
 var KOHAKU_GLOW=[null,'rgba(255,255,255,0.95)','rgba(150,215,255,0.95)','rgba(255,150,60,0.95)','rgba(255,215,80,1)'];
-if(NEW_BODY_ON) SWORD_SKINS.push({id:'kohaku', name:'紅白の剣', icon:'🎀', price:0, ta:1, taHow:'500m走で 金メダルを とると もらえるよ（1回目に 剣か盾を えらぶ・2回目で もう1つ）', blade:['#ffffff','#ff7070','#d42020'], streak:'rgba(255,235,235,0.9)', aura:null, desc:'', atk:1});
+if(NEW_BODY_ON) SWORD_SKINS.push({id:'kohaku', name:'紅白の剣', icon:'🎀', price:0, ta:1, taHow:'500m走の ハードか ベリーハードで 1位に なると もらえるよ（1回目に 剣か盾を えらぶ・もう1つは ベリーハードで 1位＋55秒切り）', blade:['#ffffff','#ff7070','#d42020'], streak:'rgba(255,235,235,0.9)', aura:null, desc:'', atk:1});
 function kohakuN(){ return Math.max(0,parseInt(store.get('yk_kohaku_n')||'0',10)||0); }
 function kohakuLv(){ var n=kohakuN(), l=1; for(var i=1;i<KOHAKU_LV.length;i++) if(n>=KOHAKU_LV[i].n) l=i+1; return l; }
 function kohakuNext(){ var l=kohakuLv(); return l>=KOHAKU_LV.length?'':'あと '+(KOHAKU_LV[l].n-kohakuN())+'体で Lv'+(l+1); }
