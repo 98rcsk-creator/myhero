@@ -162,15 +162,24 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 .htMedal{display:flex;gap:14px;justify-content:center;font-size:16px;font-weight:900;color:#fff;background:rgba(255,255,255,0.1);border-radius:999px;padding:5px 16px}
 @keyframes stampIn{from{transform:rotate(-8deg) scale(2.6);opacity:0}to{transform:rotate(-8deg) scale(1);opacity:1}}
 @media (max-height:600px){ #ov.htv{gap:5px;padding-top:10px} #ov.htv .htSub,#ov.htv .htSec{display:none} }   /* ★試作27 SE：あそびかたの 下の ボタンが 切れていた（試作26 から）。小見出しを かくして つめる */
-@media (max-height:600px){ #ov.res .big{font-size:42px} #ov.res .stamp{font-size:17px} #ov.res{gap:5px} }   /* ★試作26 小さい画面（SE）は 結果の文字を 少し小さく（4人の けっかの ぶん） */
-/* ★試作26 4人の けっか（2列×2段） */
-.rcRes{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;width:330px}
-.rcRow{display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,0.1);font-size:13px;font-weight:900;color:#fff}
-.rcRow b{color:#ffe44d;width:12px}
+@media (max-height:600px){ #ov.res .big{font-size:42px} #ov.res .stamp{font-size:17px} #ov.res{gap:4px} }   /* ★試作26 小さい画面（SE）は 結果の文字を 少し小さく（4人の けっかの ぶん） */
+/* ★試作30 レースの けっかは 1まいの パネルに 1位〜5位を たてに（ユーザー「縦に1位〜5位で並べてほしい。背景は別に なんでもいい」）。
+   見出しに「🏁 ◯◯の レース ◯位・ランキング ◯位」。1〜3位の 丸は 金・銀・銅。じぶんは 黄色の わく。試作26〜29 は 2列の こうし（1・2位が よこ）で 上から 読めなかった */
+.rcBox{width:330px;padding:6px 9px 8px;border-radius:14px;box-sizing:border-box;background:linear-gradient(180deg,rgba(22,44,104,0.94),rgba(10,22,58,0.95));border:2px solid #e8b83a;box-shadow:0 4px 14px rgba(0,0,0,0.45)}
+.rcHd{display:flex;align-items:baseline;gap:6px;margin:0 3px 5px;font-size:13px;font-weight:900;color:#fff;white-space:nowrap}
+.rcHd b{font-size:22px;color:#ffe44d}
+.rcHd small{margin-left:auto;font-size:11px;font-weight:bold;color:#8fa6bd}
+.rcRes{display:flex;flex-direction:column;gap:3px}
+.rcRow{display:flex;align-items:center;gap:7px;height:26px;padding:0 9px 0 4px;border-radius:9px;background:rgba(255,255,255,0.08);font-size:14px;font-weight:900;color:#fff}
+.rcRow b{flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;background:#56617a}
+.rcRow.rcK1 b{background:linear-gradient(180deg,#ffe98a,#d9a417);color:#5a3a00}
+.rcRow.rcK2 b{background:linear-gradient(180deg,#ffffff,#a9b5c6);color:#33405a}
+.rcRow.rcK3 b{background:linear-gradient(180deg,#ffcfa0,#c27536);color:#4a2400}
 .rcRow img{width:22px;height:22px;border-radius:50%}
 .rcRow span{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rcRow i{font-style:normal;font-family:Menlo,monospace;font-size:12px;color:#cfe3ff}
+.rcRow i{font-style:normal;font-family:Menlo,monospace;font-size:13px;color:#cfe3ff}
 .rcRow.me{background:rgba(255,210,74,0.3);box-shadow:inset 0 0 0 2px #ffd24a}
+@media (max-height:600px){ .rcBox{padding:4px 8px 5px} .rcRow{height:20px;font-size:12px} .rcRow img{width:18px;height:18px} .rcRow b{width:17px;height:17px;font-size:10px} .rcRes{gap:1px} .rcHd{margin-bottom:2px;font-size:12px} .rcHd b{font-size:17px} }   /* SE は 1行 20px（タイムが 上の「完走！！」に かからないように。はかって 147 → 試作29 と 同じ）
 #ov .stats{display:flex;gap:16px;justify-content:center;font-size:14px;font-weight:bold;color:#dfeeff}
 /* ---- コントローラー（ゲーム本体の #pad・.abtn と同じ作り。左だけ十字キー → スティック）---- */
 #pad,.hcPad{background:linear-gradient(160deg,#15151f 0%,#0a0a12 60%,#06060c 100%)}
@@ -329,7 +338,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">大運動会・試作29</div>
+    <div id="tag">大運動会・試作30</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div><div id="taRk"></div></div>
   </div>
   <div id="pad">
@@ -1613,8 +1622,8 @@ function finish(){ P.race=raceRank();   // ★試作26 4人の 順位（まだ�
 function showResult(){ ov.className='res';
   show('<div class="big" id="rt">'+(P.medal?'<span style="font-size:44px">'+P.medal[1]+'</span> ':'')+'<span id="rtt">0:00.0</span></div>'
     +(P.nb?'<div class="stamp">'+(P.first?'はじめての 完走！':'NEW RECORD！')+'</div>':'<p class="note">ベスト '+fmt(P.wasBest)+'</p>')
-    +'<p>🏁 '+LV[lv][0]+'の レース <span style="color:#ffe44d;font-size:24px">'+P.race+'位</span>　<span style="font-size:12px;color:#8fa6bd">ランキング '+P.rank+'位</span></p>'
-    +'<div class="rcRes">'+P.order.map(function(e,i){ return '<div class="rcRow'+(e.me?' me':'')+'"><b>'+(i+1)+'</b>'+(CHICON[e.id]?'<img src="data:image/webp;base64,'+CHICON[e.id]+'" alt="">':'')+'<span>'+e.nm+'</span><i>'+fmt(e.t)+'</i></div>'; }).join('')+'</div>'   /* ★試作26 4人の けっか */
+    +'<div class="rcBox"><div class="rcHd"><span>🏁 '+LV[lv][0]+'の レース</span><b>'+P.race+'位</b><small>ランキング '+P.rank+'位</small></div>'   /* ★試作30 1まいの パネルに たてに */
+    +'<div class="rcRes">'+P.order.map(function(e,i){ return '<div class="rcRow'+(i<3?' rcK'+(i+1):'')+(e.me?' me':'')+'"><b>'+(i+1)+'</b>'+(CHICON[e.id]?'<img src="data:image/webp;base64,'+CHICON[e.id]+'" alt="">':'')+'<span>'+e.nm+'</span><i>'+fmt(e.t)+'</i></div>'; }).join('')+'</div></div>'
     +'<div class="stats"><span>👾 '+kills+'</span><span>🪙 '+got+'</span><span style="color:#ff5a6e">'+new Array(Math.max(0,life)+1).join('♥')+'</span></div>'
     +'<p class="note" style="color:#ffe9a8">💰 +'+P.gold+'G（My HERO で もらえる）<br><span style="font-size:11px;color:#b4c6dc">'+P.goldWhy.join('・')+'</span></p>'
     +(P.pick?'<p class="note" id="resItem" style="color:#ffd0e8">'+itemNote(P.pick)+'</p>':'')
