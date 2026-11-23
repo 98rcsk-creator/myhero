@@ -342,7 +342,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">大運動会・試作30</div>
+    <div id="tag">大運動会・試作31</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div><div id="taRk"></div></div>
   </div>
   <div id="pad">
@@ -828,7 +828,12 @@ var RUN=25/3.6, DASHK=1.6, STARK=2.0, STAR_NEED=30, STAR_T=6;   // ★試作26 �
 // ★試作26 スターは ルール1つ（ユーザー「ルールが難しい。もっとシンプルに」「一目でわかるメーター」）：コイン・パン・まものを たおすと ★メーターが たまる。満タンで スター（スター中は たまらない）
 var STAR_COIN=1, STAR_BREAD=3, STAR_KILL=3;
 // ★試作24 スタートダッシュ：カウントダウン中に ダッシュボタンを おしつづけると ゲージがたまる（SD_FILL 秒で満タン）。GO のとき SD_LO〜SD_HI ならロケットスタート・満タンは ためすぎ（ふつうのスタート）
-var SD_FILL=2.4, SD_LO=0.55, SD_HI=0.97;   // ★試作26 1.3→2.4秒（「2」の あたりで おしはじめると みどり。おしはじめて よい はばが 約0.5→約1秒）
+var SD_FILL=2.4, SD_LO=0.55, SD_HI=0.97;
+// ★試作31 ロケットの みどりの はばを むずかしさで かえる（ユーザー「ゲージの 幅を 狭くしたい。イージーや ベリーハードで 幅を かえても いい。いまは ベリーイージー」）。
+//   試作26〜30 は 55〜97%＝「3」が出てから 0.67〜1.68秒の あいだ（1秒）に 押せば ロケット。まん中は そのまま（「2」が出た すぐ あと＝はじめての「いまだ！」で 押すと 77%）。
+//   押しはじめて よい 時間：イージー 1.0秒（いまのまま）／ノーマル 0.5秒（0.90〜1.40秒）／ハード 0.3秒（1.00〜1.30秒）／ベリーハード 0.18秒（1.06〜1.24秒）。スタートの練習も えらんでいる はば
+var SD_Z=[[0.55,0.97],[0.667,0.875],[0.709,0.834],[0.734,0.809]];
+function sdZone(){ SD_LO=SD_Z[lv][0]; SD_HI=SD_Z[lv][1]; }   // ★試作26 1.3→2.4秒（「2」の あたりで おしはじめると みどり。おしはじめて よい はばが 約0.5→約1秒）
 // ★試作26 スタートの前：「位置について」INTRO_T 秒（カメラが 上から 主人公の うしろへ おりてくる・4人が ならぶ）→ 3・2・1 を BEAT 秒ずつ（0.8→1.0）→ スタート（ピストル）
 var INTRO_T=2.2, BEAT=1.0, camEH=0, camEB=0;
 // ★試作27 スタートの練習（ユーザー「初見は難しい」）：はじめての1回は「2」で 止まって「いまだ！」と教える（TUT_KEY）／あそびかたの「スタートの練習」で スタートだけ くり返す
@@ -1569,10 +1574,10 @@ function best(){ var a=rkSort(rkLoad()); return a.length && a[0].t!=null?a[0].t:
 function md(at){ var d=new Date(at); return (d.getMonth()+1)+'/'+d.getDate(); }
 function show(h){ ov.innerHTML=h; ov.style.display='flex'; }
 function start(){ audioOn(); if(chBusy||rivBusy>0){ chWait=start; return; }   /* ★試作25 えらんだキャラの絵を 読みこみ中なら、おわってから はじめる（★試作26 ライバルの絵も） */
-  build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='intro'; tRun=0; camEH=5.5; camEB=9; say('位置について','#ffffff'); mus('U'); prEndBtn(0);
+  build(); sdZone(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='intro'; tRun=0; camEH=5.5; camEB=9; say('位置について','#ffffff'); mus('U'); prEndBtn(0);
   practice=false; tutWait=false; tutOn=false; ezSaid=0; gTut=false; gTutHold=null; document.body.classList.remove('gtut'); gTutFg(null); gTutDone={}; gTutHint={}; gTutAs=0; gTutE=null; gTutPk=null; try{ tutOn=!localStorage.getItem(TUT_KEY); gTut=!localStorage.getItem(GT_KEY); }catch(e){} }
 // ★試作27 スタートの練習：レースは しないで「3・2・1」だけ くり返す（「おわる」で ホーム）
-function prStart(){ audioOn(); build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); practice=true; prN=0; prOK=0; tutOn=false; tutWait=false; gTut=false; gTutHold=null; st='count'; tRun=0; say('スタートの れんしゅう','#ffffff'); prEndBtn(1); }
+function prStart(){ audioOn(); build(); sdZone(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); practice=true; prN=0; prOK=0; tutOn=false; tutWait=false; gTut=false; gTutHold=null; st='count'; tRun=0; say('スタートの れんしゅう','#ffffff'); prEndBtn(1); }
 function prEndBtn(on){ var b=document.getElementById('prEnd'); if(on && !b){ b=document.createElement('div'); b.id='prEnd'; b.className='uiBtn info'; b.textContent='✕ れんしゅうを おわる'; b.style.cssText='position:absolute;left:8px;top:116px;z-index:5;font-size:12px;min-height:36px;padding:4px 10px';   /* ワイプの下（下は ゲージ） */
   document.getElementById('stage').appendChild(b); onTap(b,function(){ practice=false; prEndBtn(0); title(); }); } else if(!on && b) b.parentNode.removeChild(b); }
 function hideTa(v){ document.getElementById('taBox').style.display=v?'none':''; }
