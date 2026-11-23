@@ -342,7 +342,7 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">大運動会・試作31</div>
+    <div id="tag">大運動会・試作32</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div><div id="taRk"></div></div>
   </div>
   <div id="pad">
@@ -422,7 +422,10 @@ var CHR={}, RIV=[], rivPick=[], rivBusy=0, raceT=0, RIV_N=4;   // ★試作27 5�
 //   ★試作30 イージーを 76・86・98・108秒に（ユーザー「初心者や ゲーム苦手な子でも トップ3に 入れるぐらい」）＋ハートが へらない（heartLoss）。
 //     初心者の まね（ダッシュなし・まものを なぐらない）は まものに 8〜11回 ぶつかって 84〜87秒＝ハート5つでは ゴール前に 失格していた。
 //     300回の試算：70秒 1位／80秒 2位／85秒 2〜3位／95秒 3位／100秒 4位（試作29 の 68〜77秒では 75秒で 4位・80秒より おそいと 5位）
-var ezSaid=0, LV=[['イージー',[76,86,98,108],'#33b257'],['ノーマル',[61,64,67,70],'#2f86e0'],['ハード',[56,58,60,63],'#f07c1e'],['ベリーハード',[51,53,55,57],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
+//   ★試作32 ノーマル〜ベリーハードを ならべなおす（ユーザー「ベリーハードは 今の ハードぐらい。イージーとの ギャップが ありすぎる。少しずつ」）。
+//     1位に いる タイム（300回の試算・8割）：イージー 75／ノーマル 65（銀メダルくらい）／ハード 60（金メダル）／ベリーハード 55秒。3位いない：96／73／65／59秒
+//     試作29〜31 は ノーマル 59・ハード 55・ベリーハード 50秒 だった（スクショ：ハード 57.4秒で 2位・ベリーハード 57.8秒で 5位）
+var ezSaid=0, LV=[['イージー',[76,86,98,108],'#33b257'],['ノーマル',[66,70,74,78],'#2f86e0'],['ハード',[61,63,66,69],'#f07c1e'],['ベリーハード',[56,58,60,63],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
 try{ var lvS=parseInt(localStorage.getItem(LV_KEY),10); if(lvS>=0 && lvS<LV.length) lv=lvS; }catch(e){}
 function rivTargets(){ return LV[lv][1].slice(); }
 window.TA3D_CHAR_R=function(id,o){ var ps={}; Object.keys(o.poses).forEach(function(k){ var p=o.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; ps[k]={im:im,w:p.w,h:p.h,ax:p.ax}; }); CHR[id]={PS:ps}; };
