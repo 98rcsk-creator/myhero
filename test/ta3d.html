@@ -117,6 +117,10 @@ html,body{margin:0;width:100%;height:100%;background:#0d0d1a;color:#fff;font-fam
 .chI img{display:block;width:100%;height:100%;pointer-events:none}
 .chI.on{border:3px solid #ffd24a;transform:scale(1.14);box-shadow:0 0 10px rgba(255,210,74,0.7)}
 .chI.off{opacity:0.35;filter:grayscale(1)}
+/* ★試作30 チュートリアルで 止めている 間は「いま ◯位」を かくす（SE で 説明の 文字と かさなる） */
+.gtut #taRk{visibility:hidden}
+#gtFg{position:fixed;z-index:40;font-size:40px;line-height:1;pointer-events:none;animation:gtBob .5s ease-in-out infinite alternate}   /* 押す ボタンの すぐ上 */
+@keyframes gtBob{from{transform:translateY(-8px)}to{transform:translateY(2px)}}
 #chNm{font-size:13px;font-weight:900;color:#fff2b8;text-shadow:0 1px 3px rgba(0,0,0,0.8);min-height:17px}
 /* ★試作29 むずかしさ（4つ。えらんだのは 色つき・白いわく） */
 #lvPick{display:flex;gap:5px}
@@ -829,6 +833,13 @@ var SD_FILL=2.4, SD_LO=0.55, SD_HI=0.97;   // ★試作26 1.3→2.4秒（「2」
 var INTRO_T=2.2, BEAT=1.0, camEH=0, camEB=0;
 // ★試作27 スタートの練習（ユーザー「初見は難しい」）：はじめての1回は「2」で 止まって「いまだ！」と教える（TUT_KEY）／あそびかたの「スタートの練習」で スタートだけ くり返す
 var TUT_KEY='ta3d_sdtut', tutOn=false, tutWait=false, practice=false, prN=0, prOK=0, prT=0;
+// ★試作30 かんたん チュートリアル（ユーザー「簡単な チュートリアルが あった方が いい」）：はじめての レースで、ハードル・穴・みどりの網・まものが
+//   はじめて 目の前に 来た ときだけ ピタッと 止めて「⬆ ジャンプで とびこえよう！」と 押す ボタンを 👇 で さす。押したら 動きだす（止まって いる間は タイムも ライバルも 止まる）。
+//   止まらない ヒント：スタートの すぐあと ダッシュ・はじめて ★が たまったら スター。ゴールか 失格で おわり（GT_KEY）。あそびかたの「🎓 チュートリアル」で もう1回
+var GT_KEY='ta3d_tut2', gTut=false, gTutHold=null, gTutDone={}, gTutHint={}, gTutAs=0, gTutE=null, gTutPk=null;
+function gTutFg(id){ var f=document.getElementById('gtFg'); if(!id){ if(f) f.remove(); return; } var b=document.getElementById(id); if(!b) return; if(!f){ f=document.createElement('div'); f.id='gtFg'; f.textContent='👇'; document.body.appendChild(f); }
+  var r=b.getBoundingClientRect(); f.style.left=Math.round(r.left+r.width/2-20)+'px'; f.style.top=Math.round(r.top-44)+'px'; }
+function gTutEnd(){ if(!gTut) return; gTut=false; gTutHold=null; gTutFg(null); document.body.classList.remove('gtut'); try{ localStorage.setItem(GT_KEY,'1'); }catch(e){} }
 function sdJudge(){ return sdOver?'over':(hold.dash && sdG>=SD_LO && sdG<=SD_HI?'rocket':(hold.dash?'late':'none')); }
 var cv=document.getElementById('cv'), g=cv.getContext('2d');
 var QP=parseFloat((location.search.match(/[?&]q=([\d.]+)/)||[])[1])||0, DPR=QP||Math.min(3,window.devicePixelRatio||1), skyCv=null;
@@ -995,6 +1006,9 @@ function step(){
   tAll+=DT;
   if(st==='pause'||st==='title') return;
   if(hitstop>0){ hitstop-=DT; return; }
+  if(gTutHold){ var need={h:'jump',p:'jump',b:'slide',e:'atk'}[gTutHold];   // ★試作30 チュートリアル：その ボタンを 押すまで 止める
+    if(edge[need]){ if(gTutHold==='e'){ edge.atk=0; gTutPk=gTutE; }   // まものは 見えるように 6〜7m 手前で 止めるので、とどく 所（1.9m）に 来たら パンチが 出る
+      gTutDone[gTutHold]=1; gTutHold=null; gTutAs=0.9; document.body.classList.remove('gtut'); gTutFg(null); if(P.vs<RUN*0.8) P.vs=RUN*0.8; } else { edge.jump=edge.atk=edge.slide=0; return; } }
   if(st==='intro'){ tRun+=DT; var ie=1-Math.min(1,tRun/INTRO_T); ie=ie*ie*(3-2*ie); camEH=ie*5.5; camEB=ie*9; if(tRun>=INTRO_T+0.35){ st='count'; tRun=0; camEH=camEB=0; sfx('count'); } }   // ★試作26 位置について
   else if(st==='prc'){ prT-=DT; if(prT<=0){ st='count'; tRun=0; sdG=0; sdOver=0; } }   // ★試作27 練習：結果を 見せたあと もう1回
   else if(st==='count'){ tutWait=tutOn && tRun>=BEAT*1.15 && !hold.dash; if(tutOn && tRun>=BEAT*1.15 && hold.dash){ tutOn=false; try{ localStorage.setItem(TUT_KEY,'1'); }catch(e){} }   // ★試作27 はじめての1回：「2」で 止めて まつ
@@ -1007,7 +1021,7 @@ function step(){
       else if(jd==='rocket'){ boostT=1.3; P.vs=RUN*1.7; sfx('dash'); say('ロケットスタート！！','#7dff8a'); cheer('はやい！'); }   // 1.3秒だけ はやい（今までと同じ）
       else if(jd==='late') say('おそい！ もうすこし はやく','#ffe44d');   // ★試作27 ロケットに ならなかった わけを 出す
       else say('スタート！！','#ffe44d'); sdG=0; sdOver=0; } } }
-  else if(st==='run'||st==='fall') tRun+=DT;
+  else if(st==='run'||st==='fall'){ tRun+=DT; if(gTut && st==='run' && !gTutHint.d && tRun>1.6){ gTutHint.d=1; say('ダッシュボタン おしっぱなしで はやく 走れるよ','#b9e64e'); } }   // ★試作30
   if(st==='run'||st==='fall'||st==='goal'||st==='lost') rivStep();   // ★試作26
   var live=(st==='run'), star=starT>0;
   var dashing=live && hold.dash && stam>0.02 && joy.y<-0.2 && P.stun<=0;
@@ -1015,7 +1029,8 @@ function step(){
   P.dashing=dashing;
   if(boostT>0) boostT=Math.max(0,boostT-DT);   // ⚠ 0 で止める（負になると「受付中」とまちがえて ずっと加速していた）
   var slow=P.stun>0?0.3:1, top=RUN*(star?STARK:(dashing?DASHK:(boostT>0?1.7:1)));
-  var ts=live?(joy.y<0?-joy.y*top:-joy.y*4)*slow:0,   // ★試作5 下にたおすと うしろへ（前は符号が逆で前進していた）
+  if(gTutAs>0) gTutAs-=DT; var jy=(gTutAs>0 && live)?Math.min(joy.y,-1):joy.y;   // ★試作30 チュートリアルで 止めた あと 0.9秒は 前へ 走る（とびこえ そこねない）
+  var ts=live?(jy<0?-jy*top:-jy*4)*slow:0,   // ★試作5 下にたおすと うしろへ（前は符号が逆で前進していた）
        tx=live?joy.x*(star?8:6.5)*slow:0;
   P.vs+=(ts-P.vs)*(ts>P.vs?0.07:0.12); P.vx+=(tx-P.vx)*0.25;
   if(st==='run'||st==='count'||st==='goal'){
@@ -1026,6 +1041,7 @@ function step(){
     if(live && edge.slide && P.y===0 && P.slide<=0 && P.vs>2.5){ P.slide=0.6; sfx('dash'); dust(6); }
     if(P.slide>0){ P.slide-=DT; if(Math.random()<0.5) dust(1); }
     P.vy-=19*DT; var y0=P.y; P.y+=P.vy*DT; if(P.y<0){ P.y=0; P.vy=0; if(y0>0.05) dust(5); }
+    if(gTutPk){ var pd=gTutPk.s-P.s; if(gTutPk.dead || pd<0.3) gTutPk=null; else if(pd<1.9 && Math.abs(gTutPk.x-P.x)<1.3){ edge.atk=1; gTutPk=null; } }   // ★試作30
     if(live && edge.atk && P.sw<=0){ P.sw=0.26; sfxN(2400,700,0.13,0.22); }   // ★試作23 シュッ
   }
   edge.jump=edge.atk=edge.slide=0;
@@ -1040,6 +1056,11 @@ function step(){
   F+=((dashing||star?F0*0.86:F0)-F)*0.1;                                                         // ダッシュ中は画角を広げる＝速く見える
   if(live){
     if(sp>5 && P.y===0 && Math.random()<0.25) dust(1);
+    if(gTut && !gTutHold && !star && P.y===0 && P.stun<=0){ var hn=null;   // ★試作30 はじめて 目の前に 来た ものを さがす（よこに ずれて いて ぶつからない ものは 教えない）
+      hurd.forEach(function(h){ if(hn || h.down || Math.abs(h.x-P.x)>=0.95) return; var ds=h.s-P.s; if(h.bar){ if(!gTutDone.b && ds>0.6 && ds<1.5) hn='b'; } else if(!gTutDone.h && ds>0.8 && ds<1.9) hn='h'; });
+      if(!hn && !gTutDone.p) pits.forEach(function(q){ var dp=q.s0-P.s; if(!hn && dp>0.25 && dp<1.2 && P.x>q.x0-0.3 && P.x<q.x1+0.3) hn='p'; });
+      if(!hn && !gTutDone.e && P.sw<=0) ens.forEach(function(e){ var ds=e.s-P.s; if(!hn && !e.dead && e.hp===1 && ds>6.0 && ds<7.0 && Math.abs(e.x-P.x)<2.2){ hn='e'; gTutE=e; } });   // 3m だと 主人公の 体に かくれた。まものは 主人公へ よってくるので よこは 2.2m まで   // 1回で たおせる まもので 教える（大きい まものは 2回）
+      if(hn){ gTutHold=hn; banner=null; sfx('count'); document.body.classList.add('gtut'); gTutFg({h:'bj',p:'bj',b:'bslide',e:'ba'}[hn]); } }   // 上の 文字（say）と かさならないように けす
     // パンチ：前 2.1m・横 1.3m
     if(P.sw>0.08) ens.forEach(function(e){ if(e.dead||e.hurt>0) return; var ds=e.s-P.s, dx=e.x-P.x; if(ds>-0.5 && ds<2.1 && Math.abs(dx)<1.3+(e.tp==='giant'?0.4:0)) dmg(e,'ボカッ！'); });
     ens.forEach(function(e){ if(e.dead) return; e.ph+=DT*(e.tp==='fast'?7:4); if(e.hurt>0) e.hurt-=DT; var ds=e.s-P.s;
@@ -1122,13 +1143,13 @@ function rivDraw(r,o){ var ps=rivArt(r.id); if(!ps) return; var cyc=Math.floor(r
   if(st==='intro'||st==='count'||(st==='title'&&r.vs<0.6)) txt(r.nm,o.x,o.y-p.h*k-8,Math.max(10,Math.min(14,o.s*0.22)),'#ffffff');   // スタートラインでは 名前
   g.globalAlpha=1; }
 // ★試作26 ★メーターに たす（たした所から ★へ「+1」「+3」が 飛ぶ）。満タンで スター
-function starAdd(n,x,y,sv){ if(starT>0) return; starC=Math.min(STAR_NEED,starC+n); var o=pj(x,y,sv); toks.push({x:o?o.x:W/2,y:o?o.y:HOR+80,t:0,n:n}); starTry(); }
+function starAdd(n,x,y,sv){ if(starT>0) return; if(gTut && !gTutHint.s){ gTutHint.s=1; say('コインや パンで ★が たまると スター！','#ffe44d'); }   /* ★試作30 */ starC=Math.min(STAR_NEED,starC+n); var o=pj(x,y,sv); toks.push({x:o?o.x:W/2,y:o?o.y:HOR+80,t:0,n:n}); starTry(); }
 function starTry(){ if(starT>0 || starC<STAR_NEED) return; starT=STAR_T; starC=0; meterPop=0.5; sfx('star'); say('スター モード！！','#fff27a'); flash=-0.4; }
 // ★試作7 ハート5つ。まものに当たる・穴に落ちる・コースアウト で1つへる。0 で失格（ハードル・ゲートは へらない）
 function heartLoss(why){ if(lv===0 && !practice){ flash=0.3; say(ezSaid?'いたた！':'いたた！ イージーは ハートが へらないよ','#ff9aa8'); ezSaid=1; return false; }   // ★試作30 イージーは 失格なし（ころぶ・もどされる だけ）
   life--; flash=0.3; if(life<=0){ lose(why); return true; } say('♥ のこり '+life,'#ff9aa8'); return false; }
 function hit(){ P.vs=-7; P.stun=0.8; P.inv=1.2; shake=0.32; combo=0; sfx('hit'); onoma(P.x,1.9,P.s+0.2,'ドカッ！'); cheer('だいじょうぶ！？'); heartLoss('ハートが なくなった！'); }
-function lose(why){ if(st==='lost') return; st='lost'; lostWhy=why; face='cry'; shake=0.3; sfx('fall'); mus(null); setTimeout(showLost,800); }
+function lose(why){ if(st==='lost') return; gTutEnd(); st='lost'; lostWhy=why; face='cry'; shake=0.3; sfx('fall'); mus(null); setTimeout(showLost,800); }
 function burst(x,y,s,col,n){ for(var i=0;i<n;i++){ var a=Math.random()*6.28, v=1.5+Math.random()*3; parts.push({x:x,y:y,s:s,vx:Math.cos(a)*v,vy:2+Math.random()*3.5,vs:Math.sin(a)*v*0.4,l:0.45+Math.random()*0.35,c:col}); } }
 function dust(n){ for(var i=0;i<n;i++) parts.push({x:P.x+(Math.random()-0.5)*0.6,y:0.05,s:P.s-0.2,vx:(Math.random()-0.5)*1.5,vy:0.8+Math.random(),vs:-1.5,l:0.35,c:'rgba(240,220,190,0.8)',st:1}); }
 function onoma(x,y,s,t){ pops.push({x:x,y:y,s:s,t:t,l:0.7,m:0.7,r:(Math.random()-0.5)*0.5}); }
@@ -1444,6 +1465,8 @@ function podPaint(){ var t=podT, L=podLay(), i, e, cx=podW/2, top=(P.order||[]).
 function tutDraw(){ g.fillStyle='rgba(0,0,0,0.35)'; g.fillRect(0,0,W,H); txt('いまだ！',W/2,HOR+150,44,'#ffe44d'); txt('ダッシュボタンを おしつづけて！',W/2,HOR+192,19,'#ffffff');
   var b=document.getElementById('bdash'), c=cv.getBoundingClientRect(), r=b?b.getBoundingClientRect():null, x=r?(r.left+r.width/2-c.left)*W/c.width:W*0.62;
   g.font='40px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('👇',clamp(x,30,W-30),H-34+Math.abs(Math.sin(tAll*6))*8); g.textBaseline='alphabetic'; }
+function gTutDraw(){ var T={h:['ハードルだ！','⬆ ジャンプで とびこえよう！'],p:['あなだ！','⬆ ジャンプで とびこえよう！'],b:['みどりの あみだ！','⬇ スライディングで くぐろう！'],e:['まものだ！','👊 パンチで たおそう！']}[gTutHold];
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(0,0,W,H); txt(T[0],W/2,H-104,30,'#ffe44d'); txt(T[1],W/2,H-76,18,'#ffffff'); }   // 主人公の 足もと（前は ハードル・まものが 見える）。👇 は ボタンの 上（gTutFg）
 function sdDraw(){ var w=220, h=16, x=W/2-w/2, y=H-66; g.fillStyle='rgba(10,20,45,0.75)'; g.beginPath(); rrect(x-8,y-24,w+16,h+32,10); g.fill();
   g.fillStyle='rgba(40,150,70,0.55)'; g.fillRect(x+w*SD_LO,y,w*(SD_HI-SD_LO),h);
   g.fillStyle=sdOver?'#ff6a5a':(sdG>=SD_LO?'#9dff7a':'#ffe44d'); g.fillRect(x,y+3,w*sdG,h-6);
@@ -1509,6 +1532,7 @@ function draw(){
   if(st==='count'){ var n=3-Math.floor(tRun/BEAT), tx=n>0?String(n):'GO!', z=1.6-((tRun%BEAT)/BEAT)*0.6; txt(tx,W/2,HOR+58,60*z,n>0?'#fff':'#ffe44d'); }   // ★試作9 数字は主人公の上に（前は 直立・よーい の絵に重なって見えなかった）
   if(st==='count'||st==='intro'||st==='prc') sdDraw();
   if(tutWait) tutDraw();   // ★試作27   // ★試作24 スタートダッシュの ゲージ（★試作26 位置について から 見せる）
+  if(gTutHold) gTutDraw();   // ★試作30
   if(st==='lost') txt(lostWhy,W/2,H/2,36,'#ff7a7a',-0.05);
   if(st==='goal'){   // ★試作11 ゴールの演出
     if(camO===0){ var z=1+Math.max(0,0.22-gT)*9; txt('GOAL!!',W/2,HOR+70,70*z,'#ffe44d',-0.06); }
@@ -1546,9 +1570,9 @@ function md(at){ var d=new Date(at); return (d.getMonth()+1)+'/'+d.getDate(); }
 function show(h){ ov.innerHTML=h; ov.style.display='flex'; }
 function start(){ audioOn(); if(chBusy||rivBusy>0){ chWait=start; return; }   /* ★試作25 えらんだキャラの絵を 読みこみ中なら、おわってから はじめる（★試作26 ライバルの絵も） */
   build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='intro'; tRun=0; camEH=5.5; camEB=9; say('位置について','#ffffff'); mus('U'); prEndBtn(0);
-  practice=false; tutWait=false; tutOn=false; ezSaid=0; try{ tutOn=!localStorage.getItem(TUT_KEY); }catch(e){} }
+  practice=false; tutWait=false; tutOn=false; ezSaid=0; gTut=false; gTutHold=null; document.body.classList.remove('gtut'); gTutFg(null); gTutDone={}; gTutHint={}; gTutAs=0; gTutE=null; gTutPk=null; try{ tutOn=!localStorage.getItem(TUT_KEY); gTut=!localStorage.getItem(GT_KEY); }catch(e){} }
 // ★試作27 スタートの練習：レースは しないで「3・2・1」だけ くり返す（「おわる」で ホーム）
-function prStart(){ audioOn(); build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); practice=true; prN=0; prOK=0; tutOn=false; tutWait=false; st='count'; tRun=0; say('スタートの れんしゅう','#ffffff'); prEndBtn(1); }
+function prStart(){ audioOn(); build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); practice=true; prN=0; prOK=0; tutOn=false; tutWait=false; gTut=false; gTutHold=null; st='count'; tRun=0; say('スタートの れんしゅう','#ffffff'); prEndBtn(1); }
 function prEndBtn(on){ var b=document.getElementById('prEnd'); if(on && !b){ b=document.createElement('div'); b.id='prEnd'; b.className='uiBtn info'; b.textContent='✕ れんしゅうを おわる'; b.style.cssText='position:absolute;left:8px;top:116px;z-index:5;font-size:12px;min-height:36px;padding:4px 10px';   /* ワイプの下（下は ゲージ） */
   document.getElementById('stage').appendChild(b); onTap(b,function(){ practice=false; prEndBtn(0); title(); }); } else if(!on && b) b.parentNode.removeChild(b); }
 function hideTa(v){ document.getElementById('taBox').style.display=v?'none':''; }
@@ -1594,8 +1618,9 @@ function howto(){ menuMode(1);
       +'<div class="htChip"><big>🍞</big><span>パンは ジャンプで<br><em>パクッ！</em></span></div>'
     +'</div>'
     +'<div class="htMedal"><span>🥇 〜'+(MEDAL[0][0]-0.1).toFixed(1)+'秒</span><span>🥈 〜'+(MEDAL[1][0]-0.1).toFixed(1)+'秒</span><span>🥉 〜'+(MEDAL[2][0]-0.1).toFixed(1)+'秒</span></div>'
-    +'<div class="row" style="margin-top:4px"><div class="uiBtn go half" id="hp">🚀 スタートの練習</div><div class="uiBtn info half" id="hx">◀ もどる</div></div>'); ov.className='htv';   /* ★試作27 */
-  onTap(document.getElementById('hx'),title); onTap(document.getElementById('hp'),prStart); }
+    +'<div class="row" style="margin-top:4px"><div class="uiBtn gold half" id="ht">🎓 チュートリアル</div><div class="uiBtn go half" id="hp">🚀 スタートの練習</div></div><div class="uiBtn info mid" id="hx">◀ もどる</div>'); ov.className='htv';   /* ★試作27（★試作30 チュートリアル・もどるは いちばん下 §10-5） */
+  onTap(document.getElementById('hx'),title); onTap(document.getElementById('hp'),prStart);
+  onTap(document.getElementById('ht'),function(){ try{ localStorage.removeItem(GT_KEY); localStorage.removeItem(TUT_KEY); }catch(e){} start(); }); }   // ★試作30 もう1回
 function ranking(){ menuMode(1); var a=rkSort(rkLoad()).slice(0,10), h='';
   for(var i=0;i<a.length;i++){ var e=a[i]; h+='<div class="'+(lastRes&&lastRes===e.at?'me':'')+'"><b>'+(i+1)+'</b><span class="t'+(e.t==null?' ng':'')+'">'+(e.t!=null?fmt(e.t)+(medalOf(e.t)?' '+medalOf(e.t)[1]:''):e.d+'m で失格')+'</span><small>'+md(e.at)+'</small></div>'; }
   show('<div class="uiTitle">🏆 ランキング</div><div class="rk">'+(h||'<p class="note" style="text-align:center;padding:20px 0">まだ記録がないよ。走ってみよう！</p>')+'</div>'
@@ -1653,7 +1678,7 @@ function igPlay(k){ igFanfare(); var cv2=document.getElementById('igCv'), d=Math
   setTimeout(function(){ fx.classList.add('shake'); igConf(0,igH,70,-1.05); igConf(igW,igH,70,-2.09); igConf(igW/2,igH*0.42,40,-1.57); },700);
   setTimeout(function(){ igCoins(36); },1000); setTimeout(function(){ igConf(0,igH*0.6,40,-0.7); igConf(igW,igH*0.6,40,-2.44); },1800);
   igP=[]; igK=-1; igT0=performance.now(); if(!igRun){ igRun=true; requestAnimationFrame(igLoop); } }
-function finish(){ P.race=raceRank();   // ★試作26 4人の 順位（まだ走っている子は いまの速さから ゴールの時間を 見こむ）
+function finish(){ gTutEnd(); P.race=raceRank();   // ★試作26 4人の 順位（まだ走っている子は いまの速さから ゴールの時間を 見こむ）
   P.order=RIV.map(function(r){ return {id:r.id,nm:r.nm,t:r.fin!=null?r.fin:raceT+Math.max(0,GOAL-r.s)/(GOAL/(r.T-1.0))}; }).concat([{id:curChar,nm:'じぶん',t:P.fin,me:1}]).sort(function(a,b){ return a.t-b.t; }); rivChoose();
   face='happy'; gT=0; camO=0; resShown=false; hideTa(1); mus('C'); sfx('star'); var b=best(); P.wasBest=b; P.at=Date.now(); lastRes=P.at; P.rank=rkAdd({t:P.fin,d:GOAL,k:kills,c:got,at:P.at}); P.first=!b; P.nb=!b||P.fin<b;
   splits.push(+P.fin.toFixed(2)); if(P.nb){ try{ localStorage.setItem(GH_KEY,JSON.stringify({t:P.fin,d:rec,sp:splits})); }catch(e){} }      // ベストなら ゴーストを入れかえ
