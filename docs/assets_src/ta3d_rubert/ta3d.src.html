@@ -428,6 +428,7 @@ var CHR={}, RIV=[], rivPick=[], rivBusy=0, raceT=0, RIV_N=4;   // ★試作27 5�
 var ezSaid=0, LV=[['イージー',[76,86,98,108],'#33b257'],['ノーマル',[66,70,74,78],'#2f86e0'],['ハード',[61,63,66,69],'#f07c1e'],['ベリーハード',[56,58,60,63],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
 try{ var lvS=parseInt(localStorage.getItem(LV_KEY),10); if(lvS>=0 && lvS<LV.length) lv=lvS; }catch(e){}
 function rivTargets(){ return LV[lv][1].slice(); }
+var LVE=[[0.5,1],[0.8,1],[1.2,1.12],[1.6,1.25]], poiSaid=0;   // ★試作32 まものが よこに よってくる 速さ・前から 来る 速さ（ノーマル＝いままで）
 window.TA3D_CHAR_R=function(id,o){ var ps={}; Object.keys(o.poses).forEach(function(k){ var p=o.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; ps[k]={im:im,w:p.w,h:p.h,ax:p.ax}; }); CHR[id]={PS:ps}; };
 function shuf(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function rivArt(id){ return CH[id]?CH[id].PS:(CHR[id]?CHR[id].PS:null); }
@@ -534,6 +535,16 @@ function build(){
       && breads.every(function(b){ return Math.abs(b.s-t)>3; }) && balls.every(function(b){ return Math.abs(b.s-t)>6; }); if(!ok) t+=3; }
     if(!ok) continue; var pg=t/GOAL, tp2=R2()<0.25+pg*0.2?'fast':(R2()<0.2?'giant':(R2()<0.25?'spiky':'normal'));
     ens.push(mkE(tp2,LANES[Math.floor(R2()*5)],t)); add++; }
+  // ★試作32 むずかしさで コースを かえる（ユーザー「レーン自体も 難易度変化ほしい。穴は あんまり 増やさないで。敵の数や 敵の動きで。パンを 毒パンにして スター削れる」）。
+  //   穴・ハードル・コイン・大玉は 4つとも 同じ。まもの：イージーは 3体に1体 へらす／ハードは +6体・ベリーハードは +12体（べつの くじ rng(31)・すき間に。速い・大きい まものが 多め）。
+  //   毒パン（rng(37)）：ハード＝パンの 場所の 半分で 3つの うち 1つ／ベリーハード＝ぜんぶの 場所で 1つ（4割は 2つ）。うごきの ちがいは LVE（step）
+  if(lv===0) ens=ens.filter(function(e,i){ return i%3!==2; });
+  else if(lv>=2){ var R3=rng(31), want=lv===2?6:12, ad=0;
+    for(s=46; s<GOAL-26 && ad<want; s+=(GOAL-80)/want*(0.8+R3()*0.4)){ var t3=s, ok3=false;
+      for(var k3=0;k3<6 && !ok3;k3++){ ok3=pits.every(function(q){ return t3<q.s0-6||t3>q.s1+4; }) && hurd.every(function(h){ return Math.abs(h.s-t3)>4; }) && ens.every(function(e){ return Math.abs(e.s-t3)>4; })
+        && breads.every(function(b){ return Math.abs(b.s-t3)>3; }) && balls.every(function(b){ return Math.abs(b.s-t3)>6; }); if(!ok3) t3+=2.5; }
+      if(!ok3) continue; var r3=R3(), tp3=r3<(lv===3?0.45:0.4)?'fast':(r3<(lv===3?0.75:0.6)?'giant':(r3<0.85?'spiky':'normal')); ens.push(mkE(tp3,LANES[Math.floor(R3()*5)],t3)); ad++; } }
+  if(lv>=2){ var R4=rng(37); for(i=0;i+2<breads.length;i+=3){ if(lv===2 && R4()<0.5) continue; var a4=Math.floor(R4()*3); breads[i+a4].poi=1; if(lv===3 && R4()<0.4) breads[i+(a4+1+Math.floor(R4()*2))%3].poi=1; } }
   for(s=-24;s<GOAL+50;s+=17){ tents.push({s:s,x:-(HW+6.2),k:tents.length}); tents.push({s:s+8.5,x:HW+6.2,k:tents.length}); }
   for(s=50;s<GOAL;s+=50) signs.push({s:s,rem:GOAL-s});
   // ★試作5 観客：コースのすぐ外（さくのむこう）に、コースに出ないまもの と ほかのヒーロー がならんで応援する
@@ -618,7 +629,7 @@ function step(){
     // パンチ：前 2.1m・横 1.3m
     if(P.sw>0.08) ens.forEach(function(e){ if(e.dead||e.hurt>0) return; var ds=e.s-P.s, dx=e.x-P.x; if(ds>-0.5 && ds<2.1 && Math.abs(dx)<1.3+(e.tp==='giant'?0.4:0)) dmg(e,'ボカッ！'); });
     ens.forEach(function(e){ if(e.dead) return; e.ph+=DT*(e.tp==='fast'?7:4); if(e.hurt>0) e.hurt-=DT; var ds=e.s-P.s;
-      if(ds<24 && ds>-3){ var v=e.tp==='fast'?2.4:(e.tp==='giant'?0.7:1.3); e.s-=v*DT; e.x=clamp(e.x+clamp(P.x-e.x,-1,1)*0.8*DT+(e.tp==='fast'?Math.cos(e.ph*0.5)*2.6*DT:0),-HW+0.6,HW-0.6); }
+      if(ds<24 && ds>-3){ var v=(e.tp==='fast'?2.4:(e.tp==='giant'?0.7:1.3))*LVE[lv][1]; e.s-=v*DT; e.x=clamp(e.x+clamp(P.x-e.x,-1,1)*LVE[lv][0]*DT+(e.tp==='fast'?Math.cos(e.ph*0.5)*2.6*DT:0),-HW+0.6,HW-0.6); }
       if(Math.abs(e.x-P.x)<(e.tp==='giant'?1.05:0.75) && Math.abs(e.s-P.s)<0.6 && P.y<e.h*0.8){ if(star){ e.hp=1; dmg(e,'ドカーン！'); } else if(P.inv<=0) hit(); } });
     hurd.forEach(function(h){ if(h.down) return; if(Math.abs(h.x-P.x)<0.95 && Math.abs(h.s-P.s)<0.3 && (h.bar?P.slide<=0:P.y<0.55)){ h.down=1; sfx('hurdle'); if(star){ onoma(h.x,1,h.s,'バキッ！'); burst(h.x,0.5,h.s,'#fff',8); } else { P.stun=0.55; P.vs*=0.35; shake=0.2; onoma(h.x,1.1,h.s,'ガシャン！'); } } });
     coins.forEach(function(c){ if(c.got) return; c.ph+=DT*5; if(Math.abs(c.x-P.x)<0.85 && Math.abs(c.s-P.s)<0.7 && Math.abs(c.y-0.5-P.y)<1.0 && !(P.slide>0 && c.y>1)){ c.got=1; got++; starAdd(STAR_COIN,c.x,c.y,c.s); sfx('coin'); burst(c.x,c.y,c.s,'#ffd24a',4);
@@ -637,6 +648,9 @@ function step(){
       d=bl.s-P.s; if(P.sw>0.08 && d>-0.3 && d<2.6 && Math.abs(bl.x-P.x)<1.6 && bl.hitT<=0){ bl.hitT=1.2; bl.vx=(bl.x>=P.x?1:-1)*3; onoma(bl.x,1.6,bl.s,'ボヨーン！'); sfx('kill'); faceTmpT=0.7; }
       else if(Math.abs(d)<1.0 && Math.abs(bl.x-P.x)<1.25 && P.y<1.6 && bl.hitT<=0){ if(starT>0){ bl.hitT=1.5; bl.vx=(bl.x>=P.x?1:-1)*5; onoma(bl.x,1.6,bl.s,'ドカーン！'); sfx('kill'); } else if(P.inv<=0){ P.vs=-6; P.stun=0.7; P.inv=1.0; shake=0.3; sfx('hit'); onoma(P.x,1.9,P.s,'ボヨン！'); bl.hitT=0.8; } } });
     // パン食い：ジャンプで かじる（コイン3枚ぶん）
+    if(lv>=2 && !poiSaid && breads.some(function(br){ var d=br.s-P.s; return br.poi && !br.got && d>4 && d<16; })){ poiSaid=1; say('むらさきの パンは 毒！ とらないで','#e2b0ff'); }   // ★試作32 はじめて 見えたら
+    breads.forEach(function(br){ if(!br.got && br.poi && Math.abs(br.x-P.x)<0.85 && Math.abs(br.s-P.s)<0.7 && P.y>0.45){ br.got=1;   // ★試作32 毒パン：★が 9 へる（スター中は のこりが 2秒 へる）
+        if(starT>0) starT=Math.max(0.01,starT-2); else starC=Math.max(0,starC-9); meterPop=1; sfx('hit'); sfxN(500,200,0.3,0.25); onoma(br.x,2.0,br.s,'うえっ！'); burst(br.x,1.6,br.s,'#a35ad8',12); shake=0.15; } });
     breads.forEach(function(br){ if(!br.got && Math.abs(br.x-P.x)<0.85 && Math.abs(br.s-P.s)<0.7 && P.y>0.45){ br.got=1; got+=3; starAdd(STAR_BREAD,br.x,1.6,br.s); sfx('coin'); onoma(br.x,2.0,br.s,'パクッ！'); burst(br.x,1.6,br.s,'#f3d9a0',8); faceTmpT=0.7; } });
     cheerT-=DT; if(cheerT<=0){ cheerT=1.1+Math.random()*1.3; cheer(); }
     if(P.s>=GOAL){ st='goal'; P.fin=tRun; finish(); }
@@ -786,7 +800,8 @@ function ballDraw(bl,o){ var s=o.s, r=1.0*s, cy=o.y-r; g.globalAlpha=fog(o.d); g
 function breadDraw(br,o){ var s=o.s, x=o.x, y=o.y, sw=Math.sin(tAll*3+br.ph)*0.08*s; g.globalAlpha=fog(o.d);
   g.fillStyle='#8a8f98'; g.fillRect(x-1.02*s,y-2.5*s,0.07*s,2.5*s); g.fillRect(x+0.95*s,y-2.5*s,0.07*s,2.5*s); g.fillStyle='#e0352f'; g.fillRect(x-1.02*s,y-2.56*s,2.04*s,0.1*s);
   if(!br.got){ g.strokeStyle='#fff'; g.lineWidth=Math.max(1,0.03*s); g.beginPath(); g.moveTo(x,y-2.5*s); g.lineTo(x+sw,y-1.95*s); g.stroke();
-    g.fillStyle='#b8793a'; g.beginPath(); oval(x+sw,y-1.72*s,0.34*s,0.26*s); g.fill(); g.fillStyle='#e9b76a'; g.beginPath(); oval(x+sw-0.04*s,y-1.78*s,0.26*s,0.17*s); g.fill(); g.fillStyle='rgba(255,255,255,0.5)'; g.beginPath(); oval(x+sw-0.12*s,y-1.84*s,0.09*s,0.05*s); g.fill(); }
+    var po=br.poi; g.fillStyle=po?'#5b2380':'#b8793a'; g.beginPath(); oval(x+sw,y-1.72*s,0.34*s,0.26*s); g.fill(); g.fillStyle=po?'#9b5ccf':'#e9b76a'; g.beginPath(); oval(x+sw-0.04*s,y-1.78*s,0.26*s,0.17*s); g.fill();
+    if(po){ g.fillStyle='#7dff4a'; g.beginPath(); for(var bi=0;bi<3;bi++){ var bt=(tAll*0.9+br.ph+bi*0.33)%1, bx=x+sw+(bi-1)*0.14*s, by=y-1.98*s-bt*0.55*s; g.moveTo(bx+0.06*s*(1-bt),by); g.arc(bx,by,0.06*s*(1-bt)+0.01,0,6.283); } g.fill(); } g.fillStyle='rgba(255,255,255,0.5)'; g.beginPath(); oval(x+sw-0.12*s,y-1.84*s,0.09*s,0.05*s); g.fill(); }   // ★試作32 毒パン：むらさき＋みどりの あわ
   g.globalAlpha=1; }
 function ghostDraw(o){ var p=PS['b_run'+(Math.floor(tAll*6)%2)]; if(!p||!p.im.complete) return; var k=o.s*1.35/300; g.globalAlpha=0.42*fog(o.d); g.drawImage(p.im,o.x-p.ax*k,o.y-p.h*k,p.w*k,p.h*k); g.globalAlpha=fog(o.d);
   g.font='900 '+clamp(o.s*0.22,8,13)+'px sans-serif'; g.textAlign='center'; g.fillStyle='#fff'; g.strokeStyle='#0a1a3a'; g.lineWidth=3; g.strokeText('BEST',o.x,o.y-p.h*k-3); g.fillText('BEST',o.x,o.y-p.h*k-3); g.globalAlpha=1; }
@@ -1124,7 +1139,7 @@ function md(at){ var d=new Date(at); return (d.getMonth()+1)+'/'+d.getDate(); }
 function show(h){ ov.innerHTML=h; ov.style.display='flex'; }
 function start(){ audioOn(); if(chBusy||rivBusy>0){ chWait=start; return; }   /* ★試作25 えらんだキャラの絵を 読みこみ中なら、おわってから はじめる（★試作26 ライバルの絵も） */
   build(); sdZone(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='intro'; tRun=0; camEH=5.5; camEB=9; say('位置について','#ffffff'); mus('U'); prEndBtn(0);
-  practice=false; tutWait=false; tutOn=false; ezSaid=0; gTut=false; gTutHold=null; document.body.classList.remove('gtut'); gTutFg(null); gTutDone={}; gTutHint={}; gTutAs=0; gTutE=null; gTutPk=null; try{ tutOn=!localStorage.getItem(TUT_KEY); gTut=!localStorage.getItem(GT_KEY); }catch(e){} }
+  practice=false; tutWait=false; tutOn=false; ezSaid=0; poiSaid=0; gTut=false; gTutHold=null; document.body.classList.remove('gtut'); gTutFg(null); gTutDone={}; gTutHint={}; gTutAs=0; gTutE=null; gTutPk=null; try{ tutOn=!localStorage.getItem(TUT_KEY); gTut=!localStorage.getItem(GT_KEY); }catch(e){} }
 // ★試作27 スタートの練習：レースは しないで「3・2・1」だけ くり返す（「おわる」で ホーム）
 function prStart(){ audioOn(); build(); sdZone(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); practice=true; prN=0; prOK=0; tutOn=false; tutWait=false; gTut=false; gTutHold=null; st='count'; tRun=0; say('スタートの れんしゅう','#ffffff'); prEndBtn(1); }
 function prEndBtn(on){ var b=document.getElementById('prEnd'); if(on && !b){ b=document.createElement('div'); b.id='prEnd'; b.className='uiBtn info'; b.textContent='✕ れんしゅうを おわる'; b.style.cssText='position:absolute;left:8px;top:116px;z-index:5;font-size:12px;min-height:36px;padding:4px 10px';   /* ワイプの下（下は ゲージ） */
