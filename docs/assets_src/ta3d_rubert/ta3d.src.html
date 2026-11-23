@@ -403,7 +403,10 @@ var CHR={}, RIV=[], rivPick=[], rivBusy=0, raceT=0, RIV_N=4;   // ★試作27 5�
 //   試作27 の「じこベストに あわせる」は やめた：1回 いい記録（54秒くらい）が出ると、そのあと ずっと 55〜58秒の ライバルになる（スクショ 56.7/57.1/58.0 で 5位。試算でも 60秒なら 88% 5位）。
 //   数字は ゴールの目やす（秒）。±0.75 の くじ・ひきはなすと おそく／おくれると はやく（rivStep）は そのまま。400回の試算（じぶんが 一定の はやさ）：
 //   イージー 65秒より はやければ 1位・70秒で 2位／ノーマル 58秒で 1位・60秒で 8割 1位・62秒で 2位／ハード 55秒で 8割 1位・58秒で 3位／ベリーハード 49秒（ずっとダッシュ）で 1位
-var LV=[['イージー',[68,71,74,77],'#33b257'],['ノーマル',[61,64,67,70],'#2f86e0'],['ハード',[56,58,60,63],'#f07c1e'],['ベリーハード',[51,53,55,57],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
+//   ★試作30 イージーを 76・86・98・108秒に（ユーザー「初心者や ゲーム苦手な子でも トップ3に 入れるぐらい」）＋ハートが へらない（heartLoss）。
+//     初心者の まね（ダッシュなし・まものを なぐらない）は まものに 8〜11回 ぶつかって 84〜87秒＝ハート5つでは ゴール前に 失格していた。
+//     300回の試算：70秒 1位／80秒 2位／85秒 2〜3位／95秒 3位／100秒 4位（試作29 の 68〜77秒では 75秒で 4位・80秒より おそいと 5位）
+var ezSaid=0, LV=[['イージー',[76,86,98,108],'#33b257'],['ノーマル',[61,64,67,70],'#2f86e0'],['ハード',[56,58,60,63],'#f07c1e'],['ベリーハード',[51,53,55,57],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
 try{ var lvS=parseInt(localStorage.getItem(LV_KEY),10); if(lvS>=0 && lvS<LV.length) lv=lvS; }catch(e){}
 function rivTargets(){ return LV[lv][1].slice(); }
 window.TA3D_CHAR_R=function(id,o){ var ps={}; Object.keys(o.poses).forEach(function(k){ var p=o.poses[k], im=new Image(); im.src='data:image/webp;base64,'+p.d; ps[k]={im:im,w:p.w,h:p.h,ax:p.ax}; }); CHR[id]={PS:ps}; };
@@ -668,7 +671,8 @@ function rivDraw(r,o){ var ps=rivArt(r.id); if(!ps) return; var cyc=Math.floor(r
 function starAdd(n,x,y,sv){ if(starT>0) return; starC=Math.min(STAR_NEED,starC+n); var o=pj(x,y,sv); toks.push({x:o?o.x:W/2,y:o?o.y:HOR+80,t:0,n:n}); starTry(); }
 function starTry(){ if(starT>0 || starC<STAR_NEED) return; starT=STAR_T; starC=0; meterPop=0.5; sfx('star'); say('スター モード！！','#fff27a'); flash=-0.4; }
 // ★試作7 ハート5つ。まものに当たる・穴に落ちる・コースアウト で1つへる。0 で失格（ハードル・ゲートは へらない）
-function heartLoss(why){ life--; flash=0.3; if(life<=0){ lose(why); return true; } say('♥ のこり '+life,'#ff9aa8'); return false; }
+function heartLoss(why){ if(lv===0 && !practice){ flash=0.3; say(ezSaid?'いたた！':'いたた！ イージーは ハートが へらないよ','#ff9aa8'); ezSaid=1; return false; }   // ★試作30 イージーは 失格なし（ころぶ・もどされる だけ）
+  life--; flash=0.3; if(life<=0){ lose(why); return true; } say('♥ のこり '+life,'#ff9aa8'); return false; }
 function hit(){ P.vs=-7; P.stun=0.8; P.inv=1.2; shake=0.32; combo=0; sfx('hit'); onoma(P.x,1.9,P.s+0.2,'ドカッ！'); cheer('だいじょうぶ！？'); heartLoss('ハートが なくなった！'); }
 function lose(why){ if(st==='lost') return; st='lost'; lostWhy=why; face='cry'; shake=0.3; sfx('fall'); mus(null); setTimeout(showLost,800); }
 function burst(x,y,s,col,n){ for(var i=0;i<n;i++){ var a=Math.random()*6.28, v=1.5+Math.random()*3; parts.push({x:x,y:y,s:s,vx:Math.cos(a)*v,vy:2+Math.random()*3.5,vs:Math.sin(a)*v*0.4,l:0.45+Math.random()*0.35,c:col}); } }
@@ -1088,7 +1092,7 @@ function md(at){ var d=new Date(at); return (d.getMonth()+1)+'/'+d.getDate(); }
 function show(h){ ov.innerHTML=h; ov.style.display='flex'; }
 function start(){ audioOn(); if(chBusy||rivBusy>0){ chWait=start; return; }   /* ★試作25 えらんだキャラの絵を 読みこみ中なら、おわってから はじめる（★試作26 ライバルの絵も） */
   build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='intro'; tRun=0; camEH=5.5; camEB=9; say('位置について','#ffffff'); mus('U'); prEndBtn(0);
-  practice=false; tutWait=false; tutOn=false; try{ tutOn=!localStorage.getItem(TUT_KEY); }catch(e){} }
+  practice=false; tutWait=false; tutOn=false; ezSaid=0; try{ tutOn=!localStorage.getItem(TUT_KEY); }catch(e){} }
 // ★試作27 スタートの練習：レースは しないで「3・2・1」だけ くり返す（「おわる」で ホーム）
 function prStart(){ audioOn(); build(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); practice=true; prN=0; prOK=0; tutOn=false; tutWait=false; st='count'; tRun=0; say('スタートの れんしゅう','#ffffff'); prEndBtn(1); }
 function prEndBtn(on){ var b=document.getElementById('prEnd'); if(on && !b){ b=document.createElement('div'); b.id='prEnd'; b.className='uiBtn info'; b.textContent='✕ れんしゅうを おわる'; b.style.cssText='position:absolute;left:8px;top:116px;z-index:5;font-size:12px;min-height:36px;padding:4px 10px';   /* ワイプの下（下は ゲージ） */
