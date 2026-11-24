@@ -462,8 +462,11 @@ function fog(d){ return clamp(1-(d-(FAR-26))/26,0,1); }
 
 // ---- 音（運動会の曲 U・クリアの曲 C は ゲームと同じ MUS。効果音は短い音）----
 var AC=null, musOn=null;
-function audioOn(){ try{ if(!AC){ var A=window.AudioContext||window.webkitAudioContext; if(A) AC=new A(); } if(AC && AC.state==='suspended') AC.resume(); }catch(e){} }
-function mus(id){ try{ if(!AC||typeof MUS==='undefined') return; if(id){ if(musOn===id) return; MUS.play(id,AC); musOn=id; } else { MUS.stop(); musOn=null; } }catch(e){} }
+// ★試作33 iPhone は AudioContext が「suspended」の ほかに「interrupted」（ほかの 音・画面の 切りかえ・しずかな 時間の あと）に なることが あり、
+//   試作32 までは suspended しか 戻していなかった（ユーザー「なぜか 2週目から 音楽が 消える」。ヘッドレスの Chrome では 3回とも 鳴っていて 再現しない）。
+//   running で なければ 戻す・画面を さわる たびに たしかめる（touchstart）・曲が おわったら musOn も もどす（MUS.onEnd）・スタートでは 曲を かならず かけなおす
+function audioOn(){ try{ if(!AC){ var A=window.AudioContext||window.webkitAudioContext; if(A) AC=new A(); } if(AC && AC.state!=='running') AC.resume(); }catch(e){} }
+function mus(id){ try{ if(!AC||typeof MUS==='undefined') return; if(!MUS.onEnd) MUS.onEnd=function(e){ if(musOn===e) musOn=null; }; if(id){ if(musOn===id) return; MUS.play(id,AC); musOn=id; } else { MUS.stop(); musOn=null; } }catch(e){} }
 // ★試作23 パンチの音を2つ重ねる（ユーザーの参考「打撃音のレイヤー化」）。シュッ＝ふった音（ノイズを高い→低いへ）、当たったら ドッ（四角い波 260→110Hz）＋パシッ（高いノイズ）。
 //   iPhone のスピーカーは 300Hz より下が ほぼ鳴らない（§1-24）ので「重低音」は入れない。ドッは 倍音の多い四角い波で 中くらいの高さに
 var NZB=null; function noiseBuf(){ if(NZB||!AC) return NZB; var n=AC.sampleRate*0.3|0; NZB=AC.createBuffer(1,n,AC.sampleRate); var d=NZB.getChannelData(0); for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return NZB; }
@@ -482,7 +485,8 @@ function stickSet(cx,cy){ var r=stickEl.getBoundingClientRect(), R=r.width*0.34,
 function stickOff(){ stickId=null; joy.x=joy.y=0; knob.style.transform=''; }
 function press(k,el){ if(k==='dash') hold.dash=1; else edge[k]=1; if(el) el.classList.add('act'); }
 function release(k,el){ if(k==='dash') hold.dash=0; if(el) el.classList.remove('act'); }
-document.addEventListener('touchstart',function(e){ if(e.target.closest && e.target.closest('.save')) return;   // ★試作14 記念の画像は 長押しで保存できるように 止めない
+document.addEventListener('touchstart',function(e){ if(AC && AC.state!=='running') audioOn();   // ★試作33
+  if(e.target.closest && e.target.closest('.save')) return;   // ★試作14 記念の画像は 長押しで保存できるように 止めない
   if(st==='podium' && podT>1.2 && !(e.target.closest && e.target.closest('.tap'))){ e.preventDefault(); if(podT<POD_END) podSkip(); else podEnd(); return; }   // ★試作27 表彰式は タップで つぎへ（★試作28 とちゅうなら さいごの場面へ）
   e.preventDefault();
   for(var i=0;i<e.changedTouches.length;i++){ var t=e.changedTouches[i], b=t.target.closest&&t.target.closest('[data-k]'), tp=t.target.closest&&t.target.closest('.tap'), dm=t.target.closest&&t.target.closest('.hcDia .abtn');
@@ -1141,7 +1145,7 @@ function best(){ var a=rkSort(rkLoad()); return a.length && a[0].t!=null?a[0].t:
 function md(at){ var d=new Date(at); return (d.getMonth()+1)+'/'+d.getDate(); }
 function show(h){ ov.innerHTML=h; ov.style.display='flex'; }
 function start(){ audioOn(); if(chBusy||rivBusy>0){ chWait=start; return; }   /* ★試作25 えらんだキャラの絵を 読みこみ中なら、おわってから はじめる（★試作26 ライバルの絵も） */
-  build(); sdZone(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='intro'; tRun=0; camEH=5.5; camEB=9; say('位置について','#ffffff'); mus('U'); prEndBtn(0);
+  build(); sdZone(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); st='intro'; tRun=0; camEH=5.5; camEB=9; say('位置について','#ffffff'); mus(null); mus('U'); prEndBtn(0);   /* ★試作33 かならず かけなおす */
   practice=false; tutWait=false; tutOn=false; ezSaid=0; poiSaid=0; gTut=false; gTutHold=null; document.body.classList.remove('gtut'); gTutFg(null); gTutDone={}; gTutHint={}; gTutAs=0; gTutE=null; gTutPk=null; try{ tutOn=!localStorage.getItem(TUT_KEY); gTut=!localStorage.getItem(GT_KEY); }catch(e){} }
 // ★試作27 スタートの練習：レースは しないで「3・2・1」だけ くり返す（「おわる」で ホーム）
 function prStart(){ audioOn(); build(); sdZone(); ov.style.display='none'; ov.className=''; hideTa(0); menuMode(0); practice=true; prN=0; prOK=0; tutOn=false; tutWait=false; gTut=false; gTutHold=null; st='count'; tRun=0; say('スタートの れんしゅう','#ffffff'); prEndBtn(1); }
