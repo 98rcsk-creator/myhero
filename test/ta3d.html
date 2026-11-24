@@ -1585,6 +1585,9 @@ function hud(){ var rem=Math.max(0,Math.ceil(GOAL-P.s)), t=st==='goal'||st==='lo
   }
 // ★試作11 ランキング（この端末の記録）。完走はタイムの順、失格は そのあと 走った距離の順。日時は記録したときの時刻
 var RK_KEY='ta3d_rank_500r';   // ★試作13 速さを変えたので、前の記録（速すぎた走り）とは別にする
+// ★試作33 テストの 記録を 1回だけ リセット（ユーザー「ベストタイムは 本番は 蓄積で いいけど、テストの やつは いったん リセット」）。
+//   ランキング（じこベスト）と ベストの 影を けす。まえの 記録は _bk33 に のこす（もどすときは キーを もとに 書きもどす）。ゴールド・もらった 剣と盾・はじめての完走の しるしは そのまま
+(function(){ try{ if(localStorage.getItem('ta3d_reset33')) return; [RK_KEY,'ta3d_ghost_500r'].forEach(function(k){ var v=localStorage.getItem(k); if(v!=null) localStorage.setItem(k+'_bk33',v); localStorage.removeItem(k); }); localStorage.setItem('ta3d_reset33','1'); }catch(e){} })();
 function rkLoad(){ try{ var a=JSON.parse(localStorage.getItem(RK_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function rkSort(a){ return a.sort(function(x,y){ if((x.t!=null)!==(y.t!=null)) return x.t!=null?-1:1; return x.t!=null?x.t-y.t:y.d-x.d; }); }
 function rkAdd(e){ var a=rkSort(rkLoad().concat([e])).slice(0,20); try{ localStorage.setItem(RK_KEY,JSON.stringify(a)); }catch(_){} for(var i=0;i<a.length;i++) if(a[i].at===e.at) return i+1; return 0; }
