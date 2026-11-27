@@ -491,7 +491,9 @@ var CHR={}, RIV=[], rivPick=[], rivBusy=0, raceT=0, RIV_N=4;   // ★試作27 5�
 //   ★試作32 ノーマル〜ベリーハードを ならべなおす（ユーザー「ベリーハードは 今の ハードぐらい。イージーとの ギャップが ありすぎる。少しずつ」）。
 //     1位に いる タイム（300回の試算・8割）：イージー 75／ノーマル 65（銀メダルくらい）／ハード 60（金メダル）／ベリーハード 55秒。3位いない：96／73／65／59秒
 //     試作29〜31 は ノーマル 59・ハード 55・ベリーハード 50秒 だった（スクショ：ハード 57.4秒で 2位・ベリーハード 57.8秒で 5位）
-var ezSaid=0, LV=[['イージー',[76,86,98,108],'#33b257'],['ノーマル',[66,70,74,78],'#2f86e0'],['ハード',[61,63,66,69],'#f07c1e'],['ベリーハード',[56,58,60,63],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
+//   ★試作35 新しい ルール（息切れ・着地）で うまく 走っても 約1秒 おそくなる（ボット：ノーマル 56.4→57.3秒・ハード 52.9→54.1秒）→ ライバルも ぜんぶ 1秒 おそく（むずかしさは 前と 同じ）
+//     ハーネスの 照合（試作26：49秒＝いつも1位・75秒＝いつも4位）が 合ってから 試算。1位に いる タイム（8割）：76／66／61／56秒（前 74.5／65／59.5／55）。3位いない：98／73.5／66／60秒
+var ezSaid=0, LV=[['イージー',[77,87,99,109],'#33b257'],['ノーマル',[67,71,75,79],'#2f86e0'],['ハード',[62,64,67,70],'#f07c1e'],['ベリーハード',[57,59,61,64],'#d9304a']], LV_KEY='ta3d_lv', lv=1;
 try{ var lvS=parseInt(localStorage.getItem(LV_KEY),10); if(lvS>=0 && lvS<LV.length) lv=lvS; }catch(e){}
 function rivTargets(){ return LV[lv][1].slice(); }
 var LVE=[[0.5,1],[0.8,1],[1.2,1.12],[1.6,1.25]], poiSaid=0, puffSaid=0;   // ★試作32 まものが よこに よってくる 速さ・前から 来る 速さ（ノーマル＝いままで）
@@ -631,7 +633,7 @@ function mkE(tp,x,s){ return {tp:tp,x:x,s:s,hp:tp==='giant'?2:1,dead:0,hurt:0,ph
 
 // ---- 1コマ ----
 // ★試作14 タイムの もくひょう（試作34 までは タイムの メダル）・ゴースト・区間タイム・スタートダッシュ・ごほうび
-var GOALS=[[75,30],[65,60],[60,100],[55,150]],   /* ★試作35 タイムの もくひょう［秒, はじめて きった ときの G］。じゅんに イージー〜ベリーハードで 1位に なれる タイム（LV の 試算）。試作21〜34 の タイムの メダル（60金・70銀・75銅）は 表彰台の メダルと まちがえるので やめた（ユーザー「タイムの メダルって どういう意味？」） */ GH_KEY='ta3d_ghost_500r', GOLD_KEY='tk_yk_ta3d_gold', FLAG_KEY='ta3d_flags_500r';
+var GOALS=[[76,30],[66,60],[61,100],[56,150]],   /* ★試作35 タイムの もくひょう［秒, はじめて きった ときの G］。じゅんに イージー〜ベリーハードで 1位に なれる タイム（LV の 試算）。試作21〜34 の タイムの メダル（60金・70銀・75銅）は 表彰台の メダルと まちがえるので やめた（ユーザー「タイムの メダルって どういう意味？」） */ GH_KEY='ta3d_ghost_500r', GOLD_KEY='tk_yk_ta3d_gold', FLAG_KEY='ta3d_flags_500r';
 var ghost=null, rec=[], recF=0, splits=[], nextSp=100, sdG=0, sdOver=0, boostT=0, balls=[], breads=[], gap=null, toks=[], meterPop=0;
 function ghLoad(){ try{ var o=JSON.parse(localStorage.getItem(GH_KEY)||'null'); return (o&&o.d&&o.d.length)?o:null; }catch(e){ return null; } }
 function ghAt(tm){ if(!ghost) return null; var f=tm*10, i=Math.floor(f), n=ghost.d.length/2; if(i>=n-1) return null; var k=f-i; return {s:ghost.d[i*2]+(ghost.d[i*2+2]-ghost.d[i*2])*k, x:ghost.d[i*2+1]+(ghost.d[i*2+3]-ghost.d[i*2+1])*k}; }
@@ -1286,7 +1288,7 @@ function ranking(){ menuMode(1); var a=rkSort(rkLoad()).slice(0,10), h='';
 //   記録は FLAG_KEY の items（もらった物の id）。ゲーム（taItemGrant）も 同じ items を見て 渡す。絵は build.py が ゲームの ITEM_SPR から入れる
 var ITEMS_IMG=/*ITEMS*/null, IT_INFO={kohaku:['🎀 紅白の剣','まものを たおすと 育つ剣！<br>Lv5 で 金色のオーラ'],medalshield:['🏅 金メダルの盾','ガード時間 +50%・ガード成功で HP +1<br>1位の しるし！']};
 function taItemsOf(fl){ if(!fl.items){ fl.items=[]; if(fl.first) fl.items.push('kohaku'); if(fl.m0) fl.items.push('medalshield'); } return fl.items; }   // 試作21 までの記録：完走で剣・金メダルで盾を もう渡していた
-var IT_T2=55;
+var IT_T2=GOALS[3][0];   // ★試作35 2つ目の 剣・盾＝ハードいじょうで いちばん上の もくひょう（55→56秒。新しい ルールで 1秒 おそくなった ぶん）
 function itemChip(k){ return k==='choose'?'🎁 ごほうびを えらぼう':IT_INFO[k][0]+' ゲット'; }   // ★試作33 結果の 札   // ★試作32 2つ目の 剣・盾の タイム
 function itemNote(k){ return k==='choose'?'🎁 1位の ごほうびを えらぼう！':'🎁 '+IT_INFO[k][0]+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span>'; }
 function itemSave(k){ var fl={}; try{ fl=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')||{}; }catch(e){} var its=taItemsOf(fl); if(its.indexOf(k)<0) its.push(k); try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); }catch(e){} }
@@ -1301,7 +1303,7 @@ function igMake(){ if(igL) return; igL=document.createElement('div'); igL.id='ig
   var T='NEW ITEM GET!!';
   igL.innerHTML='<div class="igSky"></div><div id="igPick"><div class="igMedal">🥇</div><div class="igP1">1位 おめでとう！</div><div class="igP2">ごほうびを 1つ えらんでね</div><div class="igCards">'
     +['kohaku','medalshield'].map(function(k){ return '<div class="igCard" data-it="'+k+'"><div class="igPic"><img src="'+(ITEMS_IMG?ITEMS_IMG[k]:'')+'" alt=""></div><b>'+IT_INFO[k][0]+'</b><span>'+(k==='kohaku'?'まものを たおすと<br>どんどん 強くなる':'ガードが 長くなって<br>HP も 回復')+'</span></div>'; }).join('')
-    +'</div><div class="igHint">のこりの 1つは ハードか ベリーハードで<br>55秒を きると もらえるよ</div></div>'
+    +'</div><div class="igHint">のこりの 1つは ハードか ベリーハードで<br>'+IT_T2+'秒を きると もらえるよ</div></div>'
     +'<div id="igFx"><div class="igDim"></div><div class="igRays"></div><div class="igRays r2"></div><div class="igPillar"></div><div class="igGlow"></div><div class="igRing"></div><div class="igRing k2"></div><div class="igRing k3"></div>'
     +'<div class="igItem" id="igIt"><img id="igBig" alt=""></div><div class="igTtl"><div class="igT1">'+T.split('').map(function(c,i){ return c===' '?'<i style="width:.3em"> </i>':'<i style="--d:'+(i*0.05)+'s">'+c+'</i>'; }).join('')+'</div><div class="igT2">ニューアイテム ゲット！</div></div>'
     +'<div class="igPlate"><b id="igPn"></b><span id="igPd"></span></div><div class="igOk" id="igOk">やったー！</div><div class="igFlash"></div><div class="igFlash f2"></div></div><canvas id="igCv"></canvas>';
