@@ -601,7 +601,7 @@ function build(){
       s+=4+R()*7; } }
   [[150,-1],[320,1],[GOAL-6,-1],[GOAL-6,1]].forEach(function(b){ specs.push({s:b[0],x:b[1]*(HW+3.9),b:-1,e:'boss',ph:R()*6,sz:2.6}); });
   var ln=shuf([-4,-2,2,4]), tt=shuf(rivTargets()); RIV=rivPick.map(function(id,i){ return {id:id,nm:rivName(id),x:ln[i],s:0,vs:0,y:0,vy:0,ph:Math.random()*6,T:tt[i]+(Math.random()-0.5)*1.5,fin:null,slide:0,react:0.08+Math.random()*0.25}; }); raceT=0; camEH=0; camEB=0;   // ★試作26
-  P={x:0,y:0,s:0,vx:0,vs:0,vy:0,ph:0,sw:0,stun:0,tilt:0,inv:0,fin:0,slide:0,fa:0,jog:0,cnt:{fall:0,hit:0,out:0,star:0,poi:0}};   // ★試作33 cnt＝結果の「ゲーム詳細」で 出す camO=0; gT=0; fws=[]; fwT=0; resShown=false; finCalls=0; jumpBuf=0;
+  P={x:0,y:0,s:0,vx:0,vs:0,vy:0,ph:0,sw:0,stun:0,tilt:0,inv:0,fin:0,slide:0,fa:0,jog:0,cnt:{fall:0,hit:0,out:0,star:0,poi:0}}; camO=0; gT=0; fws=[]; fwT=0; resShown=false; finCalls=0; jumpBuf=0;   // ★試作33 cnt＝結果の「ゲーム詳細」で 出す（★試作34 このコメントが 行の まん中に 入って、うしろの camO=0 などが 2回目の レースから 動いていなかった）
   kills=0; got=0; life=LIFE_MAX; starC=0; starT=0; toks=[]; meterPop=0; stam=1; shake=0; flash=0; hitstop=0; banner=null; combo=0; comboT=0; cheerT=1; mile=[300,200,100,50]; tRun=0; face='calm'; faceHold=0; faceTmpT=0; fallT=0; lostWhy='';
 }
 function mkE(tp,x,s){ return {tp:tp,x:x,s:s,hp:tp==='giant'?2:1,dead:0,hurt:0,ph:Math.random()*6,h:tp==='giant'?1.7:(tp==='spiky'?0.8:1.0)}; }
