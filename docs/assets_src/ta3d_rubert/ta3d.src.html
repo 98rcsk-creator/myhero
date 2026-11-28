@@ -401,7 +401,7 @@ body.rsOn #hud{visibility:hidden}
   <div id="ov"></div>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="tag">大運動会・試作36</div>
+    <div id="tag">大運動会・試作37</div>
     <div id="taBox"><div id="taT">0:00.0</div><div id="taC">のこり <b id="taR">500</b> m</div><div id="taRk"></div></div>
   </div>
   <div id="pad">
@@ -1293,9 +1293,7 @@ function ranking(){ menuMode(1); var a=rkSort(rkLoad()).slice(0,10), h='';
 //   記録は FLAG_KEY の items（もらった物の id）。ゲーム（taItemGrant）も 同じ items を見て 渡す。絵は build.py が ゲームの ITEM_SPR から入れる
 var ITEMS_IMG=/*ITEMS*/null, IT_INFO={kohaku:['🎀 紅白の剣','まものを たおすと 育つ剣！<br>Lv5 で 金色のオーラ'],medalshield:['🏅 金メダルの盾','ガード時間 +50%・ガード成功で HP +1<br>1位の しるし！']};
 function taItemsOf(fl){ if(!fl.items){ fl.items=[]; if(fl.first) fl.items.push('kohaku'); if(fl.m0) fl.items.push('medalshield'); } return fl.items; }   // 試作21 までの記録：完走で剣・金メダルで盾を もう渡していた
-var IT_T2=58;   // ★試作36 剣・盾の タイムの 条件＝ハードいじょうで 58秒切り（ユーザー「55秒は ほぼ 不可能な 気が する」。試作35 は 56秒＝いちばん上の もくひょう）
-// ★試作36 えらぶ 画面の 下の 1行：のこりの 1つの もらいかた（c1＝ベリーハードで 1位で もらった・c2＝58秒切りで もらった・both＝いっしょに たっせいした）
-function igHintTx(v){ return v==='c1'?'のこりの 1つは ハードいじょうで<br>'+IT_T2+'秒を きると もらえるよ':(v==='c2'?'のこりの 1つは ベリーハードで<br>1位に なると もらえるよ':'のこりの 1つは もういちど ベリーハードで 1位か<br>ハードいじょうで '+IT_T2+'秒を きると もらえるよ'); }
+var IT_T2=60, IT_TX='1分切り';   // ★試作37 1つ目の 剣・盾＝ハードいじょうで 1分切り（ユーザー「1位 なれんくても ゲット できるって 言うのが ええ」「58秒じゃなくて 1分 切れたら」）。試作36 は 58秒・試作35 は 56秒
 function itemChip(k){ return k==='choose'?'🎁 ごほうびを えらぼう':IT_INFO[k][0]+' ゲット'; }   // ★試作33 結果の 札   // ★試作32 2つ目の 剣・盾の タイム
 function itemNote(k){ return k==='choose'?'🎁 1位の ごほうびを えらぼう！':'🎁 '+IT_INFO[k][0]+' ゲット！<br><span style="font-size:11px;color:#b4c6dc">My HERO の そうびで 使えるよ</span>'; }
 function itemSave(k){ var fl={}; try{ fl=JSON.parse(localStorage.getItem(FLAG_KEY)||'{}')||{}; }catch(e){} var its=taItemsOf(fl); if(its.indexOf(k)<0) its.push(k); try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); }catch(e){} }
@@ -1308,9 +1306,9 @@ function igFanfare(o){ audioOn(); o=o||0;   // じゃららら → ジャーン�
   [1568,2093,2637,3136,2637,3136,4186].forEach(function(f,i){ igTone(f,o+0.95+i*0.09,0.25,'triangle',0.05); }); igTone(196,o+0.7,0.5,'triangle',0.12); }
 function igMake(){ if(igL) return; igL=document.createElement('div'); igL.id='igL';
   var T='NEW ITEM GET!!';
-  igL.innerHTML='<div class="igSky"></div><div id="igPick"><div class="igMedal">🥇</div><div class="igP1">1位 おめでとう！</div><div class="igP2">ごほうびを 1つ えらんでね</div><div class="igCards">'
+  igL.innerHTML='<div class="igSky"></div><div id="igPick"><div class="igMedal">⏱</div><div class="igP1">'+IT_TX+' おめでとう！</div><div class="igP2">ごほうびを 1つ えらんでね</div><div class="igCards">'
     +['kohaku','medalshield'].map(function(k){ return '<div class="igCard" data-it="'+k+'"><div class="igPic"><img src="'+(ITEMS_IMG?ITEMS_IMG[k]:'')+'" alt=""></div><b>'+IT_INFO[k][0]+'</b><span>'+(k==='kohaku'?'まものを たおすと<br>どんどん 強くなる':'ガードが 長くなって<br>HP も 回復')+'</span></div>'; }).join('')
-    +'</div><div class="igHint"></div></div>'
+    +'</div><div class="igHint">のこりの 1つは ベリーハードで<br>1位に なると もらえるよ</div></div>'
     +'<div id="igFx"><div class="igDim"></div><div class="igRays"></div><div class="igRays r2"></div><div class="igPillar"></div><div class="igGlow"></div><div class="igRing"></div><div class="igRing k2"></div><div class="igRing k3"></div>'
     +'<div class="igItem" id="igIt"><img id="igBig" alt=""></div><div class="igTtl"><div class="igT1">'+T.split('').map(function(c,i){ return c===' '?'<i style="width:.3em"> </i>':'<i style="--d:'+(i*0.05)+'s">'+c+'</i>'; }).join('')+'</div><div class="igT2">ニューアイテム ゲット！</div></div>'
     +'<div class="igPlate"><b id="igPn"></b><span id="igPd"></span></div><div class="igOk" id="igOk">やったー！</div><div class="igFlash"></div><div class="igFlash f2"></div></div><canvas id="igCv"></canvas>';
@@ -1318,8 +1316,7 @@ function igMake(){ if(igL) return; igL=document.createElement('div'); igL.id='ig
   [].forEach.call(igL.querySelectorAll('.igCard'),function(c){ onTap(c,function(){ var k=c.dataset.it; itemSave(k);   /* data-k は コントローラーのボタンの しるしなので使わない（§1-3） */ P.pick=k; var n=document.getElementById('resItem'); if(n) n.innerHTML=itemChip(k); igPlay(k); }); });
   onTap(document.getElementById('igOk'),function(){ document.getElementById('igFx').classList.remove('on','shake'); igL.classList.remove('on'); igRun=false; igP=[]; }); }
 function itemShow(k){ igMake(); igL.classList.add('on'); var pk=document.getElementById('igPick');
-  if(k==='choose'){ var v=P.via||'both'; pk.querySelector('.igMedal').textContent=v==='c2'?'⏱':'🥇'; pk.querySelector('.igP1').textContent=v==='c2'?IT_T2+'秒切り おめでとう！':'1位 おめでとう！'; pk.querySelector('.igHint').innerHTML=igHintTx(v);   // ★試作36 どれで もらったかで 文字を かえる
-    pk.classList.remove('off'); document.getElementById('igFx').classList.remove('on','shake'); sfx('star'); }
+  if(k==='choose'){ pk.classList.remove('off'); document.getElementById('igFx').classList.remove('on','shake'); sfx('star'); }
   else igPlay(k); }
 var IG_COL=['#ff5a5a','#ffd84a','#6aff8a','#5ad4ff','#b88aff','#ff9ad5','#ffffff'];
 function igConf(x,y,n,dir){ for(var i=0;i<n;i++){ var a=dir+(Math.random()-0.5)*1.1, v=7+Math.random()*9; igP.push({k:'c',x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:Math.random()*6.3,vr:(Math.random()-0.5)*0.4,w:6+Math.random()*6,h:3+Math.random()*4,c:IG_COL[i%IG_COL.length],l:200}); } }
@@ -1359,11 +1356,10 @@ function finish(){ gTutEnd(); P.race=raceRank();   // ★試作26 4人の 順位
   // ★試作32 剣・盾は レースの 順位で（ユーザー「ベリーハードで 1位に なった上で 55秒切ったら とか」→ 2段にした：1つ目＝ハードか ベリーハードで 1位・2つ目＝ベリーハードで 1位＋55秒切り）。
   //   試作22〜31 は むずかしさに かんけい なく 金メダル（60秒切り）の 1回目・2回目。もう もっている 物は そのまま
   //   ★試作33 2つ目は「ハードいじょうで 55秒切り」（ユーザー「1位じゃなくても いい。表現として 2つ目は タイム重視」）
-  //   ★試作36 ユーザー「ベリーハードで 1位に なったら 1つ・ハード以上で 58秒 切ったら 2つめ」＋どちらを 先に たっせいしても いい（ベリーハード 1位は 56〜57秒 いるので 58秒切りの ほうが 先に なりやすい）。
-  //     先に たっせいした ほうで 1つ目（えらぶ）・もう 片方で 2つ目。いっしょに たっせいしたら 1つ目だけ（1回で 2つは ごうか すぎる 試作22）→ 2つ目は もういちど どちらか。どれで もらったかは fl.via
-  P.via=null; if(!practice){ var c1=lv===3 && P.race===1, c2=lv>=2 && P.fin<IT_T2;
-    if(!its.length && (c1||c2)){ P.pick='choose'; P.via=c1&&c2?'both':(c1?'c1':'c2'); fl.via=P.via; }
-    else if(its.length===1 && (fl.via==='c1'?c2:(fl.via==='c2'?c1:(c1||c2)))){ var rest=its[0]==='kohaku'?'medalshield':'kohaku'; its.push(rest); P.pick=rest; } }
+  //   ★試作36 は「ベリーハード 1位」「ハードいじょうで 58秒切り」の どちらが 先でも よかった
+  //   ★試作37 ユーザー「1つ目が ハード以上で 58秒切り、2つ目が ベリーハードで 1位」「1個ずつしか ゲット できひん ように」「1位 なれんくても ゲット できる」「1分 切れたら」
+  //     1つ目＝ハードいじょうで 1分切り（えらぶ）→ 2つ目＝ベリーハードで 1位。1回の レースで もらえるのは 1つだけ（いっしょに たっせいしても 1つ目だけ）
+  if(!practice){ if(!its.length && lv>=2 && P.fin<IT_T2) P.pick='choose'; else if(its.length===1 && lv===3 && P.race===1){ var rest=its[0]==='kohaku'?'medalshield':'kohaku'; its.push(rest); P.pick=rest; } }
   try{ localStorage.setItem(FLAG_KEY,JSON.stringify(fl)); localStorage.setItem(GOLD_KEY,String((parseInt(localStorage.getItem(GOLD_KEY)||'0',10)||0)+gd)); }catch(e){}
   P.gold=gd; P.goldWhy=why; }
 function rsDetHTML(){ var c=P.cnt||{}, t=[];   // ★試作33 ゲーム詳細（★試作34 ユーザー「順位の 表は ゲーム終了後に 表示。それ以外 ぜんぶ ▼で。いくら ゲットしたか・どうすれば タイムを 縮めれたか、次に 活かせる 内容」）
